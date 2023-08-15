@@ -50,6 +50,14 @@ For a detailed example, refer to the example.py file.
 
 Contributions are welcome! If you find a bug or have an enhancement suggestion, please open an issue or create a pull request.
 
+## Author
+
+![Profile Photo](https://avatars.githubusercontent.com/u/93073728?v=4&size=100)
+
+- **Name:** Hakkil Kim
+- **GitHub Profile:** [GitHub Profile Link](https://github.com/ScionKim/)
+- **LinkedIn:** [LinkedIn Profile Link](https://www.linkedin.com/in/hakkil-kim-3b620445/)
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
