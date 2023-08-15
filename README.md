@@ -3,7 +3,7 @@
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
 [![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/your-username/FaissImputer/blob/main/LICENSE)
 
-Impute missing values using faiss - A Python library for missing data imputation with k nearest neighbors.
+Impute missing values using Meta's [faiss](https://github.com/facebookresearch/faiss) - A Python library for missing data imputation with k nearest neighbors.
 
 ## Installation
 
