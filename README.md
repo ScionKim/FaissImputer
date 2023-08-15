@@ -34,9 +34,12 @@ df_imputed = imputer.transform(df_missing)
 
 ## Parameters
 
-**n_neighbors:** Number of nearest neighbors to consider for imputation.\
-**metric:** Distance metric to use for nearest neighbor search ('l2' or 'ip').\
-**strategy:** Imputation strategy ('mean' or 'median').\
+**n_neighbors:** Number of nearest neighbors to consider for imputation.
+
+**metric:** Distance metric to use for nearest neighbor search ('l2' or 'ip').
+
+**strategy:** Imputation strategy ('mean' or 'median').
+
 **index_factory:** Faiss index type ('Flat' or others).
 
 ## Example
