@@ -56,7 +56,6 @@ Contributions are welcome! If you find a bug or have an enhancement suggestion, 
 
 - **Name:** Hakkil Kim
 - **GitHub Profile:** [GitHub Profile Link](https://github.com/ScionKim/)
-- **LinkedIn:** [LinkedIn Profile Link](https://www.linkedin.com/in/hakkil-kim-3b620445/)
 
 ## License
 
