@@ -45,9 +45,15 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         # Extract non-missing data
         mask = ~np.isnan(X).any(axis=1)
         self.donors_ = X[mask].copy()
+        
         if self.donors_.shape[0] == 0:
             raise ValueError(
                 "X must contain at least one complete row to use as a donor"
+            )
+
+        if self.n_neighbors > self.donors_.shape[0]:
+            raise ValueError(
+                "n_neighbors cannot exceed the number of complete donors"
             )
 
         # Build faiss index
