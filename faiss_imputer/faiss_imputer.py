@@ -83,7 +83,7 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         # Loop over each sample with missing values
         for sample_idx in np.where(missing_mask.any(axis=1))[0]:
             # Extract row and the missing mask for that sample
-            sample_row = X[sample_idx, :]
+            sample_row = X[sample_idx, :].copy()
             sample_missing_mask = missing_mask[sample_idx, :]
 
             # Find the missing values and their corresponding columns
