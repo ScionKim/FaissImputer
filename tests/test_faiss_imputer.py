@@ -15,3 +15,25 @@ def test_fit_accepts_missing_values():
     imputer = FaissImputer(n_neighbors=1)
 
     assert imputer.fit(X) is imputer
+
+def test_transform_uses_fitted_donors():
+    train = np.array(
+        [
+            [0.0, 0.0],
+            [10.0, 100.0],
+            [20.0, 200.0],
+        ],
+        dtype=np.float32,
+    )
+    test = np.array(
+        [
+            [19.0, np.nan],
+            [0.0, 200.0],
+        ],
+        dtype=np.float32,
+    )
+
+    imputer = FaissImputer(n_neighbors=1).fit(train)
+    transformed = imputer.transform(test)
+
+    assert transformed[0, 1] == 200.0
