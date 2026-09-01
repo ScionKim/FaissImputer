@@ -1,3 +1,4 @@
+import faiss
 import numpy as np
 
 from faiss_imputer import FaissImputer
@@ -135,3 +136,20 @@ def test_transform_rejects_different_feature_count():
 
     with np.testing.assert_raises(ValueError):
         imputer.transform(invalid_test)
+
+def test_inner_product_metric_reaches_ivf_quantizer():
+    X = (
+        np.random.default_rng(0)
+        .normal(size=(100, 4))
+        .astype(np.float32)
+    )
+
+    imputer = FaissImputer(
+        n_neighbors=1,
+        metric='ip',
+        index_factory='IVF2,Flat',
+    ).fit(X)
+
+    quantizer = faiss.downcast_index(imputer.index_.quantizer)
+
+    assert quantizer.metric_type == faiss.METRIC_INNER_PRODUCT
