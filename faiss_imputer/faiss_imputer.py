@@ -63,8 +63,16 @@ class FaissImputer(BaseEstimator, TransformerMixin):
             )
 
         # Build faiss index
-        index = faiss.index_factory(self.donors_.shape[1], self.index_factory)
-        index.metric_type = faiss.METRIC_L2 if self.metric == 'l2' else faiss.METRIC_INNER_PRODUCT
+        self.metric_type_ = (
+            faiss.METRIC_L2
+            if self.metric == 'l2'
+            else faiss.METRIC_INNER_PRODUCT
+        )
+        index = faiss.index_factory(
+            self.donors_.shape[1],
+            self.index_factory,
+            self.metric_type_,
+        )
         index.train(self.donors_)
         index.add(self.donors_)
 
