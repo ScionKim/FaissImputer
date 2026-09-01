@@ -108,33 +108,78 @@ class FaissImputer(BaseEstimator, TransformerMixin):
 
         # Find the missing values
         missing_mask = np.isnan(X)
-        
-        # Generate placeholder values for imputation (mean or median)
-        placeholder_values = self.statistics_
-        
-        # Loop over each sample with missing values
-        for sample_idx in np.where(missing_mask.any(axis=1))[0]:
-            # Extract row and the missing mask for that sample
-            sample_row = X[sample_idx, :].copy()
-            sample_missing_mask = missing_mask[sample_idx, :]
 
-            # Find the missing values and their corresponding columns
-            sample_missing_cols = np.where(sample_missing_mask)[0]
-            sample_row[sample_missing_cols] = placeholder_values[sample_missing_cols]
+        # Group rows that have the same observed columns.
+        pattern_groups = {}
+        missing_row_indices = np.flatnonzero(
+            missing_mask.any(axis=1)
+        )
 
-            # Impute missing values using k nearest neighbors
-            _, neighbor_indices = self.index_.search(sample_row.reshape(1, -1), self.n_neighbors)
-            selected_vectors = self.donors_[neighbor_indices[0]]
-            selected_values = selected_vectors[:, sample_missing_cols]
+        for sample_idx in missing_row_indices:
+            observed_mask = ~missing_mask[sample_idx]
+            pattern = tuple(observed_mask.tolist())
+            pattern_groups.setdefault(pattern, []).append(sample_idx)
 
-            if self.strategy == 'mean':
-                column_agg = np.nanmean(selected_values, axis=0)
-            elif self.strategy == 'median':
-                column_agg = np.nanmedian(selected_values, axis=0)
+        for pattern, sample_indices in pattern_groups.items():
+            observed_mask = np.asarray(pattern, dtype=bool)
+            observed_cols = np.flatnonzero(observed_mask)
+            missing_cols = np.flatnonzero(~observed_mask)
 
-            sample_row[sample_missing_cols] = column_agg
+            # If the whole row is missing, use fitted statistics.
+            if observed_cols.size == 0:
+                X_tmp[np.ix_(sample_indices, missing_cols)] = (
+                    self.statistics_[missing_cols]
+                )
+                continue
 
-            # Update the imputed row in the temporary copy
-            X_tmp[sample_idx] = sample_row
+            donor_vectors = np.ascontiguousarray(
+                self.donors_[:, observed_cols],
+                dtype=np.float32,
+            )
+            query_vectors = np.ascontiguousarray(
+                X[np.ix_(sample_indices, observed_cols)],
+                dtype=np.float32,
+            )
+
+            index = faiss.index_factory(
+                donor_vectors.shape[1],
+                self.index_factory,
+                self.metric_type_,
+            )
+            index.train(donor_vectors)
+            index.add(donor_vectors)
+
+            _, neighbor_indices = index.search(
+                query_vectors,
+                self.n_neighbors,
+            )
+
+            for sample_idx, neighbors in zip(
+                sample_indices,
+                neighbor_indices,
+            ):
+                valid_neighbors = neighbors[neighbors >= 0]
+
+                if valid_neighbors.size == 0:
+                    raise ValueError(
+                        "FAISS did not return any valid neighbors"
+                    )
+
+                selected_values = self.donors_[
+                    valid_neighbors
+                ][:, missing_cols]
+
+                if self.strategy == 'mean':
+                    column_agg = np.mean(
+                        selected_values,
+                        axis=0,
+                    )
+                else:
+                    column_agg = np.median(
+                        selected_values,
+                        axis=0,
+                    )
+
+                X_tmp[sample_idx, missing_cols] = column_agg
 
         return X_tmp
