@@ -8,6 +8,24 @@
 
 Impute missing values using Meta's [faiss](https://github.com/facebookresearch/faiss) - A Python library for missing data imputation with k nearest neighbors.
 
+## What's new in 0.2.0
+
+Version 0.2.0 is the corrected release recommended for users upgrading from 0.1.x.
+
+- Corrects the neighbor-to-donor mapping that could return values from the wrong training row.
+- Uses the donor rows learned during `fit()` when new data is passed to `transform()`.
+- Searches for neighbors using only the columns observed in each query row.
+- Preserves the input array and reuses fallback statistics learned during `fit()`.
+- Supports modern scikit-learn validation APIs and adds regression tests and automatic CI.
+
+Upgrade an existing installation with:
+
+```bash
+python -m pip install --upgrade "faiss-imputer>=0.2.0"
+```
+
+See the [0.2.0 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.0) and the [full benchmark report](docs/benchmarks/v0.2.0.md) for details and current limitations.
+
 ## Installation
 
 You can install `faiss-imputer` using `pip`:
@@ -84,10 +102,7 @@ Contributions are welcome! If you find a bug or have an enhancement suggestion, 
 
 ## Author
 
-![Profile Photo](https://avatars.githubusercontent.com/u/93073728?v=4&size=100)
-
-- **Name:** Hakkil Kim
-- **GitHub Profile:** [GitHub Profile Link](https://github.com/ScionKim/)
+- **GitHub:** [@ScionKim](https://github.com/ScionKim/)
 
 ## License
 
