@@ -103,3 +103,15 @@ def test_fit_requires_at_least_one_complete_donor():
 
     with np.testing.assert_raises(ValueError):
         FaissImputer(n_neighbors=1).fit(X)
+
+def test_fit_rejects_more_neighbors_than_donors():
+    X = np.array(
+        [
+            [0.0, 10.0],
+            [1.0, 20.0],
+        ],
+        dtype=np.float32,
+    )
+
+    with np.testing.assert_raises(ValueError):
+        FaissImputer(n_neighbors=3).fit(X)
