@@ -29,6 +29,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = [
+    "build>=1.2",
     "pytest>=8",
 ]
 examples = [
