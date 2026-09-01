@@ -25,7 +25,7 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         - self: Returns an instance of the fitted FaissImputer.
         """
         # Check input data
-        X = check_array(X, dtype=np.float32, force_all_finite='allow-nan')
+        X = check_array(X, dtype=np.float32, ensure_all_finite='allow-nan')
 
         # Check parameters
         if not isinstance(self.n_neighbors, int) or self.n_neighbors <= 0:
@@ -63,7 +63,7 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         - X_tmp (array-like): A copy of the input data with imputed missing values.
         """
         # Check input data
-        X = check_array(X, dtype=np.float32, force_all_finite='allow-nan')
+        X = check_array(X, dtype=np.float32, ensure_all_finite='allow-nan')
 
         # Check if fit is called
         check_is_fitted(self)
