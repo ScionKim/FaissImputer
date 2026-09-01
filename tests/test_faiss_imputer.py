@@ -153,3 +153,24 @@ def test_inner_product_metric_reaches_ivf_quantizer():
     quantizer = faiss.downcast_index(imputer.index_.quantizer)
 
     assert quantizer.metric_type == faiss.METRIC_INNER_PRODUCT
+
+def test_missing_columns_do_not_affect_neighbor_search():
+    train = np.array(
+        [
+            [0.0, 0.0],
+            [10.0, 100.0],
+            [20.0, 200.0],
+        ],
+        dtype=np.float32,
+    )
+    test = np.array(
+        [
+            [19.0, np.nan],
+        ],
+        dtype=np.float32,
+    )
+
+    imputer = FaissImputer(n_neighbors=1).fit(train)
+    transformed = imputer.transform(test)
+
+    assert transformed[0, 1] == 200.0
