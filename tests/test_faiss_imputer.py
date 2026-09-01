@@ -91,3 +91,15 @@ def test_transform_is_independent_of_batch_values():
     result_b = imputer.transform(batch_b)[-1, 1]
 
     assert result_a == result_b == 100.0
+
+def test_fit_requires_at_least_one_complete_donor():
+    X = np.array(
+        [
+            [1.0, np.nan],
+            [np.nan, 2.0],
+        ],
+        dtype=np.float32,
+    )
+
+    with np.testing.assert_raises(ValueError):
+        FaissImputer(n_neighbors=1).fit(X)
