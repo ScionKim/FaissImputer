@@ -19,8 +19,8 @@ def test_fit_accepts_missing_values():
 def test_transform_uses_fitted_donors():
     train = np.array(
         [
-            [0.0, 0.0],
-            [10.0, 100.0],
+            [0.0, 200.0],
+            [10.0, 200.0],
             [20.0, 200.0],
         ],
         dtype=np.float32,
