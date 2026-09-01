@@ -39,13 +39,13 @@ class FaissImputer(BaseEstimator, TransformerMixin):
 
         # Extract non-missing data
         mask = ~np.isnan(X).any(axis=1)
-        X_non_missing = X[mask]
+        self.donors_ = X[mask].copy()
 
         # Build faiss index
-        index = faiss.index_factory(X_non_missing.shape[1], self.index_factory)
+        index = faiss.index_factory(self.donors_.shape[1], self.index_factory)
         index.metric_type = faiss.METRIC_L2 if self.metric == 'l2' else faiss.METRIC_INNER_PRODUCT
-        index.train(X_non_missing)
-        index.add(X_non_missing)
+        index.train(self.donors_)
+        index.add(self.donors_)
 
         # Store the index as an attribute
         self.index_ = index
@@ -92,7 +92,7 @@ class FaissImputer(BaseEstimator, TransformerMixin):
 
             # Impute missing values using k nearest neighbors
             _, neighbor_indices = self.index_.search(sample_row.reshape(1, -1), self.n_neighbors)
-            selected_vectors = X[neighbor_indices[0]]
+            selected_vectors = self.donors_[neighbor_indices[0]]
             selected_values = selected_vectors[:, sample_missing_cols]
 
             if self.strategy == 'mean':
