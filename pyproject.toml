@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "faiss-imputer"
+version = "0.2.0"
+description = "K-nearest-neighbor imputation backed by Faiss"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Hakkil Kim" },
+]
+dependencies = [
+    "numpy>=1.24",
+    "faiss-cpu>=1.7.4",
+    "scikit-learn>=1.6",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+test = [
+    "build>=1.2",
+    "pytest>=8",
+]
+examples = [
+    "jupyterlab>=4",
+    "pandas>=2",
+]
+
+[project.urls]
+Repository = "https://github.com/ScionKim/FaissImputer"
+Issues = "https://github.com/ScionKim/FaissImputer/issues"
+
+[tool.setuptools.packages.find]
+include = ["faiss_imputer*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

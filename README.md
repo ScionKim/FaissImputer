@@ -3,7 +3,7 @@
 Maintenance notice: FaissImputer 0.1.x has a known neighbor-mapping bug that can produce incorrect imputations, and it is incompatible with scikit-learn 1.8+. Please do not use it in production. A corrected v0.2.0 is in progress.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/your-username/FaissImputer/blob/main/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/main/LICENSE)
 
 Impute missing values using Meta's [faiss](https://github.com/facebookresearch/faiss) - A Python library for missing data imputation with k nearest neighbors.
 
@@ -18,35 +18,56 @@ pip install faiss-imputer
 ## Usage
 
 ```python
-import pandas as pd
+import numpy as np
+
 from faiss_imputer import FaissImputer
 
-# Create your DataFrame and introduce missing values
-# ...
+# Complete rows used as reference donors
+X_train = np.array(
+    [
+        [1.0, 10.0, 100.0],
+        [2.0, 20.0, 200.0],
+        [3.0, 30.0, 300.0],
+    ],
+    dtype=np.float32,
+)
 
-# Create an instance of FaissImputer
-imputer = FaissImputer(n_neighbors=3)
+# New rows containing missing values
+X_missing = np.array(
+    [
+        [1.5, np.nan, 150.0],
+        [2.5, 25.0, np.nan],
+    ],
+    dtype=np.float32,
+)
 
-# Fit the imputer on the data frame with missing values
-imputer.fit(df_missing)
+imputer = FaissImputer(n_neighbors=2)
+imputer.fit(X_train)
 
-# Transform the data frame with missing values
-df_imputed = imputer.transform(df_missing)
+X_imputed = imputer.transform(X_missing)
+print(X_imputed)
 ```
+
+`transform()` returns a NumPy `float32` array. The input array is not modified.
 
 ## Parameters
 
-**n_neighbors:** Number of nearest neighbors to consider for imputation.
+- `n_neighbors`: Number of reference rows used to calculate each missing value.
+- `metric`: Neighbor-search metric. Supported values are `"l2"` and `"ip"`. Raw inner product is not cosine similarity.
+- `strategy`: Aggregation method for neighbor values. Supported values are `"mean"` and `"median"`.
+- `index_factory`: Faiss index description. The default `"Flat"` performs exact search.
 
-**metric:** Distance metric to use for nearest neighbor search ('l2' or 'ip').
+## Important behavior
 
-**strategy:** Imputation strategy ('mean' or 'median').
+- `fit()` currently uses only rows without any missing values as reference donors.
+- Neighbor search compares only the columns observed in each query row.
+- `n_neighbors` cannot exceed the number of complete reference rows.
+- An entirely missing row is filled using statistics learned during `fit()`.
+- Input data must be a two-dimensional numeric array with the same number of columns used during `fit()`.
 
-**index_factory:** Faiss index type ('Flat' or others).
+## Example notebook
 
-## Example
-
-For a detailed example, refer to the example.py file.
+See [Imputing Missing Values with Faiss Imputer](notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb) for a notebook example.
 
 ## Contributing
 
@@ -65,8 +86,8 @@ This project is licensed under the [MIT License](LICENSE).
 
 ### Third-Party Licenses
 
-This project utilizes code from Meta's Faiss library, which is distributed under the [Apache License 2.0](https://github.com/facebookresearch/faiss/blob/master/LICENSE).
+FaissImputer depends on Meta's [Faiss](https://github.com/facebookresearch/faiss), which is distributed under the [MIT License](https://github.com/facebookresearch/faiss/blob/main/LICENSE).
 
-Please note that while this project includes code from the Faiss library, it is not officially associated with or endorsed by the Faiss maintainers or Meta.
+FaissImputer is not affiliated with or endorsed by Meta or the Faiss maintainers.
 
 For detailed licensing information of the Faiss library, please refer to the [Faiss repository](https://github.com/facebookresearch/faiss).
