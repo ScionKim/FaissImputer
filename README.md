@@ -1,11 +1,30 @@
 # FaissImputer
-[!WARNING]
-Maintenance notice: FaissImputer 0.1.x has a known neighbor-mapping bug that can produce incorrect imputations, and it is incompatible with scikit-learn 1.8+. Please do not use it in production. A corrected v0.2.0 is in progress.
+
+> [!WARNING]
+> FaissImputer 0.1.x has a known neighbor-mapping bug that can produce incorrect imputations, and it is incompatible with scikit-learn 1.8+. Use version 0.2.0 or newer.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
 [![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/main/LICENSE)
 
 Impute missing values using Meta's [faiss](https://github.com/facebookresearch/faiss) - A Python library for missing data imputation with k nearest neighbors.
+
+## What's new in 0.2.0
+
+Version 0.2.0 is the corrected release recommended for users upgrading from 0.1.x.
+
+- Corrects the neighbor-to-donor mapping that could return values from the wrong training row.
+- Uses the donor rows learned during `fit()` when new data is passed to `transform()`.
+- Searches for neighbors using only the columns observed in each query row.
+- Preserves the input array and reuses fallback statistics learned during `fit()`.
+- Supports modern scikit-learn validation APIs and adds regression tests and automatic CI.
+
+Upgrade an existing installation with:
+
+```bash
+python -m pip install --upgrade "faiss-imputer>=0.2.0"
+```
+
+See the [0.2.0 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.0) and the [full benchmark report](docs/benchmarks/v0.2.0.md) for details and current limitations.
 
 ## Installation
 
@@ -65,6 +84,14 @@ print(X_imputed)
 - An entirely missing row is filled using statistics learned during `fit()`.
 - Input data must be a two-dimensional numeric array with the same number of columns used during `fit()`.
 
+## Benchmark
+
+In a controlled synthetic benchmark with complete training donors, FaissImputer 0.2.0 and scikit-learn's KNNImputer produced exactly matching imputed values. With 20,000 training rows, FaissImputer transformed repeated missingness patterns up to 19.62 times faster, while performance was effectively tied when almost every test row had a different pattern.
+
+When the training data itself contained missing values, FaissImputer was less accurate because version 0.2.0 uses only fully observed rows as donors. These single-thread results are specific to the tested synthetic data and hardware, not a general performance guarantee.
+
+See the [full 0.2.0 benchmark report](docs/benchmarks/v0.2.0.md), [reproduction script](benchmarks/benchmark_imputers.py), and [raw results](benchmarks/results/v0.2.0-windows-py3.12.json). Planned improvements are tracked in the [roadmap](ROADMAP.md).
+
 ## Example notebook
 
 See [Imputing Missing Values with Faiss Imputer](notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb) for a notebook example.
@@ -75,10 +102,7 @@ Contributions are welcome! If you find a bug or have an enhancement suggestion, 
 
 ## Author
 
-![Profile Photo](https://avatars.githubusercontent.com/u/93073728?v=4&size=100)
-
-- **Name:** Hakkil Kim
-- **GitHub Profile:** [GitHub Profile Link](https://github.com/ScionKim/)
+- **GitHub:** [@ScionKim](https://github.com/ScionKim/)
 
 ## License
 
@@ -91,3 +115,4 @@ FaissImputer depends on Meta's [Faiss](https://github.com/facebookresearch/faiss
 FaissImputer is not affiliated with or endorsed by Meta or the Faiss maintainers.
 
 For detailed licensing information of the Faiss library, please refer to the [Faiss repository](https://github.com/facebookresearch/faiss).
+
