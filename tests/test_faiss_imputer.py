@@ -37,3 +37,25 @@ def test_transform_uses_fitted_donors():
     transformed = imputer.transform(test)
 
     assert transformed[0, 1] == 200.0
+
+def test_transform_does_not_modify_input():
+    train = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 1.0],
+        ],
+        dtype=np.float32,
+    )
+    test = np.array(
+        [
+            [2.0, np.nan],
+            [3.0, 0.5],
+        ],
+        dtype=np.float32,
+    )
+    original = test.copy()
+
+    imputer = FaissImputer(n_neighbors=1).fit(train)
+    imputer.transform(test)
+
+    np.testing.assert_array_equal(test, original)
