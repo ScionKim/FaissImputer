@@ -115,3 +115,23 @@ def test_fit_rejects_more_neighbors_than_donors():
 
     with np.testing.assert_raises(ValueError):
         FaissImputer(n_neighbors=3).fit(X)
+
+def test_transform_rejects_different_feature_count():
+    train = np.array(
+        [
+            [0.0, 10.0],
+            [1.0, 20.0],
+        ],
+        dtype=np.float32,
+    )
+    invalid_test = np.array(
+        [
+            [0.0, 10.0, 20.0],
+        ],
+        dtype=np.float32,
+    )
+
+    imputer = FaissImputer(n_neighbors=1).fit(train)
+
+    with np.testing.assert_raises(ValueError):
+        imputer.transform(invalid_test)
