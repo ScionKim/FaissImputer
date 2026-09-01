@@ -1,4 +1,6 @@
 # FaissImputer
+[!WARNING]
+Maintenance notice: FaissImputer 0.1.x has a known neighbor-mapping bug that can produce incorrect imputations, and it is incompatible with scikit-learn 1.8+. Please do not use it in production. A corrected v0.2.0 is in progress.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
 [![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/your-username/FaissImputer/blob/main/LICENSE)
