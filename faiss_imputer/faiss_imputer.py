@@ -37,6 +37,11 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         if self.strategy not in ('mean', 'median'):
             raise ValueError("strategy must be either 'mean' or 'median'")
 
+        if self.strategy == 'mean':
+            self.statistics_ = np.nanmean(X, axis=0)
+        else:
+            self.statistics_ = np.nanmedian(X, axis=0)
+
         # Extract non-missing data
         mask = ~np.isnan(X).any(axis=1)
         self.donors_ = X[mask].copy()
@@ -75,10 +80,7 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         missing_mask = np.isnan(X)
         
         # Generate placeholder values for imputation (mean or median)
-        if self.strategy == 'mean':
-            placeholder_values = np.nanmean(X, axis=0)
-        elif self.strategy == 'median':
-            placeholder_values = np.nanmedian(X, axis=0)
+        placeholder_values = self.statistics_
         
         # Loop over each sample with missing values
         for sample_idx in np.where(missing_mask.any(axis=1))[0]:
