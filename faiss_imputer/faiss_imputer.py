@@ -1,7 +1,7 @@
 import numpy as np
 import faiss
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
 
 class FaissImputer(BaseEstimator, TransformerMixin):
     """Impute missing values using faiss."""
@@ -25,7 +25,13 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         - self: Returns an instance of the fitted FaissImputer.
         """
         # Check input data
-        X = check_array(X, dtype=np.float32, ensure_all_finite='allow-nan')
+        X = validate_data(
+            self,
+            X,
+            dtype=np.float32,
+            ensure_all_finite='allow-nan',
+            reset=True,
+        )
 
         # Check parameters
         if not isinstance(self.n_neighbors, int) or self.n_neighbors <= 0:
@@ -77,11 +83,17 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         Returns:
         - X_tmp (array-like): A copy of the input data with imputed missing values.
         """
-        # Check input data
-        X = check_array(X, dtype=np.float32, ensure_all_finite='allow-nan')
-
+        
         # Check if fit is called
         check_is_fitted(self)
+
+        X = validate_data(
+            self,
+            X,
+            dtype=np.float32,
+            ensure_all_finite='allow-nan',
+            reset=False,
+        )
 
         # Copy X to avoid modifying the original data
         X_tmp = X.copy()
