@@ -3,7 +3,7 @@
 Maintenance notice: FaissImputer 0.1.x has a known neighbor-mapping bug that can produce incorrect imputations, and it is incompatible with scikit-learn 1.8+. Please do not use it in production. A corrected v0.2.0 is in progress.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/your-username/FaissImputer/blob/main/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/main/LICENSE)
 
 Impute missing values using Meta's [faiss](https://github.com/facebookresearch/faiss) - A Python library for missing data imputation with k nearest neighbors.
 
@@ -65,8 +65,8 @@ This project is licensed under the [MIT License](LICENSE).
 
 ### Third-Party Licenses
 
-This project utilizes code from Meta's Faiss library, which is distributed under the [Apache License 2.0](https://github.com/facebookresearch/faiss/blob/master/LICENSE).
+FaissImputer depends on Meta's [Faiss](https://github.com/facebookresearch/faiss), which is distributed under the [MIT License](https://github.com/facebookresearch/faiss/blob/main/LICENSE).
 
-Please note that while this project includes code from the Faiss library, it is not officially associated with or endorsed by the Faiss maintainers or Meta.
+FaissImputer is not affiliated with or endorsed by Meta or the Faiss maintainers.
 
 For detailed licensing information of the Faiss library, please refer to the [Faiss repository](https://github.com/facebookresearch/faiss).
