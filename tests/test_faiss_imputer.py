@@ -174,3 +174,26 @@ def test_missing_columns_do_not_affect_neighbor_search():
     transformed = imputer.transform(test)
 
     assert transformed[0, 1] == 200.0
+
+def test_all_missing_row_uses_fitted_statistics():
+    train = np.array(
+        [
+            [0.0, 10.0],
+            [2.0, 30.0],
+        ],
+        dtype=np.float32,
+    )
+    test = np.array(
+        [
+            [np.nan, np.nan],
+        ],
+        dtype=np.float32,
+    )
+
+    imputer = FaissImputer(n_neighbors=1).fit(train)
+    transformed = imputer.transform(test)
+
+    np.testing.assert_allclose(
+        transformed,
+        [[1.0, 20.0]],
+    )
