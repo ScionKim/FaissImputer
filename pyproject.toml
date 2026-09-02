@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "faiss-imputer"
-version = "0.2.0"
+version = "0.2.1"
 description = "K-nearest-neighbor imputation backed by Faiss"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,6 +13,7 @@ license-files = ["LICENSE"]
 authors = [
     { name = "Hakkil Kim" },
 ]
+keywords = ["missing-data", "imputation", "knn", "faiss", "scikit-learn"]
 dependencies = [
     "numpy>=1.24",
     "faiss-cpu>=1.7.4",
@@ -31,6 +32,7 @@ classifiers = [
 test = [
     "build>=1.2",
     "pytest>=8",
+    "twine>=6",
 ]
 examples = [
     "jupyterlab>=4",
@@ -38,8 +40,10 @@ examples = [
 ]
 
 [project.urls]
+Documentation = "https://github.com/ScionKim/FaissImputer#readme"
 Repository = "https://github.com/ScionKim/FaissImputer"
 Issues = "https://github.com/ScionKim/FaissImputer/issues"
+Changelog = "https://github.com/ScionKim/FaissImputer/releases"
 
 [tool.setuptools.packages.find]
 include = ["faiss_imputer*"]

@@ -28,5 +28,16 @@ jobs:
       - name: Build package
         run: python -m build
 
+      - name: Validate package metadata
+        run: |
+          python -m twine check --strict dist/*
+          python scripts/check_release_artifacts.py
+
+      - name: Smoke test built wheel
+        run: |
+          python -m venv .wheel-test
+          .wheel-test/bin/python -m pip install dist/*.whl
+          .wheel-test/bin/python -I scripts/smoke_test_installed_package.py
+
       - name: Run tests
         run: python -m pytest -q
