@@ -129,4 +129,3 @@ FaissImputer is not affiliated with or endorsed by Meta or the Faiss maintainers
 
 For detailed licensing information of the Faiss library, please refer to the [Faiss repository](https://github.com/facebookresearch/faiss).
 
-
