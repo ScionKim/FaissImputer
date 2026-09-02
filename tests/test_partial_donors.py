@@ -50,3 +50,64 @@ def test_available_mode_failed_fit_clears_state(previously_fitted):
 
     with pytest.raises(NotFittedError):
         imputer.transform([[0.1, np.nan, np.nan]])
+
+@pytest.mark.parametrize("strategy", ["mean", "median"])
+@pytest.mark.parametrize(
+    "train, query, k, expected_mean, expected_median",
+    [
+        pytest.param(
+            [[2, np.nan, 10], [1, 2, 20]],
+            [[0, 0, np.nan]],
+            1,
+            [[0, 0, 20]],
+            [[0, 0, 20]],
+            id="scaled-distance",
+        ),
+        pytest.param(
+            [[0, np.nan, 100], [1, 20, np.nan], [2, 40, np.nan]],
+            [[0, np.nan, np.nan]],
+            1,
+            [[0, 20, 100]],
+            [[0, 20, 100]],
+            id="neighbors-per-column",
+        ),
+        pytest.param(
+            [[0, np.nan], [np.nan, 10], [np.nan, 30], [np.nan, 110]],
+            [[5, np.nan]],
+            1,
+            [[5, 50]],
+            [[5, 30]],
+            id="no-overlap-fallback",
+        ),
+        pytest.param(
+            [[0, 10], [2, 30], [3, 110], [np.nan, 1000]],
+            [[1, np.nan]],
+            5,
+            [[1, 50]],
+            [[1, 30]],
+            id="fewer-than-k-neighbors",
+        ),
+        pytest.param(
+            [[0, 10, np.nan], [100, 20, 5]],
+            [[0, np.nan, 5]],
+            1,
+            [[0, 10, 5]],
+            [[0, 10, 5]],
+            id="partial-donor-can-be-closest",
+        ),
+    ],
+)
+
+def test_available_mode_neighbor_rules(
+    train, query, k, expected_mean, expected_median, strategy
+):
+    imputer = FaissImputer(
+        n_neighbors=k,
+        strategy=strategy,
+        donor_policy="available",
+    )
+    result = imputer.fit(train).transform(query)
+    expected = expected_mean if strategy == "mean" else expected_median
+
+    assert result.dtype == np.float32
+    np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-6)
