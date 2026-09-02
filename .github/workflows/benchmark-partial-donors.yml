@@ -43,7 +43,7 @@ jobs:
         timeout-minutes: 10
         run: >
           python -u -m benchmarks.benchmark_partial_donors
-          --seeds 101 --repeats 1
+          --seeds 101 202 303 404 505 --repeats 3
 
       - name: Upload benchmark results
         if: always()
