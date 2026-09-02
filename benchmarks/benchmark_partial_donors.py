@@ -291,6 +291,94 @@ def main():
 
     print(f"Saved: {output}", flush=True)
 
+def compare_native_kernels(imputer, query):
+    donors = np.ascontiguousarray(imputer.donors_, dtype=np.float32)
+    missing = np.isnan(query)
+    rows = missing.any(axis=1) & ~missing.all(axis=1)
+    queries = np.ascontiguousarray(query[rows], dtype=np.float32)
+    if len(queries) == 0:
+        return {"skipped": "No partially observed queries"}
+
+    n_donors = len(donors)
+    batch_size = max(1, min(256, (16 * 1024 * 1024) // (12 * n_donors)))
+    k = min(n_donors, max(16, 2 * min(imputer.n_neighbors, n_donors)))
+    batches = [
+        queries[start:start + batch_size]
+        for start in range(0, len(queries), batch_size)
+    ]
+    records = []
+
+    faiss.omp_set_num_threads(1)
+    with threadpool_limits(limits=1):
+        faiss.pairwise_distances(
+            batches[0], donors, metric=faiss.METRIC_NaNEuclidean
+        )
+        imputer.native_index_.search(batches[0], k)
+
+        for repeat in range(1, 4):
+            totals = {"distance_matrix": 0.0, "topk_search": 0.0}
+            for batch_number, batch in enumerate(batches):
+                order = ("distance_matrix", "topk_search")
+                if (repeat + batch_number) % 2 == 0:
+                    order = order[::-1]
+
+                for method in order:
+                    started = time.perf_counter()
+                    if method == "distance_matrix":
+                        matrix = faiss.pairwise_distances(
+                            batch, donors, metric=faiss.METRIC_NaNEuclidean
+                        )
+                    else:
+                        distances, ids = imputer.native_index_.search(batch, k)
+                    totals[method] += time.perf_counter() - started
+
+                # Validation is outside the measured intervals.
+                valid = (
+                    (ids >= 0)
+                    & (ids < n_donors)
+                    & np.isfinite(distances)
+                )
+                sorted_ids = np.sort(np.where(valid, ids, -1), axis=1)
+                duplicates = (
+                    (sorted_ids[:, 1:] >= 0)
+                    & (sorted_ids[:, 1:] == sorted_ids[:, :-1])
+                )
+                if duplicates.any():
+                    raise AssertionError("Search returned duplicate donor IDs")
+
+                row_ids, positions = np.nonzero(valid)
+                np.testing.assert_allclose(
+                    distances[valid],
+                    matrix[row_ids, ids[row_ids, positions]],
+                    rtol=1e-5,
+                    atol=1e-6,
+                )
+                matrix[~np.isfinite(matrix)] = np.inf
+                matrix.partition(k - 1, axis=1)
+                expected = np.sort(matrix[:, :k], axis=1)
+                actual = np.sort(np.where(valid, distances, np.inf), axis=1)
+                np.testing.assert_allclose(
+                    actual, expected, rtol=1e-5, atol=1e-6
+                )
+                del matrix
+
+            records.append({
+                "repeat": repeat,
+                "distance_matrix_seconds": totals["distance_matrix"],
+                "topk_search_seconds": totals["topk_search"],
+                "nearest_distances_match": True,
+            })
+
+    return {
+        "purpose": "diagnostic_only_not_a_pure_selection_cost",
+        "query_rows": len(queries),
+        "donor_rows": n_donors,
+        "batch_size": batch_size,
+        "search_k": k,
+        "batches": len(batches),
+        "trials": records,
+    }
+
 class TimedNativeIndex:
     def __init__(self, index):
         self.index = index
@@ -374,6 +462,7 @@ def profile_native_search():
         "seed": seed,
         "purpose": "diagnostic_only",
         "trials": records,
+        "kernel_comparison": compare_native_kernels(imputer, query),
     }
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     print("Saved native search profile:", path)
