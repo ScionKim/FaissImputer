@@ -9,6 +9,14 @@
 
 Impute missing values using Meta's [faiss](https://github.com/facebookresearch/faiss) - A Python library for missing data imputation with k nearest neighbors.
 
+## What's new in 0.2.2
+
+- Clears fitted state after a failed `fit()`, including failed refits.
+- Corrects scikit-learn transformer, NaN-support, and `float32` dtype-preservation tags.
+- Adds regression tests for failed fits, estimator tags, and pipeline use.
+
+See the [0.2.2 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.2) for details.
+
 ## What's new in 0.2.1
 
 Version 0.2.1 is a packaging and documentation hotfix. The imputation behavior is unchanged from 0.2.0.
@@ -32,10 +40,10 @@ Version 0.2.0 is the corrected release recommended for users upgrading from 0.1.
 Upgrade an existing installation with:
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.2.1"
+python -m pip install --upgrade "faiss-imputer>=0.2.2"
 ```
 
-See the [0.2.0 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.0) and the [full benchmark report](https://github.com/ScionKim/FaissImputer/blob/v0.2.1/docs/benchmarks/v0.2.0.md) for details and current limitations.
+See the [0.2.0 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.0) and the [full benchmark report](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/docs/benchmarks/v0.2.0.md) for details and current limitations.
 
 ## Installation
 
@@ -103,11 +111,11 @@ In a controlled synthetic benchmark with complete training donors, FaissImputer 
 
 When the training data itself contained missing values, FaissImputer was less accurate because version 0.2.0 uses only fully observed rows as donors. These single-thread results are specific to the tested synthetic data and hardware, not a general performance guarantee.
 
-See the [full 0.2.0 benchmark report](https://github.com/ScionKim/FaissImputer/blob/v0.2.1/docs/benchmarks/v0.2.0.md), [reproduction script](https://github.com/ScionKim/FaissImputer/blob/v0.2.1/benchmarks/benchmark_imputers.py), and [raw results](https://github.com/ScionKim/FaissImputer/blob/v0.2.1/benchmarks/results/v0.2.0-windows-py3.12.json). Planned improvements are tracked in the [roadmap](https://github.com/ScionKim/FaissImputer/blob/v0.2.1/ROADMAP.md).
+See the [full 0.2.0 benchmark report](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/docs/benchmarks/v0.2.0.md), [reproduction script](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/benchmarks/benchmark_imputers.py), and [raw results](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/benchmarks/results/v0.2.0-windows-py3.12.json). Planned improvements are tracked in the [roadmap](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/ROADMAP.md).
 
 ## Example notebook
 
-See [Imputing Missing Values with Faiss Imputer](https://github.com/ScionKim/FaissImputer/blob/v0.2.1/notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb) for a notebook example.
+See [Imputing Missing Values with Faiss Imputer](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb) for a notebook example.
 
 ## Contributing
 
@@ -119,7 +127,7 @@ Contributions are welcome! If you find a bug or have an enhancement suggestion, 
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.2.1/LICENSE).
+This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/LICENSE).
 
 ### Third-Party Licenses
 
