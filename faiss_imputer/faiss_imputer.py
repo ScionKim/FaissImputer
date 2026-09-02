@@ -14,6 +14,31 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         self.index_factory = index_factory
 
     def fit(self, X, y=None):
+        """Fit the imputer; leave it unfitted if fitting fails."""
+        self._clear_fitted_state()
+        fit_succeeded = False
+
+        try:
+            self._fit(X, y)
+            fit_succeeded = True
+        finally:
+            if not fit_succeeded:
+                self._clear_fitted_state()
+
+        return self
+
+    def _clear_fitted_state(self):
+        for name in (
+            "n_features_in_",
+            "feature_names_in_",
+            "statistics_",
+            "donors_",
+            "metric_type_",
+            "index_",
+        ):
+            self.__dict__.pop(name, None)
+
+    def _fit(self, X, y=None):
         """
         Fit the FaissImputer to the provided data.
 
