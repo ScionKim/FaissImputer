@@ -232,3 +232,32 @@ def test_available_mode_ignores_invalid_faiss_neighbor_ids(monkeypatch):
 
     result = imputer.transform([[0, np.nan, np.nan]])
     np.testing.assert_allclose(result, [[0, 20, 100]])
+
+def test_available_mode_builds_one_index_per_query(monkeypatch):
+    import faiss
+
+    imputer = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+    ).fit(
+        [
+            [0, 10, np.nan, np.nan],
+            [1, 20, 30, np.nan],
+            [2, 40, np.nan, 50],
+            [3, 60, 70, 80],
+        ]
+    )
+
+    original_index = faiss.IndexFlatL2
+    created = []
+
+    def counted_index(*args, **kwargs):
+        created.append(1)
+        return original_index(*args, **kwargs)
+
+    monkeypatch.setattr(faiss, "IndexFlatL2", counted_index)
+
+    result = imputer.transform([[0.1, np.nan, np.nan, np.nan]])
+
+    np.testing.assert_allclose(result, [[0.1, 10, 30, 50]])
+    assert len(created) == 1
