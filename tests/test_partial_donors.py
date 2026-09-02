@@ -261,3 +261,38 @@ def test_available_mode_builds_one_index_per_query(monkeypatch):
 
     np.testing.assert_allclose(result, [[0.1, 10, 30, 50]])
     assert len(created) == 1
+
+def test_available_mode_expands_search_for_each_target():
+    train = np.column_stack(
+        [
+            np.arange(64),
+            np.arange(64) + 100,
+            np.arange(64) + 1000,
+        ]
+    ).astype(np.float32)
+    train[:60, 2] = np.nan
+
+    imputer = FaissImputer(
+        n_neighbors=2,
+        donor_policy="available",
+    ).fit(train)
+
+    result = imputer.transform([[0.1, np.nan, np.nan]])
+
+    np.testing.assert_allclose(result, [[0.1, 100.5, 1060.5]])
+
+
+def test_available_mode_handles_large_finite_distances():
+    imputer = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+    ).fit(
+        [
+            [1.1e19, np.nan, 10],
+            [np.nan, 1.2e19, 20],
+        ]
+    )
+
+    result = imputer.transform([[0, 0, np.nan]])
+
+    np.testing.assert_allclose(result, [[0, 0, 10]])
