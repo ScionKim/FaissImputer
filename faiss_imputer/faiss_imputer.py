@@ -281,96 +281,70 @@ class FaissImputer(TransformerMixin, BaseEstimator):
     def _transform_available(self, X):
         result = X.copy()
         missing = np.isnan(X)
-        patterns = {}
-        for row_idx in np.flatnonzero(missing.any(axis=1)):
-            pattern = tuple((~missing[row_idx]).tolist())
-            patterns.setdefault(pattern, []).append(row_idx)
+        donor_observed = ~np.isnan(self.donors_)
 
-        n_donors = self.donors_.shape[0]
-        batch_size = max(
-            1, min(256, (16 * 1024 * 1024) // (8 * n_donors))
-        )
+        for row in np.flatnonzero(missing.any(axis=1)):
+            missing_cols = np.flatnonzero(missing[row])
+            observed_cols = np.flatnonzero(~missing[row])
+            result[row, missing_cols] = self.statistics_[missing_cols]
+            if observed_cols.size == 0:
+                continue
 
-        for pattern, sample_indices in patterns.items():
-            observed = np.asarray(pattern, dtype=bool)
-            missing_cols = np.flatnonzero(~observed)
-            result[np.ix_(sample_indices, missing_cols)] = (
-                self.statistics_[missing_cols]
+            common_counts = donor_observed[:, observed_cols].sum(axis=1)
+            has_target = donor_observed[:, missing_cols].any(axis=1)
+            donor_rows = np.flatnonzero((common_counts > 0) & has_target)
+            if donor_rows.size == 0:
+                continue
+
+            target_present = donor_observed[np.ix_(donor_rows, missing_cols)]
+            k = min(self.n_neighbors, donor_rows.size)
+            required = np.minimum(k, target_present.sum(axis=0))
+
+            index = faiss.IndexFlatL2(int(observed_cols.size))
+            block_size = max(
+                1, (16 * 1024 * 1024) // (8 * observed_cols.size)
             )
-            if not observed.any():
-                continue
+            for start in range(0, donor_rows.size, block_size):
+                block_rows = donor_rows[start:start + block_size]
+                offsets = self.donors_[
+                    np.ix_(block_rows, observed_cols)
+                ].astype(np.float64)
+                offsets -= X[row, observed_cols]
+                offsets[np.isnan(offsets)] = 0.0
+                # Omitting the common factor X.shape[1] preserves ranking.
+                offsets /= np.sqrt(common_counts[block_rows])[:, None]
+                index.add(np.ascontiguousarray(offsets, dtype=np.float32))
 
-            prepared = []
-            for donor_mask, donor_rows in self.donor_groups_:
-                if not donor_mask[missing_cols].any():
+            query = np.zeros((1, observed_cols.size), dtype=np.float32)
+            search_k = min(donor_rows.size, max(16, 2 * k))
+            while True:
+                distances, indices = index.search(query, int(search_k))
+                local_ids = indices[0]
+                valid = (
+                    (local_ids >= 0)
+                    & (local_ids < donor_rows.size)
+                    & np.isfinite(distances[0])
+                )
+                local_ids = local_ids[valid]
+                _, first = np.unique(local_ids, return_index=True)
+                local_ids = local_ids[np.sort(first)]
+                hits = target_present[local_ids]
+
+                if (
+                    np.all(hits.sum(axis=0) >= required)
+                    or search_k == donor_rows.size
+                ):
+                    break
+                search_k = min(donor_rows.size, 2 * search_k)
+
+            for target_idx, col in enumerate(missing_cols):
+                selected = local_ids[hits[:, target_idx]][:k]
+                if selected.size == 0:
                     continue
-                common = np.flatnonzero(observed & donor_mask)
-                if common.size == 0:
-                    continue
-                index = faiss.IndexFlatL2(int(common.size))
-                index.add(
-                    np.ascontiguousarray(
-                        self.donors_[np.ix_(donor_rows, common)],
-                        dtype=np.float32,
-                    )
-                )
-                prepared.append((donor_rows, common, index))
-
-            if not prepared:
-                continue
-
-            for start in range(0, len(sample_indices), batch_size):
-                rows = np.asarray(
-                    sample_indices[start:start + batch_size],
-                    dtype=np.intp,
-                )
-                distances = np.full(
-                    (rows.size, n_donors), np.inf, dtype=np.float64
-                )
-
-                for donor_rows, common, index in prepared:
-                    queries = np.ascontiguousarray(
-                        X[np.ix_(rows, common)], dtype=np.float32
-                    )
-                    group_k = min(self.n_neighbors, donor_rows.size)
-                    d, local_ids = index.search(queries, group_k)
-                    valid = (
-                        (local_ids >= 0)
-                        & (local_ids < donor_rows.size)
-                        & np.isfinite(d)
-                    )
-                    batch_rows, hits = np.nonzero(valid)
-                    donor_ids = donor_rows[local_ids[batch_rows, hits]]
-                    scaled = np.maximum(
-                        d[batch_rows, hits].astype(np.float64), 0.0
-                    )
-                    scaled *= X.shape[1] / common.size
-                    distances[batch_rows, donor_ids] = scaled
-
-                for col in missing_cols:
-                    eligible = np.flatnonzero(
-                        ~np.isnan(self.donors_[:, col])
-                    )
-                    k = min(self.n_neighbors, eligible.size)
-                    scores = distances[:, eligible]
-                    nearest = np.argpartition(
-                        scores, k - 1, axis=1
-                    )[:, :k]
-                    valid = np.isfinite(
-                        np.take_along_axis(scores, nearest, axis=1)
-                    )
-                    usable = valid.any(axis=1)
-                    if not usable.any():
-                        continue
-
-                    values = self.donors_[
-                        eligible[nearest[usable]], col
-                    ]
-                    values = np.where(valid[usable], values, np.nan)
-                    if self.strategy == "mean":
-                        fill = np.nanmean(values, axis=1)
-                    else:
-                        fill = np.nanmedian(values, axis=1)
-                    result[rows[usable], col] = fill
+                values = self.donors_[donor_rows[selected], col]
+                if self.strategy == "mean":
+                    result[row, col] = np.mean(values)
+                else:
+                    result[row, col] = np.median(values)
 
         return result
