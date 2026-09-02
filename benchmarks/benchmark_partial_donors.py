@@ -28,6 +28,84 @@ from benchmarks.benchmark_imputers import (
 )
 
 
+class NativeNaNBenchmark(FaissImputer):
+    """Benchmark-only prototype; not a production implementation."""
+
+    def _clear_fitted_state(self):
+        super()._clear_fitted_state()
+        self.__dict__.pop("native_index_", None)
+
+    def _fit_available(self, X):
+        super()._fit_available(X)
+        if not hasattr(faiss, "METRIC_NaNEuclidean"):
+            raise RuntimeError("This benchmark needs Faiss NaNEuclidean support.")
+        self.native_index_ = faiss.IndexFlat(
+            X.shape[1], faiss.METRIC_NaNEuclidean
+        )
+        self.native_index_.add(
+            np.ascontiguousarray(self.donors_, dtype=np.float32)
+        )
+        return self
+
+    def _transform_available(self, X):
+        result = X.copy()
+        missing = np.isnan(X)
+        result[missing] = np.broadcast_to(self.statistics_, X.shape)[missing]
+        rows = np.flatnonzero(missing.any(axis=1) & ~missing.all(axis=1))
+        n_donors = self.donors_.shape[0]
+        k = min(self.n_neighbors, n_donors)
+        batch_size = max(
+            1, min(256, (16 * 1024 * 1024) // (12 * n_donors))
+        )
+
+        for start in range(0, rows.size, batch_size):
+            batch_rows = rows[start:start + batch_size]
+            batch_missing = missing[batch_rows]
+            columns = np.flatnonzero(batch_missing.any(axis=0))
+            queries = np.ascontiguousarray(X[batch_rows], dtype=np.float32)
+            search_k = min(n_donors, max(16, 2 * k))
+
+            while True:
+                distances, ids = self.native_index_.search(
+                    queries, int(search_k)
+                )
+                valid = (
+                    (ids >= 0)
+                    & (ids < n_donors)
+                    & np.isfinite(distances)
+                )
+                safe_ids = np.where(valid, ids, 0)
+                enough = np.ones(batch_rows.size, dtype=bool)
+                for col in columns:
+                    values = self.donors_[safe_ids, col]
+                    usable = valid & ~np.isnan(values)
+                    enough &= (
+                        ~batch_missing[:, col]
+                        | (usable.sum(axis=1) >= k)
+                    )
+
+                if enough.all() or search_k == n_donors:
+                    break
+                search_k = min(n_donors, 2 * search_k)
+
+            for col in columns:
+                values = self.donors_[safe_ids, col]
+                usable = valid & ~np.isnan(values)
+                chosen = usable & (np.cumsum(usable, axis=1) <= k)
+                fill_rows = batch_missing[:, col] & chosen.any(axis=1)
+                if not fill_rows.any():
+                    continue
+                selected = np.where(
+                    chosen[fill_rows], values[fill_rows], np.nan
+                )
+                if self.strategy == "mean":
+                    fill = np.nanmean(selected, axis=1)
+                else:
+                    fill = np.nanmedian(selected, axis=1)
+                result[batch_rows[fill_rows], col] = fill
+
+        return result
+
 def make_imputers():
     imputers = make_original_imputers()
     imputers["FaissImputer[complete]"] = imputers.pop("FaissImputer")
@@ -35,8 +113,11 @@ def make_imputers():
         n_neighbors=N_NEIGHBORS,
         donor_policy="available",
     )
+    imputers["FaissImputer[native-NaN experimental]"] = NativeNaNBenchmark(
+        n_neighbors=N_NEIGHBORS,
+        donor_policy="available",
+    )
     return imputers
-
 
 def main():
     parser = argparse.ArgumentParser()
