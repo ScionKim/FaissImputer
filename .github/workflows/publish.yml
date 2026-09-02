@@ -16,6 +16,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
           persist-credentials: false
 
       - name: Set up Python
@@ -23,11 +24,31 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build
-        run: python -m pip install --upgrade build
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run tests
+        run: python -m pytest -q
 
       - name: Build wheel and source archive
         run: python -m build
+
+      - name: Validate release metadata
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python -m twine check --strict dist/*
+          python scripts/check_release_artifacts.py --tag "$RELEASE_TAG"
+
+      - name: Smoke test built wheel
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python -m venv .wheel-test
+          .wheel-test/bin/python -m pip install dist/*.whl
+          .wheel-test/bin/python -I scripts/smoke_test_installed_package.py --tag "$RELEASE_TAG"
 
       - name: Store distributions
         uses: actions/upload-artifact@v7
