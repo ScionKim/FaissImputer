@@ -291,6 +291,94 @@ def main():
 
     print(f"Saved: {output}", flush=True)
 
+class TimedNativeIndex:
+    def __init__(self, index):
+        self.index = index
+        self.seconds = 0.0
+        self.calls = 0
+        self.max_k = 0
+
+    def __getattr__(self, name):
+        return getattr(self.index, name)
+
+    def search(self, queries, k):
+        started = time.perf_counter()
+        result = self.index.search(queries, k)
+        self.seconds += time.perf_counter() - started
+        self.calls += 1
+        self.max_k = max(self.max_k, int(k))
+        return result
+
+def profile_native_search():
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "benchmark_outputs"
+        / "partial_donors.json"
+    )
+    data = json.loads(path.read_text(encoding="utf-8"))
+    params = data["parameters"]
+    seed = params["seeds"][0]
+    train, truth = make_correlated_data(
+        50000 + seed,
+        params["n_train"],
+        params["n_test"],
+        params["n_features"],
+    )
+    rng = np.random.default_rng(60000 + seed)
+    train[rng.random(train.shape) < params["train_missing_rate"]] = np.nan
+    mask = make_missing_mask(
+        70000 + seed,
+        params["n_test"],
+        params["n_features"],
+        params["query_pattern"],
+    )
+    query = truth.copy()
+    query[mask] = np.nan
+    records = []
+
+    faiss.omp_set_num_threads(1)
+    with threadpool_limits(limits=1):
+        imputer = NativeNaNBenchmark(
+            n_neighbors=params["n_neighbors"],
+            donor_policy="available",
+        ).fit(train)
+
+        for repeat in range(1, 4):
+            started = time.perf_counter()
+            expected = imputer.transform(query)
+            normal_seconds = time.perf_counter() - started
+
+            original_index = imputer.native_index_
+            timer = TimedNativeIndex(original_index)
+            imputer.native_index_ = timer
+            try:
+                started = time.perf_counter()
+                actual = imputer.transform(query)
+                profiled_seconds = time.perf_counter() - started
+            finally:
+                imputer.native_index_ = original_index
+
+            np.testing.assert_array_equal(actual, expected)
+            records.append({
+                "repeat": repeat,
+                "unprofiled_transform_seconds": normal_seconds,
+                "profiled_transform_seconds": profiled_seconds,
+                "search_seconds": timer.seconds,
+                "non_search_seconds": profiled_seconds - timer.seconds,
+                "search_calls": timer.calls,
+                "max_search_k": timer.max_k,
+                "outputs_identical": True,
+            })
+
+    data["native_profile"] = {
+        "seed": seed,
+        "purpose": "diagnostic_only",
+        "trials": records,
+    }
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    print("Saved native search profile:", path)
+    
 
 if __name__ == "__main__":
     main()
+    profile_native_search()
