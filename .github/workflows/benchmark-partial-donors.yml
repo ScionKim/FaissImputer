@@ -1,0 +1,55 @@
+name: Partial donor benchmark
+
+on:
+  push:
+    branches:
+      - feat/partial-donors
+    paths:
+      - .github/workflows/benchmark-partial-donors.yml
+      - benchmarks/**
+      - faiss_imputer/**
+      - pyproject.toml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: partial-donor-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Run pilot benchmark
+        timeout-minutes: 10
+        run: >
+          python -u -m benchmarks.benchmark_partial_donors
+          --seeds 101 --repeats 1
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: partial-donor-benchmark
+          path: benchmark_outputs/partial_donors.json
+          if-no-files-found: warn
+          retention-days: 14
