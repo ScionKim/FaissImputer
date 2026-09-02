@@ -36,9 +36,24 @@ class NativeNaNBenchmark(FaissImputer):
         self.__dict__.pop("native_index_", None)
 
     def _fit_available(self, X):
-        super()._fit_available(X)
+        if self.metric != "l2" or self.index_factory != "Flat":
+            raise ValueError(
+                "donor_policy='available' requires "
+                "metric='l2' and index_factory='Flat'"
+            )
         if not hasattr(faiss, "METRIC_NaNEuclidean"):
             raise RuntimeError("This benchmark needs Faiss NaNEuclidean support.")
+
+        observed = ~np.isnan(X)
+        if not observed.any(axis=0).all():
+            raise ValueError("X must not contain all-missing columns")
+
+        if self.strategy == "mean":
+            self.statistics_ = np.nanmean(X, axis=0)
+        else:
+            self.statistics_ = np.nanmedian(X, axis=0)
+        self.donors_ = X[observed.any(axis=1)].copy()
+
         self.native_index_ = faiss.IndexFlat(
             X.shape[1], faiss.METRIC_NaNEuclidean
         )
@@ -46,6 +61,21 @@ class NativeNaNBenchmark(FaissImputer):
             np.ascontiguousarray(self.donors_, dtype=np.float32)
         )
         return self
+
+    def transform(self, X):
+        from sklearn.utils.validation import check_is_fitted, validate_data
+
+        check_is_fitted(self, ["donor_policy_"])
+        if self.donor_policy_ == "complete":
+            return super().transform(X)
+        X = validate_data(
+            self,
+            X,
+            dtype=np.float32,
+            ensure_all_finite="allow-nan",
+            reset=False,
+        )
+        return self._transform_available(X)
 
     def _transform_available(self, X):
         result = X.copy()
