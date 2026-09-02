@@ -3,7 +3,7 @@ import faiss
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-class FaissImputer(BaseEstimator, TransformerMixin):
+class FaissImputer(TransformerMixin, BaseEstimator):
     """Impute missing values using faiss."""
 
     def __init__(self, n_neighbors=3, metric='l2', strategy='mean', index_factory='Flat'):
@@ -12,6 +12,12 @@ class FaissImputer(BaseEstimator, TransformerMixin):
         self.metric = metric
         self.strategy = strategy
         self.index_factory = index_factory
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.transformer_tags.preserves_dtype = ["float32"]
+        return tags
 
     def fit(self, X, y=None):
         """Fit the imputer; leave it unfitted if fitting fails."""
