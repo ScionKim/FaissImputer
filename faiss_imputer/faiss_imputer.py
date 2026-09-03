@@ -103,7 +103,7 @@ class FaissImputer(TransformerMixin, BaseEstimator):
 
         # Extract non-missing data
         mask = ~np.isnan(X).any(axis=1)
-        self.donors_ = X[mask].copy()
+        self.donors_ = X[mask].copy(order="F")
         
         if self.donors_.shape[0] == 0:
             raise ValueError(
