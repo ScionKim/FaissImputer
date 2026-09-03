@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "faiss-imputer"
-version = "0.3.0"
+version = "0.3.1"
 description = "K-nearest-neighbor imputation backed by Faiss"
 readme = "README.md"
 requires-python = ">=3.10"

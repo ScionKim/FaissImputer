@@ -9,6 +9,16 @@
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
+## What's new in 0.3.1
+
+- Optimizes the donor-array layout for `donor_policy="complete"` to reduce repeated column-projection overhead.
+- Adds a reproducible missingness-pattern benchmark, raw results, and a report.
+- Leaves the public API, imputation algorithm, and available-donor policy unchanged.
+
+Performance depends on data size and missingness patterns. Small training sets with many different patterns can still be slower than `KNNImputer`.
+
+See the [0.3.1 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.1) and the [complete-donor benchmark report](https://github.com/ScionKim/FaissImputer/blob/v0.3.1/docs/benchmarks/complete-patterns-9d179b2b.md).
+
 ## What's new in 0.3.0
 
 - Adds `donor_policy="available"` to use partially observed training rows as donors.
@@ -23,7 +33,7 @@ See the [0.3.0 release notes](https://github.com/ScionKim/FaissImputer/releases/
 FaissImputer requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.0"
+python -m pip install --upgrade "faiss-imputer>=0.3.1"
 ```
 
 ## Usage
