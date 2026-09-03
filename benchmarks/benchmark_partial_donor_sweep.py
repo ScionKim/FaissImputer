@@ -18,7 +18,7 @@ from benchmarks.benchmark_imputers import (
     make_correlated_data,
     make_missing_mask,
 )
-from benchmarks.benchmark_partial_donors import MatrixNaNBenchmark
+from faiss_imputer import FaissImputer
 
 SEEDS = [101, 202, 303, 404, 505]
 REPEATS = 3
@@ -32,8 +32,9 @@ N_NEIGHBORS = 5
 def make_models():
     return {
         "KNNImputer": KNNImputer(n_neighbors=N_NEIGHBORS),
-        "MatrixNaNBenchmark": MatrixNaNBenchmark(
-            n_neighbors=N_NEIGHBORS, donor_policy="available"
+        "FaissImputer[available]": FaissImputer(
+            n_neighbors=N_NEIGHBORS,
+            donor_policy="available",
         ),
     }
 
@@ -107,7 +108,7 @@ def run_sweep(results):
                         )
 
                     expected = outputs["KNNImputer"]
-                    actual = outputs["MatrixNaNBenchmark"]
+                    actual = outputs["FaissImputer[available]"]
                     matches = bool(np.allclose(actual, expected, rtol=1e-6, atol=1e-6))
                     difference = np.abs(actual.astype(np.float64) - expected.astype(np.float64))
                     bad = ~np.isclose(actual, expected, rtol=1e-6, atol=1e-6)
@@ -191,7 +192,7 @@ def run_fit_transform(results):
                 print(f"  {repeat + 1} {name}: total={elapsed:.4f}s", flush=True)
 
             expected = outputs["KNNImputer"]
-            actual = outputs["MatrixNaNBenchmark"]
+            actual = outputs["FaissImputer[available]"]
             bad = ~np.isclose(actual, expected, rtol=1e-6, atol=1e-6)
             difference = np.abs(actual.astype(np.float64) - expected.astype(np.float64))
             report["quality"].append({
