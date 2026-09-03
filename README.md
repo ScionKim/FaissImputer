@@ -11,8 +11,9 @@ Impute missing values using Meta's [faiss](https://github.com/facebookresearch/f
 
 ## Unreleased: partial donors
 
-> **Development branch only:** The following option and example require the
-> source code on `feat/partial-donors`. They are not included in PyPI 0.2.2.
+> **Unreleased source-only feature:** The following option and example are
+> implemented in this source tree but have not been released on PyPI.
+> PyPI 0.2.2 does not include them.
 
 The development version adds `donor_policy`:
 
