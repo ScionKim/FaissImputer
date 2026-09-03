@@ -37,9 +37,9 @@ jobs:
       - name: Run timing pilot and output checks
         run: >-
           python -u -m benchmarks.benchmark_complete_patterns
-          --train-sizes 20000
+          --train-sizes 1000 5000 20000
           --queries 300
-          --seeds 101
+          --seeds 101 202 303 404 505
           --repeats 3
 
       - name: Upload results
