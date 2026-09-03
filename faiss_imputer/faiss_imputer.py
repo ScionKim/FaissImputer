@@ -152,12 +152,8 @@ class FaissImputer(TransformerMixin, BaseEstimator):
 
         nonempty_rows = observed.any(axis=1)
         self.donors_ = X[nonempty_rows].copy()
-        observed = observed[nonempty_rows]
         self.metric_type_ = faiss.METRIC_L2
-
-        self.all_donors_complete_ = bool(observed.all())
-        if not self.all_donors_complete_:
-            self.available_index_ = MatrixNaNIndex(self.donors_)
+        self.available_index_ = MatrixNaNIndex(self.donors_)
 
         return self
 
@@ -183,10 +179,7 @@ class FaissImputer(TransformerMixin, BaseEstimator):
             reset=False,
         )
 
-        if (
-            self.donor_policy_ == "available"
-            and not self.all_donors_complete_
-        ):
+        if self.donor_policy_ == "available":
             return self._transform_available(X)
 
         # Copy X to avoid modifying the original data
