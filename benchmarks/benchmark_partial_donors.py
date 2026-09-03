@@ -180,16 +180,27 @@ class MatrixNaNIndex:
                 64 * np.finfo(np.float64).eps * p * p
                 * (query_norms[:, None] + self.norms[None, :])
             )
-            suspect = (finite & (distances <= tolerance)).any(axis=1)
+            suspect_pairs = finite & (distances <= tolerance)
             distances[~finite] = np.inf
 
             with np.errstate(over="ignore", under="ignore"):
                 matrix32 = distances.astype(np.float32)
-            unsafe = finite & (
+            suspect_pairs |= finite & (
                 (matrix32 >= np.finfo(np.float32).max)
                 | ((distances > 0) & (matrix32 == 0))
             )
-            suspect |= unsafe.any(axis=1)
+
+            query_missing = np.isnan(query64)
+            suspect = np.zeros(query64.shape[0], dtype=bool)
+            chunk_size = max(1, min(4096, (1024 * 1024) // max(p, 1)))
+            for row in np.flatnonzero(suspect_pairs.any(axis=1)):
+                candidates = np.flatnonzero(suspect_pairs[row])
+                for start in range(0, candidates.size, chunk_size):
+                    donor_rows = candidates[start:start + chunk_size]
+                    can_fill = self.present[donor_rows] & query_missing[row]
+                    if can_fill.any():
+                        suspect[row] = True
+                        break
 
             if suspect.any():
                 for row in np.flatnonzero(suspect):
