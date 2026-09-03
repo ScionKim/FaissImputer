@@ -141,40 +141,76 @@ class NativeNaNBenchmark(FaissImputer):
 class MatrixNaNIndex:
     def __init__(self, donors):
         self.donors64 = np.asarray(donors, dtype=np.float64)
+        self.present = ~np.isnan(self.donors64)
+        self.norms = np.nansum(self.donors64 * self.donors64, axis=1)
         self.clear_cache()
 
     def clear_cache(self):
         self.query_ref = None
         self.matrix = None
+        self.use_float64 = False
+
+    def _direct_distances(self, query):
+        shared = self.present & ~np.isnan(query)
+        counts = shared.sum(axis=1)
+        delta = np.where(shared, self.donors64 - query, 0.0)
+        squared = np.sum(delta * delta, axis=1)
+        distances = np.full(len(self.donors64), np.inf, dtype=np.float64)
+        usable = counts > 0
+        distances[usable] = (
+            squared[usable] * self.donors64.shape[1] / counts[usable]
+        )
+        return distances
 
     def search(self, queries, k):
         if queries is not self.query_ref:
             from sklearn.metrics.pairwise import nan_euclidean_distances
 
             self.clear_cache()
+            query64 = np.asarray(queries, dtype=np.float64)
             distances = nan_euclidean_distances(
-                np.asarray(queries, dtype=np.float64),
-                self.donors64,
-                squared=True,
-                copy=True,
+                query64, self.donors64, squared=True, copy=True
             )
             finite = np.isfinite(distances)
-            distances[~finite] = np.inf
-            with np.errstate(over="ignore", under="ignore"):
-                matrix = distances.astype(np.float32)
-            unsafe = finite & (
-                (matrix >= np.finfo(np.float32).max)
-                | ((distances > 0) & (matrix == 0))
+            query_norms = np.nansum(query64 * query64, axis=1)
+            p = self.donors64.shape[1]
+
+            # Conservative suspicion test, not a proven error bound.
+            tolerance = (
+                64 * np.finfo(np.float64).eps * p * p
+                * (query_norms[:, None] + self.norms[None, :])
             )
-            if unsafe.any():
-                raise ValueError(
-                    "Experimental float32 selection cannot represent "
-                    "these distances safely."
-                )
-            self.matrix = matrix
+            suspect = (finite & (distances <= tolerance)).any(axis=1)
+            distances[~finite] = np.inf
+
+            with np.errstate(over="ignore", under="ignore"):
+                matrix32 = distances.astype(np.float32)
+            unsafe = finite & (
+                (matrix32 >= np.finfo(np.float32).max)
+                | ((distances > 0) & (matrix32 == 0))
+            )
+            suspect |= unsafe.any(axis=1)
+
+            if suspect.any():
+                for row in np.flatnonzero(suspect):
+                    distances[row] = self._direct_distances(query64[row])
+                self.matrix = distances
+                self.use_float64 = True
+            else:
+                self.matrix = matrix32
             self.query_ref = queries
 
-        return faiss.kmin(self.matrix, int(k))
+        k = min(int(k), self.matrix.shape[1])
+        if not self.use_float64:
+            return faiss.kmin(self.matrix, k)
+
+        ids = np.argpartition(self.matrix, k - 1, axis=1)[:, :k]
+        values = np.take_along_axis(self.matrix, ids, axis=1)
+        order = np.argsort(values, axis=1, kind="stable")
+        values = np.take_along_axis(values, order, axis=1)
+        ids = np.take_along_axis(ids, order, axis=1)
+        ids = np.where(np.isfinite(values), ids, -1)
+        return values, ids
 
 
 class MatrixNaNBenchmark(NativeNaNBenchmark):
