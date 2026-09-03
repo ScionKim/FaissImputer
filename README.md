@@ -9,24 +9,8 @@
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-## What's new in 0.3.1
-
-- Optimizes the donor-array layout for `donor_policy="complete"` to reduce repeated column-projection overhead.
-- Adds a reproducible missingness-pattern benchmark, raw results, and a report.
-- Leaves the public API, imputation algorithm, and available-donor policy unchanged.
-
-Performance depends on data size and missingness patterns. Small training sets with many different patterns can still be slower than `KNNImputer`.
-
-See the [0.3.1 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.1) and the [complete-donor benchmark report](https://github.com/ScionKim/FaissImputer/blob/v0.3.1/docs/benchmarks/complete-patterns-9d179b2b.md).
-
-## What's new in 0.3.0
-
-- Adds `donor_policy="available"` to use partially observed training rows as donors.
-- Keeps `donor_policy="complete"` as the default, preserving the existing behavior.
-- Adds batched NaN-aware distances and numerical safeguards for the available-donor policy.
-- Expands regression tests, dependency compatibility checks, and installed-package smoke tests.
-
-See the [0.3.0 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.0).
+Current release: [0.3.1](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.1).
+See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Installation
 
@@ -148,53 +132,16 @@ Both policies return a new NumPy `float32` array. The training and query inputs 
 
 The available-donor policy uses batched NaN-aware distances and Faiss neighbor selection, with float64 safeguards for detected numerical risks. This backend is also used when all training donors are complete.
 
-## Benchmark
+## Benchmarks
 
-### Partial donors: development snapshot
+Performance depends on donor policy, data size, and missingness patterns. Neither faster execution nor lower memory use than `KNNImputer` is guaranteed. Similar average errors do not imply identical imputed values; ties and numerical precision can affect donor selection.
 
-The [partial-donor benchmark report](https://github.com/ScionKim/FaissImputer/blob/bc1929f58608033bdca565260878e5c8f2a7571f/docs/benchmarks/partial-donors-0a3cc077.md) includes timings, tolerance-based agreement checks against `KNNImputer`, raw results, and limitations.
+- [Real-data pilot](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/real-data-a3bd1ce3.md): compares SimpleImputer, KNNImputer, and both Faiss donor policies under MCAR and selected MAR missingness. This small dataset is not a scalability test.
+- [Complete-donor patterns](https://github.com/ScionKim/FaissImputer/blob/v0.3.1/docs/benchmarks/complete-patterns-9d179b2b.md): measures the impact of training size and query missingness patterns.
+- [Partial-donor development snapshot](https://github.com/ScionKim/FaissImputer/blob/bc1929f58608033bdca565260878e5c8f2a7571f/docs/benchmarks/partial-donors-0a3cc077.md): historical results for measured commit `0a3cc077`, not the final 0.3.0 implementation.
+- [Historical 0.2.0 benchmark](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/docs/benchmarks/v0.2.0.md): results for the earlier complete-donor-only implementation.
 
-It measures development commit `0a3cc077`, not the final 0.3.0 implementation. Subsequent changes include the backend used for `"available"` with fully observed donors.
-
-Performance depends on the donor policy, data size, and missingness pattern. Neither faster execution nor lower memory use than `KNNImputer` is guaranteed. Agreement on the tested cases is not a guarantee of identical results on every dataset.
-
-### Version 0.2.0: historical results
-
-In a controlled synthetic benchmark with complete training donors, FaissImputer 0.2.0 and scikit-learn's KNNImputer produced exactly matching imputed values. With 20,000 training rows, FaissImputer transformed repeated missingness patterns up to 19.62 times faster, while performance was effectively tied when almost every test row had a different pattern.
-
-When the training data itself contained missing values, FaissImputer was less accurate because version 0.2.0 uses only fully observed rows as donors. These single-thread results are specific to the tested synthetic data and hardware, not a general performance guarantee.
-
-See the [full 0.2.0 benchmark report](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/docs/benchmarks/v0.2.0.md), [reproduction script](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/benchmarks/benchmark_imputers.py), and [raw results](https://github.com/ScionKim/FaissImputer/blob/v0.2.2/benchmarks/results/v0.2.0-windows-py3.12.json).
-
-## What's new in 0.2.2
-
-- Clears fitted state after a failed `fit()`, including failed refits.
-- Corrects scikit-learn transformer, NaN-support, and `float32` dtype-preservation tags.
-- Adds regression tests for failed fits, estimator tags, and pipeline use.
-
-See the [0.2.2 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.2).
-
-## What's new in 0.2.1
-
-Version 0.2.1 is a packaging and documentation hotfix. The imputation behavior is unchanged from 0.2.0.
-
-- Corrects the PyPI description so it no longer presents 0.2.0 as unreleased.
-- Uses portable warning markup and absolute documentation links that work on PyPI.
-- Verifies built package metadata against the release tag before publication.
-
-See the [0.2.1 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.1).
-
-## What's new in 0.2.0
-
-Version 0.2.0 corrected the imputation behavior of 0.1.x.
-
-- Corrects the neighbor-to-donor mapping that could return values from the wrong training row.
-- Uses the donor rows learned during `fit()` when new data is passed to `transform()`.
-- Searches for neighbors using only the columns observed in each query row.
-- Preserves the input array and reuses fallback statistics learned during `fit()`.
-- Supports modern scikit-learn validation APIs and adds regression tests and automatic CI.
-
-See the [0.2.0 release notes](https://github.com/ScionKim/FaissImputer/releases/tag/v0.2.0).
+Reports provide measurement conditions, results, and links to reproduction code and raw data.
 
 ## Example notebook
 
