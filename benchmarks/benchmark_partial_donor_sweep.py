@@ -126,6 +126,87 @@ def run_sweep(results):
                     if not matches:
                         print("  QUALITY MISMATCH:", float(difference.max()), flush=True)
 
+def run_fit_transform(results):
+    n_train = 1_000
+    missing_rate = 0.1
+    report = {
+        "parameters": {
+            "seeds": SEEDS,
+            "repeats": REPEATS,
+            "n_train": n_train,
+            "n_features": N_FEATURES,
+            "n_neighbors": N_NEIGHBORS,
+            "train_missing_rate": missing_rate,
+            "timing": "one public fit_transform call",
+            "data_design": "Same training prefix and mask as the held-out sweep.",
+        },
+        "completed": False,
+        "trials": [],
+        "quality": [],
+    }
+    results["fit_transform"] = report
+
+    for seed_index, seed in enumerate(SEEDS):
+        base, _ = make_correlated_data(
+            50_000 + seed, max(TRAIN_SIZES), N_TEST, N_FEATURES
+        )
+        truth = base[:n_train].copy()
+        mask = np.random.default_rng(60_000 + seed).random(truth.shape) < missing_rate
+        original = truth.copy()
+        original[mask] = np.nan
+        print("FIT_TRANSFORM", seed, flush=True)
+
+        for model in make_models().values():
+            model.fit_transform(original.copy())
+
+        for repeat in range(REPEATS):
+            outputs = {}
+            models = list(make_models().items())
+            if (seed_index + repeat) % 2:
+                models.reverse()
+
+            for name, model in models:
+                train = original.copy()
+                gc.collect()
+                started = time.perf_counter()
+                output = model.fit_transform(train)
+                elapsed = time.perf_counter() - started
+
+                assert output.shape == truth.shape
+                assert np.isfinite(output).all()
+                np.testing.assert_array_equal(output[~mask], original[~mask])
+                np.testing.assert_array_equal(train, original)
+                rmse, mae = imputation_errors(truth, output, mask)
+                report["trials"].append({
+                    "seed": seed,
+                    "repeat": repeat + 1,
+                    "method": name,
+                    "total_seconds": elapsed,
+                    "rmse": rmse,
+                    "mae": mae,
+                    "observed_values_unchanged": True,
+                    "inputs_unchanged": True,
+                })
+                outputs[name] = output
+                print(f"  {repeat + 1} {name}: total={elapsed:.4f}s", flush=True)
+
+            expected = outputs["KNNImputer"]
+            actual = outputs["MatrixNaNBenchmark"]
+            bad = ~np.isclose(actual, expected, rtol=1e-6, atol=1e-6)
+            difference = np.abs(actual.astype(np.float64) - expected.astype(np.float64))
+            report["quality"].append({
+                "seed": seed,
+                "repeat": repeat + 1,
+                "allclose_passed": bool(not bad.any()),
+                "max_abs_difference": float(difference.max()),
+                "mismatched_values": int(bad.sum()),
+                "examples": [
+                    {"row": int(i), "column": int(j),
+                     "knn": float(expected[i, j]), "matrix": float(actual[i, j])}
+                    for i, j in np.argwhere(bad)[:5]
+                ],
+            })
+    report["completed"] = True
 
 def main():
     results = {
@@ -167,13 +248,15 @@ def main():
     try:
         with threadpool_limits(limits=1):
             run_sweep(results)
+            run_fit_transform(results)
         results["completed"] = True
     finally:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(results, indent=2, allow_nan=False), encoding="utf-8")
         print("Saved:", path, flush=True)
 
-    if not all(row["allclose_passed"] for row in results["quality"]):
+    checks = results["quality"] + results["fit_transform"]["quality"]
+    if not all(row["allclose_passed"] for row in checks):
         raise AssertionError("Output differences found; inspect partial_donor_sweep.json")
 
 
