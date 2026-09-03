@@ -42,8 +42,6 @@ class NativeNaNBenchmark(FaissImputer):
                 "donor_policy='available' requires "
                 "metric='l2' and index_factory='Flat'"
             )
-        if not hasattr(faiss, "METRIC_NaNEuclidean"):
-            raise RuntimeError("This benchmark needs Faiss NaNEuclidean support.")
 
         observed = ~np.isnan(X)
         if not observed.any(axis=0).all():
@@ -59,6 +57,9 @@ class NativeNaNBenchmark(FaissImputer):
         return self
 
     def _make_search_backend(self):
+        if not hasattr(faiss, "METRIC_NaNEuclidean"):
+            raise RuntimeError("This benchmark needs Faiss NaNEuclidean support.")
+
         index = faiss.IndexFlat(
             self.donors_.shape[1], faiss.METRIC_NaNEuclidean
         )
