@@ -1,0 +1,51 @@
+name: Partial donor sweep
+
+on:
+  push:
+    branches: [feat/partial-donors]
+    paths:
+      - ".github/workflows/benchmark-partial-donor-sweep.yml"
+      - "benchmarks/benchmark_partial_donor_sweep.py"
+      - "benchmarks/benchmark_partial_donors.py"
+      - "benchmarks/benchmark_imputers.py"
+      - "faiss_imputer/**"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Run size and missingness sweep
+        timeout-minutes: 15
+        run: python -u -m benchmarks.benchmark_partial_donor_sweep
+
+      - name: Upload sweep results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: partial-donor-sweep
+          path: benchmark_outputs/partial_donor_sweep.json
+          retention-days: 14
+          if-no-files-found: warn

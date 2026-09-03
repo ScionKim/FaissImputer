@@ -2,16 +2,25 @@ import numpy as np
 import faiss
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted, validate_data
+from ._matrix import MatrixNaNIndex
 
 class FaissImputer(TransformerMixin, BaseEstimator):
     """Impute missing values using faiss."""
 
-    def __init__(self, n_neighbors=3, metric='l2', strategy='mean', index_factory='Flat'):
+    def __init__(
+        self,
+        n_neighbors=3,
+        metric="l2",
+        strategy="mean",
+        index_factory="Flat",
+        donor_policy="complete",
+    ):
         super().__init__()
         self.n_neighbors = n_neighbors
         self.metric = metric
         self.strategy = strategy
         self.index_factory = index_factory
+        self.donor_policy = donor_policy
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -41,6 +50,10 @@ class FaissImputer(TransformerMixin, BaseEstimator):
             "donors_",
             "metric_type_",
             "index_",
+            "donor_policy_",
+            "donor_groups_",
+            "available_index_",
+            "all_donors_complete_",
         ):
             self.__dict__.pop(name, None)
 
@@ -73,6 +86,15 @@ class FaissImputer(TransformerMixin, BaseEstimator):
 
         if self.strategy not in ('mean', 'median'):
             raise ValueError("strategy must be either 'mean' or 'median'")
+
+        if self.donor_policy not in ("complete", "available"):
+            raise ValueError(
+                "donor_policy must be either 'complete' or 'available'"
+            )
+
+        self.donor_policy_ = self.donor_policy
+        if self.donor_policy_ == "available":
+            return self._fit_available(X)
 
         if self.strategy == 'mean':
             self.statistics_ = np.nanmean(X, axis=0)
@@ -112,6 +134,29 @@ class FaissImputer(TransformerMixin, BaseEstimator):
 
         return self
 
+    def _fit_available(self, X):
+        if self.metric != "l2" or self.index_factory != "Flat":
+            raise ValueError(
+                "donor_policy='available' requires "
+                "metric='l2' and index_factory='Flat'"
+            )
+
+        observed = ~np.isnan(X)
+        if not observed.any(axis=0).all():
+            raise ValueError("X must not contain all-missing columns")
+
+        if self.strategy == "mean":
+            self.statistics_ = np.nanmean(X, axis=0)
+        else:
+            self.statistics_ = np.nanmedian(X, axis=0)
+
+        nonempty_rows = observed.any(axis=1)
+        self.donors_ = X[nonempty_rows].copy()
+        self.metric_type_ = faiss.METRIC_L2
+        self.available_index_ = MatrixNaNIndex(self.donors_)
+
+        return self
+
     def transform(self, X):
         """
         Impute missing values in the provided data using the fitted Faiss index.
@@ -133,6 +178,9 @@ class FaissImputer(TransformerMixin, BaseEstimator):
             ensure_all_finite='allow-nan',
             reset=False,
         )
+
+        if self.donor_policy_ == "available":
+            return self._transform_available(X)
 
         # Copy X to avoid modifying the original data
         X_tmp = X.copy()
@@ -182,7 +230,7 @@ class FaissImputer(TransformerMixin, BaseEstimator):
 
             _, neighbor_indices = index.search(
                 query_vectors,
-                self.n_neighbors,
+                min(self.n_neighbors, self.donors_.shape[0]),
             )
 
             for sample_idx, neighbors in zip(
@@ -214,3 +262,68 @@ class FaissImputer(TransformerMixin, BaseEstimator):
                 X_tmp[sample_idx, missing_cols] = column_agg
 
         return X_tmp
+
+    def _transform_available(self, X):
+        try:
+            return self._transform_available_batched(X)
+        finally:
+            self.available_index_.clear_cache()
+
+    def _transform_available_batched(self, X):
+        result = X.copy()
+        missing = np.isnan(X)
+        result[missing] = np.broadcast_to(self.statistics_, X.shape)[missing]
+        rows = np.flatnonzero(missing.any(axis=1) & ~missing.all(axis=1))
+        n_donors = self.donors_.shape[0]
+        k = min(self.n_neighbors, n_donors)
+        batch_size = max(
+            1, min(256, (16 * 1024 * 1024) // (12 * n_donors))
+        )
+
+        for start in range(0, rows.size, batch_size):
+            batch_rows = rows[start:start + batch_size]
+            batch_missing = missing[batch_rows]
+            columns = np.flatnonzero(batch_missing.any(axis=0))
+            queries = np.ascontiguousarray(X[batch_rows], dtype=np.float32)
+            search_k = min(n_donors, max(16, 2 * k))
+
+            while True:
+                distances, ids = self.available_index_.search(
+                    queries, int(search_k)
+                )
+                valid = (
+                    (ids >= 0)
+                    & (ids < n_donors)
+                    & np.isfinite(distances)
+                )
+                safe_ids = np.where(valid, ids, 0)
+                enough = np.ones(batch_rows.size, dtype=bool)
+                for col in columns:
+                    values = self.donors_[safe_ids, col]
+                    usable = valid & ~np.isnan(values)
+                    enough &= (
+                        ~batch_missing[:, col]
+                        | (usable.sum(axis=1) >= k)
+                    )
+
+                if enough.all() or search_k == n_donors:
+                    break
+                search_k = min(n_donors, 2 * search_k)
+
+            for col in columns:
+                values = self.donors_[safe_ids, col]
+                usable = valid & ~np.isnan(values)
+                chosen = usable & (np.cumsum(usable, axis=1) <= k)
+                fill_rows = batch_missing[:, col] & chosen.any(axis=1)
+                if not fill_rows.any():
+                    continue
+                selected = np.where(
+                    chosen[fill_rows], values[fill_rows], np.nan
+                )
+                if self.strategy == "mean":
+                    fill = np.nanmean(selected, axis=1)
+                else:
+                    fill = np.nanmedian(selected, axis=1)
+                result[batch_rows[fill_rows], col] = fill
+
+        return result

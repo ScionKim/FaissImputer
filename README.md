@@ -9,6 +9,66 @@
 
 Impute missing values using Meta's [faiss](https://github.com/facebookresearch/faiss) - A Python library for missing data imputation with k nearest neighbors.
 
+## Unreleased: partial donors
+
+> **Unreleased source-only feature:** The following option and example are
+> implemented in this source tree but have not been released on PyPI.
+> PyPI 0.2.2 does not include them.
+
+The development version adds `donor_policy`:
+
+- `"complete"` (default): use fully observed training rows, preserving the existing behavior.
+- `"available"`: allow partially observed training rows, choosing donors separately for each missing feature.
+
+For `donor_policy="available"`:
+
+- Only `metric="l2"` and `index_factory="Flat"` are supported. Both `strategy="mean"` and `strategy="median"` are available.
+- A donor must observe the feature being imputed and share at least one originally observed feature with the query row.
+- Donors are ranked by squared L2 distance over shared observed features, scaled by the total feature count divided by the shared feature count.
+- Each missing feature uses up to `n_neighbors` eligible donors. Fewer eligible donors are allowed.
+- If no eligible donor exists, the fitted column mean or median is used. Entirely missing query rows use these fitted statistics.
+- Entirely missing training rows are ignored; entirely missing training columns are rejected.
+
+```python
+import numpy as np
+
+from faiss_imputer import FaissImputer
+
+# No training row is completely observed.
+X_train = np.array(
+    [
+        [0.0, 10.0, np.nan],
+        [2.0, 30.0, np.nan],
+        [1.0, np.nan, 20.0],
+        [3.0, np.nan, 40.0],
+    ],
+    dtype=np.float32,
+)
+X_missing = np.array(
+    [[0.1, np.nan, np.nan], [np.nan, np.nan, np.nan]],
+    dtype=np.float32,
+)
+
+imputer = FaissImputer(n_neighbors=1, donor_policy="available")
+X_imputed = imputer.fit(X_train).transform(X_missing)
+print(X_imputed)
+```
+
+Expected output:
+
+```text
+[[ 0.1 10.  20. ]
+ [ 1.5 20.  30. ]]
+```
+
+The output is a new NumPy `float32` array; the training and query inputs are not modified.
+Performance depends on data size and missingness. This mode is not guaranteed to be faster than `KNNImputer`.
+
+See the [partial-donor benchmark report](https://github.com/ScionKim/FaissImputer/blob/bc1929f58608033bdca565260878e5c8f2a7571f/docs/benchmarks/partial-donors-0a3cc077.md) for measured timings, quality checks, and limitations.
+
+The Installation, Usage, Parameters, and Important behavior sections below describe the released 0.2.2 package.
+Earlier release notes and the 0.2.0 benchmark remain historical.
+
 ## What's new in 0.2.2
 
 - Clears fitted state after a failed `fit()`, including failed refits.
@@ -99,7 +159,7 @@ print(X_imputed)
 
 ## Important behavior
 
-- `fit()` currently uses only rows without any missing values as reference donors.
+- In released 0.2.2, `fit()` uses only rows without any missing values as reference donors.
 - Neighbor search compares only the columns observed in each query row.
 - `n_neighbors` cannot exceed the number of complete reference rows.
 - An entirely missing row is filled using statistics learned during `fit()`.
