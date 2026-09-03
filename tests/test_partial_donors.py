@@ -346,3 +346,32 @@ def test_available_mode_keeps_nearest_donor_at_tiny_scale(reverse):
     np.testing.assert_array_equal(result, [[0.0, 20.0, 0.0]])
     np.testing.assert_array_equal(train, train_before)
     np.testing.assert_array_equal(query, query_before)
+
+@pytest.mark.parametrize("scale", [1e-30, 1e20], ids=["tiny", "large"])
+@pytest.mark.parametrize(
+    "reverse", [False, True], ids=["farther-first", "nearer-first"]
+)
+@pytest.mark.parametrize(
+    "add_non_donor", [False, True],
+    ids=["complete-training", "extra-non-donor"],
+)
+def test_available_mode_extreme_scales_with_complete_donors(
+    scale, reverse, add_non_donor
+):
+    train = np.array(
+        [[2 * scale, 10.0, 0.0], [scale, 20.0, 0.0]],
+        dtype=np.float32,
+    )
+    if reverse:
+        train = train[::-1].copy()
+
+    query = np.array([[0.0, np.nan, 0.0]], dtype=np.float32)
+    if add_non_donor:
+        train = np.vstack([train, query])
+
+    result = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+    ).fit(train).transform(query)
+
+    np.testing.assert_array_equal(result, [[0.0, 20.0, 0.0]])
