@@ -1,0 +1,49 @@
+name: Real-data benchmark
+
+on:
+  push:
+    branches:
+      - bench/real-data
+    paths:
+      - benchmarks/benchmark_real_data.py
+      - faiss_imputer/**
+      - pyproject.toml
+      - .github/workflows/real-data-benchmark.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Run real-data benchmark
+        run: >-
+          python -u -m benchmarks.benchmark_real_data
+          --seeds 101 202 303 404 505
+          --repeats 3
+
+      - name: Upload results
+        uses: actions/upload-artifact@v6
+        with:
+          name: real-data-benchmark
+          path: benchmark_outputs/real_data.json
+          if-no-files-found: error
+          retention-days: 14
