@@ -54,13 +54,15 @@ class NativeNaNBenchmark(FaissImputer):
             self.statistics_ = np.nanmedian(X, axis=0)
         self.donors_ = X[observed.any(axis=1)].copy()
 
-        self.native_index_ = faiss.IndexFlat(
-            X.shape[1], faiss.METRIC_NaNEuclidean
-        )
-        self.native_index_.add(
-            np.ascontiguousarray(self.donors_, dtype=np.float32)
-        )
+        self.native_index_ = self._make_search_backend()
         return self
+
+    def _make_search_backend(self):
+        index = faiss.IndexFlat(
+            self.donors_.shape[1], faiss.METRIC_NaNEuclidean
+        )
+        index.add(np.ascontiguousarray(self.donors_, dtype=np.float32))
+        return index
 
     def transform(self, X):
         from sklearn.utils.validation import check_is_fitted, validate_data
@@ -136,6 +138,106 @@ class NativeNaNBenchmark(FaissImputer):
 
         return result
 
+class MatrixNaNIndex:
+    def __init__(self, donors):
+        self.donors64 = np.asarray(donors, dtype=np.float64)
+        self.clear_cache()
+
+    def clear_cache(self):
+        self.query_ref = None
+        self.matrix = None
+
+    def search(self, queries, k):
+        if queries is not self.query_ref:
+            from sklearn.metrics.pairwise import nan_euclidean_distances
+
+            self.clear_cache()
+            distances = nan_euclidean_distances(
+                np.asarray(queries, dtype=np.float64),
+                self.donors64,
+                squared=True,
+                copy=True,
+            )
+            finite = np.isfinite(distances)
+            distances[~finite] = np.inf
+            with np.errstate(over="ignore", under="ignore"):
+                matrix = distances.astype(np.float32)
+            unsafe = finite & (
+                (matrix >= np.finfo(np.float32).max)
+                | ((distances > 0) & (matrix == 0))
+            )
+            if unsafe.any():
+                raise ValueError(
+                    "Experimental float32 selection cannot represent "
+                    "these distances safely."
+                )
+            self.matrix = matrix
+            self.query_ref = queries
+
+        return faiss.kmin(self.matrix, int(k))
+
+
+class MatrixNaNBenchmark(NativeNaNBenchmark):
+    """Benchmark-only matrix distances plus FAISS neighbor selection."""
+
+    def _make_search_backend(self):
+        return MatrixNaNIndex(self.donors_)
+
+    def _transform_available(self, X):
+        try:
+            return super()._transform_available(X)
+        finally:
+            self.native_index_.clear_cache()
+
+
+def check_matrix_quality(params):
+    from sklearn.impute import KNNImputer
+
+    records = []
+    with threadpool_limits(limits=1):
+        for seed in params["seeds"]:
+            train, truth = make_correlated_data(
+                50000 + seed,
+                params["n_train"],
+                params["n_test"],
+                params["n_features"],
+            )
+            rng = np.random.default_rng(60000 + seed)
+            train[rng.random(train.shape) < params["train_missing_rate"]] = np.nan
+            mask = make_missing_mask(
+                70000 + seed,
+                params["n_test"],
+                params["n_features"],
+                params["query_pattern"],
+            )
+            query = truth.copy()
+            query[mask] = np.nan
+            actual = MatrixNaNBenchmark(
+                n_neighbors=params["n_neighbors"],
+                donor_policy="available",
+            ).fit(train).transform(query)
+            expected = KNNImputer(
+                n_neighbors=params["n_neighbors"]
+            ).fit(train).transform(query)
+
+            np.testing.assert_array_equal(actual[~mask], query[~mask])
+            np.testing.assert_allclose(
+                actual, expected, rtol=1e-6, atol=1e-6
+            )
+            difference = np.abs(
+                actual.astype(np.float64) - expected.astype(np.float64)
+            )
+            records.append({
+                "seed": seed,
+                "max_abs_difference": float(difference.max()),
+                "rtol": 1e-6,
+                "atol": 1e-6,
+                "allclose_passed": True,
+                "observed_values_unchanged": True,
+            })
+
+    return records
+
 def make_imputers():
     imputers = make_original_imputers()
     imputers["FaissImputer[complete]"] = imputers.pop("FaissImputer")
@@ -144,6 +246,10 @@ def make_imputers():
         donor_policy="available",
     )
     imputers["FaissImputer[native-NaN experimental]"] = NativeNaNBenchmark(
+        n_neighbors=N_NEIGHBORS,
+        donor_policy="available",
+    )
+    imputers["FaissImputer[matrix-NaN experimental]"] = MatrixNaNBenchmark(
         n_neighbors=N_NEIGHBORS,
         donor_policy="available",
     )
@@ -464,6 +570,7 @@ def profile_native_search():
         "trials": records,
         "kernel_comparison": compare_native_kernels(imputer, query),
     }
+    data["matrix_quality"] = check_matrix_quality(params)
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     print("Saved native search profile:", path)
     
