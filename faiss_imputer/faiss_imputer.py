@@ -53,6 +53,7 @@ class FaissImputer(TransformerMixin, BaseEstimator):
             "donor_policy_",
             "donor_groups_",
             "available_index_",
+            "all_donors_complete_",
         ):
             self.__dict__.pop(name, None)
 
@@ -154,26 +155,10 @@ class FaissImputer(TransformerMixin, BaseEstimator):
         observed = observed[nonempty_rows]
         self.metric_type_ = faiss.METRIC_L2
 
-        groups = {}
-        for row_idx, row_mask in enumerate(observed):
-            pattern = tuple(row_mask.tolist())
-            groups.setdefault(pattern, []).append(row_idx)
-
-        self.donor_groups_ = [
-            (
-                np.asarray(pattern, dtype=bool),
-                np.asarray(indices, dtype=np.intp),
-            )
-            for pattern, indices in groups.items()
-        ]
-
-        all_complete = (
-            len(self.donor_groups_) == 1
-            and self.donor_groups_[0][0].all()
-        )
-        if not all_complete:
+        self.all_donors_complete_ = bool(observed.all())
+        if not self.all_donors_complete_:
             self.available_index_ = MatrixNaNIndex(self.donors_)
-            
+
         return self
 
     def transform(self, X):
@@ -198,13 +183,11 @@ class FaissImputer(TransformerMixin, BaseEstimator):
             reset=False,
         )
 
-        if self.donor_policy_ == "available":
-            all_complete = (
-                len(self.donor_groups_) == 1
-                and self.donor_groups_[0][0].all()
-            )
-            if not all_complete:
-                return self._transform_available(X)
+        if (
+            self.donor_policy_ == "available"
+            and not self.all_donors_complete_
+        ):
+            return self._transform_available(X)
 
         # Copy X to avoid modifying the original data
         X_tmp = X.copy()
