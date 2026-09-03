@@ -296,3 +296,33 @@ def test_available_mode_handles_large_finite_distances():
     result = imputer.transform([[0, 0, np.nan]])
 
     np.testing.assert_allclose(result, [[0, 0, 10]])
+
+@pytest.mark.parametrize(
+    "reverse",
+    [False, True],
+    ids=["farther-first", "nearer-first"],
+)
+def test_available_mode_keeps_nearest_donor_at_tiny_scale(reverse):
+    train = np.array(
+        [
+            [2e-30, 10.0, np.nan],
+            [1e-30, 20.0, 0.0],
+        ],
+        dtype=np.float32,
+    )
+    if reverse:
+        train = train[::-1].copy()
+
+    query = np.array([[0.0, np.nan, 0.0]], dtype=np.float32)
+    train_before = train.copy()
+    query_before = query.copy()
+
+    imputer = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+    ).fit(train)
+    result = imputer.transform(query)
+
+    np.testing.assert_array_equal(result, [[0.0, 20.0, 0.0]])
+    np.testing.assert_array_equal(train, train_before)
+    np.testing.assert_array_equal(query, query_before)
