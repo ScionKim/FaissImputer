@@ -63,6 +63,8 @@ Expected output:
 The output is a new NumPy `float32` array; the training and query inputs are not modified.
 Performance depends on data size and missingness. This mode is not guaranteed to be faster than `KNNImputer`.
 
+See the [partial-donor benchmark report](https://github.com/ScionKim/FaissImputer/blob/bc1929f58608033bdca565260878e5c8f2a7571f/docs/benchmarks/partial-donors-0a3cc077.md) for measured timings, quality checks, and limitations.
+
 The Installation, Usage, Parameters, and Important behavior sections below describe the released 0.2.2 package.
 Earlier release notes and the 0.2.0 benchmark remain historical.
 
