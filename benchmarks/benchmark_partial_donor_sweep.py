@@ -127,7 +127,7 @@ def run_sweep(results):
                         print("  QUALITY MISMATCH:", float(difference.max()), flush=True)
 
 def run_fit_transform(results):
-    n_train = 1_000
+    n_train = 5_000
     missing_rate = 0.1
     report = {
         "parameters": {
