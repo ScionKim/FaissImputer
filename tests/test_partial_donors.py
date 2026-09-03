@@ -203,22 +203,6 @@ def test_available_mode_preserves_inputs_and_batch_behavior(strategy):
 
 
 def test_available_mode_ignores_invalid_faiss_neighbor_ids(monkeypatch):
-    class NoNeighbors:
-        def __init__(self, dimension):
-            pass
-
-        def add(self, vectors):
-            pass
-
-        def search(self, queries, k):
-            shape = (queries.shape[0], k)
-            return (
-                np.zeros(shape, dtype=np.float32),
-                np.full(shape, -1, dtype=np.int64),
-            )
-
-    monkeypatch.setattr("faiss.IndexFlatL2", NoNeighbors)
-
     imputer = FaissImputer(
         n_neighbors=1,
         donor_policy="available",
@@ -230,12 +214,26 @@ def test_available_mode_ignores_invalid_faiss_neighbor_ids(monkeypatch):
         ]
     )
 
+    def no_neighbors(queries, k):
+        shape = (queries.shape[0], k)
+        return (
+            np.zeros(shape, dtype=np.float32),
+            np.full(shape, -1, dtype=np.int64),
+        )
+
+    monkeypatch.setattr(
+        imputer.available_index_, "search", no_neighbors
+    )
+
     result = imputer.transform([[0, np.nan, np.nan]])
     np.testing.assert_allclose(result, [[0, 20, 100]])
 
-def test_available_mode_builds_one_index_per_query(monkeypatch):
-    import faiss
-
+@pytest.mark.parametrize(
+    "fail_search", [False, True], ids=["success", "search-error"]
+)
+def test_available_mode_batches_search_and_clears_cache(
+    monkeypatch, fail_search
+):
     imputer = FaissImputer(
         n_neighbors=1,
         donor_policy="available",
@@ -247,20 +245,42 @@ def test_available_mode_builds_one_index_per_query(monkeypatch):
             [3, 60, 70, 80],
         ]
     )
+    query = np.array(
+        [[0.1, np.nan, np.nan, np.nan],
+         [1.1, np.nan, np.nan, np.nan]],
+        dtype=np.float32,
+    )
+    before = query.copy()
+    backend = imputer.available_index_
+    original_search = backend.search
+    calls = []
 
-    original_index = faiss.IndexFlatL2
-    created = []
+    def tracked_search(queries, k):
+        calls.append(queries.copy())
+        found = original_search(queries, k)
+        assert backend.matrix is not None
+        assert backend.query_ref is queries
+        if fail_search:
+            raise RuntimeError("injected search failure")
+        return found
 
-    def counted_index(*args, **kwargs):
-        created.append(1)
-        return original_index(*args, **kwargs)
+    monkeypatch.setattr(backend, "search", tracked_search)
 
-    monkeypatch.setattr(faiss, "IndexFlatL2", counted_index)
+    if fail_search:
+        with pytest.raises(RuntimeError, match="injected search failure"):
+            imputer.transform(query)
+    else:
+        result = imputer.transform(query)
+        np.testing.assert_allclose(
+            result,
+            [[0.1, 10, 30, 50], [1.1, 20, 30, 50]],
+        )
 
-    result = imputer.transform([[0.1, np.nan, np.nan, np.nan]])
-
-    np.testing.assert_allclose(result, [[0.1, 10, 30, 50]])
-    assert len(created) == 1
+    assert len(calls) == 1
+    np.testing.assert_array_equal(calls[0], before)
+    np.testing.assert_array_equal(query, before)
+    assert backend.matrix is None
+    assert backend.query_ref is None
 
 def test_available_mode_expands_search_for_each_target():
     train = np.column_stack(
