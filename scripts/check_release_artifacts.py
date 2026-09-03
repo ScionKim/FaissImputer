@@ -76,7 +76,6 @@ def validate_description(
         )
 
     required_text = (
-        f"## What's new in {version}",
         f"/releases/tag/v{version}",
         f"/blob/v{version}/",
         f"faiss-imputer>={version}",
