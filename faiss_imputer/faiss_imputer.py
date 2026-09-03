@@ -2,6 +2,7 @@ import numpy as np
 import faiss
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted, validate_data
+from ._matrix import MatrixNaNIndex
 
 class FaissImputer(TransformerMixin, BaseEstimator):
     """Impute missing values using faiss."""
@@ -51,6 +52,7 @@ class FaissImputer(TransformerMixin, BaseEstimator):
             "index_",
             "donor_policy_",
             "donor_groups_",
+            "available_index_",
         ):
             self.__dict__.pop(name, None)
 
@@ -165,6 +167,13 @@ class FaissImputer(TransformerMixin, BaseEstimator):
             for pattern, indices in groups.items()
         ]
 
+        all_complete = (
+            len(self.donor_groups_) == 1
+            and self.donor_groups_[0][0].all()
+        )
+        if not all_complete:
+            self.available_index_ = MatrixNaNIndex(self.donors_)
+            
         return self
 
     def transform(self, X):
@@ -279,72 +288,66 @@ class FaissImputer(TransformerMixin, BaseEstimator):
         return X_tmp
 
     def _transform_available(self, X):
+        try:
+            return self._transform_available_batched(X)
+        finally:
+            self.available_index_.clear_cache()
+
+    def _transform_available_batched(self, X):
         result = X.copy()
         missing = np.isnan(X)
-        donor_observed = ~np.isnan(self.donors_)
+        result[missing] = np.broadcast_to(self.statistics_, X.shape)[missing]
+        rows = np.flatnonzero(missing.any(axis=1) & ~missing.all(axis=1))
+        n_donors = self.donors_.shape[0]
+        k = min(self.n_neighbors, n_donors)
+        batch_size = max(
+            1, min(256, (16 * 1024 * 1024) // (12 * n_donors))
+        )
 
-        for row in np.flatnonzero(missing.any(axis=1)):
-            missing_cols = np.flatnonzero(missing[row])
-            observed_cols = np.flatnonzero(~missing[row])
-            result[row, missing_cols] = self.statistics_[missing_cols]
-            if observed_cols.size == 0:
-                continue
+        for start in range(0, rows.size, batch_size):
+            batch_rows = rows[start:start + batch_size]
+            batch_missing = missing[batch_rows]
+            columns = np.flatnonzero(batch_missing.any(axis=0))
+            queries = np.ascontiguousarray(X[batch_rows], dtype=np.float32)
+            search_k = min(n_donors, max(16, 2 * k))
 
-            common_counts = donor_observed[:, observed_cols].sum(axis=1)
-            has_target = donor_observed[:, missing_cols].any(axis=1)
-            donor_rows = np.flatnonzero((common_counts > 0) & has_target)
-            if donor_rows.size == 0:
-                continue
-
-            target_present = donor_observed[np.ix_(donor_rows, missing_cols)]
-            k = min(self.n_neighbors, donor_rows.size)
-            required = np.minimum(k, target_present.sum(axis=0))
-
-            index = faiss.IndexFlatL2(int(observed_cols.size))
-            block_size = max(
-                1, (16 * 1024 * 1024) // (8 * observed_cols.size)
-            )
-            for start in range(0, donor_rows.size, block_size):
-                block_rows = donor_rows[start:start + block_size]
-                offsets = self.donors_[
-                    np.ix_(block_rows, observed_cols)
-                ].astype(np.float64)
-                offsets -= X[row, observed_cols]
-                offsets[np.isnan(offsets)] = 0.0
-                # Omitting the common factor X.shape[1] preserves ranking.
-                offsets /= np.sqrt(common_counts[block_rows])[:, None]
-                index.add(np.ascontiguousarray(offsets, dtype=np.float32))
-
-            query = np.zeros((1, observed_cols.size), dtype=np.float32)
-            search_k = min(donor_rows.size, max(16, 2 * k))
             while True:
-                distances, indices = index.search(query, int(search_k))
-                local_ids = indices[0]
-                valid = (
-                    (local_ids >= 0)
-                    & (local_ids < donor_rows.size)
-                    & np.isfinite(distances[0])
+                distances, ids = self.available_index_.search(
+                    queries, int(search_k)
                 )
-                local_ids = local_ids[valid]
-                _, first = np.unique(local_ids, return_index=True)
-                local_ids = local_ids[np.sort(first)]
-                hits = target_present[local_ids]
+                valid = (
+                    (ids >= 0)
+                    & (ids < n_donors)
+                    & np.isfinite(distances)
+                )
+                safe_ids = np.where(valid, ids, 0)
+                enough = np.ones(batch_rows.size, dtype=bool)
+                for col in columns:
+                    values = self.donors_[safe_ids, col]
+                    usable = valid & ~np.isnan(values)
+                    enough &= (
+                        ~batch_missing[:, col]
+                        | (usable.sum(axis=1) >= k)
+                    )
 
-                if (
-                    np.all(hits.sum(axis=0) >= required)
-                    or search_k == donor_rows.size
-                ):
+                if enough.all() or search_k == n_donors:
                     break
-                search_k = min(donor_rows.size, 2 * search_k)
+                search_k = min(n_donors, 2 * search_k)
 
-            for target_idx, col in enumerate(missing_cols):
-                selected = local_ids[hits[:, target_idx]][:k]
-                if selected.size == 0:
+            for col in columns:
+                values = self.donors_[safe_ids, col]
+                usable = valid & ~np.isnan(values)
+                chosen = usable & (np.cumsum(usable, axis=1) <= k)
+                fill_rows = batch_missing[:, col] & chosen.any(axis=1)
+                if not fill_rows.any():
                     continue
-                values = self.donors_[donor_rows[selected], col]
+                selected = np.where(
+                    chosen[fill_rows], values[fill_rows], np.nan
+                )
                 if self.strategy == "mean":
-                    result[row, col] = np.mean(values)
+                    fill = np.nanmean(selected, axis=1)
                 else:
-                    result[row, col] = np.median(values)
+                    fill = np.nanmedian(selected, axis=1)
+                result[batch_rows[fill_rows], col] = fill
 
         return result
