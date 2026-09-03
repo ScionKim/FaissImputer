@@ -1,0 +1,51 @@
+name: Complete-pattern benchmark
+
+on:
+  push:
+    branches:
+      - bench/complete-patterns
+    paths:
+      - benchmarks/benchmark_complete_patterns.py
+      - benchmarks/benchmark_imputers.py
+      - faiss_imputer/**
+      - pyproject.toml
+      - .github/workflows/complete-pattern-benchmark.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Run timing pilot and output checks
+        run: >-
+          python -u -m benchmarks.benchmark_complete_patterns
+          --train-sizes 1000 5000 20000
+          --queries 300
+          --seeds 101 202 303 404 505
+          --repeats 3
+
+      - name: Upload results
+        uses: actions/upload-artifact@v6
+        with:
+          name: complete-pattern-benchmark
+          path: benchmark_outputs/complete_patterns.json
+          if-no-files-found: error
+          retention-days: 14
