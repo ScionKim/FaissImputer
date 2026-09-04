@@ -2,14 +2,44 @@
 
 import faiss
 import numpy as np
+from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.utils.extmath import row_norms
 
 
 class MatrixNaNIndex:
     def __init__(self, donors):
-        self.donors64 = np.asarray(donors, dtype=np.float64)
+        # Own this buffer: caller data and public donors_ retain their NaNs.
+        self.donors64 = np.array(donors, dtype=np.float64, copy=True)
         self.present = ~np.isnan(self.donors64)
+        # Preserve the reduction used by the existing numerical-risk guard.
         self.norms = np.nansum(self.donors64 * self.donors64, axis=1)
+        self.missing_donors = ~self.present
+        # Internal donors64 is zero-filled; masks preserve missingness.
+        self.donors64[self.missing_donors] = 0.0
+        self.squared_donors = self.donors64 * self.donors64
+        self.zero_norms = row_norms(self.donors64, squared=True)
         self.clear_cache()
+
+    def _prepared_distances(self, queries):
+        X = queries.copy()
+        missing_X = np.isnan(X)
+        X[missing_X] = 0.0
+        distances = euclidean_distances(
+            X,
+            self.donors64,
+            squared=True,
+            Y_norm_squared=self.zero_norms,
+        )
+        XX = X * X
+        distances -= np.dot(XX, self.missing_donors.T)
+        distances -= np.dot(missing_X, self.squared_donors.T)
+        np.clip(distances, 0, None, out=distances)
+        present_count = np.dot(1 - missing_X, self.present.T)
+        distances[present_count == 0] = np.nan
+        np.maximum(1, present_count, out=present_count)
+        distances /= present_count
+        distances *= X.shape[1]
+        return distances
 
     def clear_cache(self):
         self.query_ref = None
@@ -30,13 +60,9 @@ class MatrixNaNIndex:
 
     def search(self, queries, k):
         if queries is not self.query_ref:
-            from sklearn.metrics.pairwise import nan_euclidean_distances
-
             self.clear_cache()
             query64 = np.asarray(queries, dtype=np.float64)
-            distances = nan_euclidean_distances(
-                query64, self.donors64, squared=True, copy=True
-            )
+            distances = self._prepared_distances(query64)
             finite = np.isfinite(distances)
             query_norms = np.nansum(query64 * query64, axis=1)
             p = self.donors64.shape[1]
