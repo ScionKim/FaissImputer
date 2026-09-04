@@ -37,9 +37,9 @@ Selected benchmark results:
 
 | Donor policy | Training rows | Query missingness | KNNImputer | FaissImputer | Speedup |
 |---|---:|---|---:|---:|---:|
+| complete | 1,000 | Random patterns | 22.6 ms | 30.9 ms | 0.73× — slower |
 | complete | 20,000 | One shared pattern | 314.3 ms | 34.8 ms | **9.04×** |
 | complete | 20,000 | Random patterns | 316.8 ms | 133.0 ms | **2.38×** |
-| complete | 1,000 | Random patterns | 22.6 ms | 30.9 ms | 0.73× — slower |
 | available | 500,000 | Random patterns | 9.027 s | 6.179 s | **1.46×** |
 | available | 1,000,000 | Random patterns | 21.724 s | 19.681 s | **1.10×** |
 
