@@ -1,0 +1,372 @@
+{
+  "metadata": {
+    "created_at_utc": "2026-09-04T01:30:31.136290+00:00",
+    "git_commit": "94c152a91e6437f399e46bd9f2a1bfe95386e452",
+    "python": "3.12.14",
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "cpu_model": "Intel(R) Xeon(R) 6973P-C",
+    "logical_cpus": 4,
+    "affinity_cpus": 4,
+    "faiss_imputer": "0.3.1",
+    "numpy": "2.5.2",
+    "scikit_learn": "1.9.0",
+    "faiss": "1.15.0"
+  },
+  "parameters": {
+    "train_sizes": [
+      1000000
+    ],
+    "threads": [
+      1
+    ],
+    "queries": 300,
+    "features": 20,
+    "n_neighbors": 5,
+    "seeds": [
+      101
+    ],
+    "patterns": [
+      "random"
+    ],
+    "repeats": 1,
+    "train_missing_rate": 0.1,
+    "sklearn_working_memory_mib": 256,
+    "worker_timeout_seconds": 180,
+    "run_budget_seconds": 900,
+    "experiment_batch_budgets_mib": [
+      16,
+      64,
+      128
+    ],
+    "comparison_rtol": 1e-06,
+    "comparison_atol": 1e-07
+  },
+  "notes": [
+    "Synthetic low-rank Gaussian data with theoretical variance normalization.",
+    "Training has 10% MCAR cells; each query has four missing features.",
+    "Queries are held out; query values and masks are shared across sizes.",
+    "Training prefixes are shared across sizes; data generation uses one thread.",
+    "Fresh sequential subprocesses; small warmup before each timed fit/transform.",
+    "Timings exclude data generation, validation and process startup.",
+    "Memory is full-worker lifetime peak RSS, including imports, inputs, generation, warmup and validation; excludes the controller.",
+    "sklearn working_memory is a distance-chunk setting, not a process RAM cap.",
+    "Timeout includes the entire worker; killed-worker peak memory is unavailable.",
+    "Errors, timeouts and unrun cases remain in the results.",
+    "Output comparisons use the first successful reference in each configuration.",
+    "A null output comparison means no successful reference was available.",
+    "No accuracy or speed threshold, or exact equality to KNN, is required.",
+    "Experimental subclasses change only the batch-budget constant in memory.",
+    "The released implementation and product files are unchanged.",
+    "16/64/128 MiB are batch-sizing budgets, NOT total process memory caps.",
+    "Each candidate is compared with the original available method in the same repeat.",
+    "Numerical tolerance is a diagnostic, not proof of general equivalence.",
+    "A candidate outside tolerance makes this experiment fail visibly.",
+    "Repeated timings on synthetic data do not establish general performance."
+  ],
+  "records": [
+    {
+      "size": 1000000,
+      "queries": 300,
+      "seed": 101,
+      "pattern": "random",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        1000000
+      ],
+      "status": "ok",
+      "complete_donors": 121174,
+      "train_missing_rate": 0.1000183,
+      "query_missing_rate": 0.2,
+      "query_patterns": 296,
+      "fingerprints": {
+        "query": "1ef0fa7919afdc182f8e9505ab9b60d1c179b132a5130280597b4eeb3a1b4928",
+        "truth": "2763a73ca324a783c42deda2d64bd755d5ba6a2dc190274c6a528462a4c52ad9",
+        "prefixes": {
+          "1000000": "b80fd1bfe29ee59ea2b907c6908462a282023be51a1a9b354459f531cc7b2029"
+        }
+      },
+      "fit_seconds": 0.04693179599999553,
+      "transform_seconds": 21.677559175,
+      "total_seconds": 21.724490970999994,
+      "worker_peak_rss_mib": 1066.453125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.0.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Prescott"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.10985950114544651,
+      "mae": 0.08574678659101967,
+      "checks_passed": true,
+      "experiment_batch_budget_mib": null,
+      "batch_row_limit": null,
+      "available_donors": null,
+      "model_class": "KNNImputer",
+      "original_method_sha256": "473c9393737eb65d65e36cde818fa4147d1ebf1b56419f62b2d4ffb4439627fc",
+      "effective_method_sha256": null,
+      "worker_wall_seconds": 23.208317899000008,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0,
+      "max_abs_difference_from_original": 2.384185791015625e-07,
+      "exactly_changed_cells": 222,
+      "cells_outside_tolerance": 0
+    },
+    {
+      "size": 1000000,
+      "queries": 300,
+      "seed": 101,
+      "pattern": "random",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 1,
+      "prefix_sizes": [
+        1000000
+      ],
+      "status": "ok",
+      "complete_donors": 121174,
+      "train_missing_rate": 0.1000183,
+      "query_missing_rate": 0.2,
+      "query_patterns": 296,
+      "fingerprints": {
+        "query": "1ef0fa7919afdc182f8e9505ab9b60d1c179b132a5130280597b4eeb3a1b4928",
+        "truth": "2763a73ca324a783c42deda2d64bd755d5ba6a2dc190274c6a528462a4c52ad9",
+        "prefixes": {
+          "1000000": "b80fd1bfe29ee59ea2b907c6908462a282023be51a1a9b354459f531cc7b2029"
+        }
+      },
+      "fit_seconds": 0.34653806700001155,
+      "transform_seconds": 81.56925992399997,
+      "total_seconds": 81.91579799099998,
+      "worker_peak_rss_mib": 993.5078125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.0.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Prescott"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.10985950126173226,
+      "mae": 0.0857467861231271,
+      "checks_passed": true,
+      "experiment_batch_budget_mib": 16,
+      "batch_row_limit": 1,
+      "available_donors": 1000000,
+      "model_class": "FaissImputer",
+      "original_method_sha256": "473c9393737eb65d65e36cde818fa4147d1ebf1b56419f62b2d4ffb4439627fc",
+      "effective_method_sha256": "473c9393737eb65d65e36cde818fa4147d1ebf1b56419f62b2d4ffb4439627fc",
+      "worker_wall_seconds": 83.26549855099998,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0,
+      "max_abs_difference_from_original": 0.0,
+      "exactly_changed_cells": 0,
+      "cells_outside_tolerance": 0
+    },
+    {
+      "size": 1000000,
+      "queries": 300,
+      "seed": 101,
+      "pattern": "random",
+      "threads": 1,
+      "method": "FaissImputer[available,64MiB]",
+      "repeat": 1,
+      "prefix_sizes": [
+        1000000
+      ],
+      "status": "ok",
+      "complete_donors": 121174,
+      "train_missing_rate": 0.1000183,
+      "query_missing_rate": 0.2,
+      "query_patterns": 296,
+      "fingerprints": {
+        "query": "1ef0fa7919afdc182f8e9505ab9b60d1c179b132a5130280597b4eeb3a1b4928",
+        "truth": "2763a73ca324a783c42deda2d64bd755d5ba6a2dc190274c6a528462a4c52ad9",
+        "prefixes": {
+          "1000000": "b80fd1bfe29ee59ea2b907c6908462a282023be51a1a9b354459f531cc7b2029"
+        }
+      },
+      "fit_seconds": 0.3474756929999785,
+      "transform_seconds": 26.408545842000024,
+      "total_seconds": 26.756021535000002,
+      "worker_peak_rss_mib": 1050.98046875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.0.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Prescott"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.10985950126173226,
+      "mae": 0.0857467861231271,
+      "checks_passed": true,
+      "experiment_batch_budget_mib": 64,
+      "batch_row_limit": 5,
+      "available_donors": 1000000,
+      "model_class": "BatchBudget64Imputer",
+      "original_method_sha256": "473c9393737eb65d65e36cde818fa4147d1ebf1b56419f62b2d4ffb4439627fc",
+      "effective_method_sha256": "485d426db45a00ca1a32fa3f2817fa84f9e2f9e18dfe3c52b234eff8708c9db8",
+      "worker_wall_seconds": 28.167691703000003,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0,
+      "max_abs_difference_from_original": 0.0,
+      "exactly_changed_cells": 0,
+      "cells_outside_tolerance": 0
+    },
+    {
+      "size": 1000000,
+      "queries": 300,
+      "seed": 101,
+      "pattern": "random",
+      "threads": 1,
+      "method": "FaissImputer[available,128MiB]",
+      "repeat": 1,
+      "prefix_sizes": [
+        1000000
+      ],
+      "status": "ok",
+      "complete_donors": 121174,
+      "train_missing_rate": 0.1000183,
+      "query_missing_rate": 0.2,
+      "query_patterns": 296,
+      "fingerprints": {
+        "query": "1ef0fa7919afdc182f8e9505ab9b60d1c179b132a5130280597b4eeb3a1b4928",
+        "truth": "2763a73ca324a783c42deda2d64bd755d5ba6a2dc190274c6a528462a4c52ad9",
+        "prefixes": {
+          "1000000": "b80fd1bfe29ee59ea2b907c6908462a282023be51a1a9b354459f531cc7b2029"
+        }
+      },
+      "fit_seconds": 0.35284108199999764,
+      "transform_seconds": 19.32864164900002,
+      "total_seconds": 19.681482731000017,
+      "worker_peak_rss_mib": 1163.05078125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.0.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Prescott"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.10985950126173226,
+      "mae": 0.0857467861231271,
+      "checks_passed": true,
+      "experiment_batch_budget_mib": 128,
+      "batch_row_limit": 11,
+      "available_donors": 1000000,
+      "model_class": "BatchBudget128Imputer",
+      "original_method_sha256": "473c9393737eb65d65e36cde818fa4147d1ebf1b56419f62b2d4ffb4439627fc",
+      "effective_method_sha256": "7f4584bb9fd3f4dc5c90272f4c2f61decf52c66c43685f4b1cd1e8c8648c80a8",
+      "worker_wall_seconds": 21.097810449000008,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0,
+      "max_abs_difference_from_original": 0.0,
+      "exactly_changed_cells": 0,
+      "cells_outside_tolerance": 0
+    }
+  ]
+}
