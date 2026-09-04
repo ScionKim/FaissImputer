@@ -125,7 +125,7 @@ def test_mixed_rows_match_direct_reference(strategy, neighbors, batch_rows):
         [2.2, 44, 55, 6],
         [np.nan, np.nan, 80, 9.1],
         [1.4, np.nan, 36, np.nan],
-        [np.nan, 50, 90, np.nan],
+        [np.nan, 50, 91, np.nan],
         [4.2, np.nan, np.nan, 9],
     ], dtype=np.float32)
     expected = reference(train, query, neighbors, strategy)
