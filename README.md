@@ -5,11 +5,11 @@
 > Use version 0.2.0 or newer.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.3/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.4/LICENSE)
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-Current release: [0.3.3](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.3).
+Current release: [0.3.4](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.4).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Performance at a glance
@@ -74,7 +74,7 @@ peak RSS was about 9.1% higher than KNNImputer.
 FaissImputer requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.3"
+python -m pip install --upgrade "faiss-imputer>=0.3.4"
 ```
 
 ## Usage
@@ -227,6 +227,10 @@ and temporary arrays also consume memory. Larger batches can improve speed
 but increase peak memory usage. FaissImputer does not set the number of
 threads; configure thread limits in the application when needed.
 
+Donor-side arrays are prepared during `fit()` and reused across query batches.
+This reduces repeated work but increases retained memory after fitting;
+lower peak memory is not guaranteed.
+
 ## Benchmarks
 
 Performance depends on donor policy, data size, and missingness patterns. Neither faster execution nor lower memory use than `KNNImputer` is guaranteed. Similar average errors do not imply identical imputed values; ties and numerical precision can affect donor selection.
@@ -253,7 +257,7 @@ Contributions are welcome! Please open an [issue](https://github.com/ScionKim/Fa
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.3/LICENSE).
+This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.4/LICENSE).
 
 ### Third-Party Licenses
 
