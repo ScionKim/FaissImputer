@@ -218,3 +218,11 @@ def test_real_128mib_variant_changes_batch_boundaries(monkeypatch, strategy):
     expected = reference(train, query, 5, strategy)
     np.testing.assert_allclose(results[16], expected, rtol=1e-6, atol=1e-7)
     np.testing.assert_allclose(results[128], expected, rtol=1e-6, atol=1e-7)
+    calls.clear()
+    default_result = FaissImputer(
+        n_neighbors=5,
+        donor_policy="available",
+        strategy=strategy,
+    ).fit(train).transform(query)
+    assert calls == [32]
+    np.testing.assert_allclose(default_result, expected, rtol=1e-6, atol=1e-7)
