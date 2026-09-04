@@ -9,7 +9,7 @@
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-Current release: [0.3.1](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.1).
+Current release: [0.3.2](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.2).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Installation
@@ -17,7 +17,7 @@ See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version hi
 FaissImputer requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.1"
+python -m pip install --upgrade "faiss-imputer>=0.3.2"
 ```
 
 ## Usage
@@ -164,7 +164,7 @@ Contributions are welcome! Please open an [issue](https://github.com/ScionKim/Fa
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.0/LICENSE).
+This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.2/LICENSE).
 
 ### Third-Party Licenses
 
