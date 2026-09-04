@@ -18,7 +18,7 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     env:
       OMP_NUM_THREADS: "1"
@@ -49,14 +49,14 @@ jobs:
       - name: Compare batch budgets
         run: >-
           python -u -m benchmarks.benchmark_available_batches
-          --train-sizes 500000
+          --train-sizes 1000000
           --threads 1
           --queries 300
           --seeds 101
           --patterns random
-          --repeats 3
-          --timeout-seconds 120
-          --budget-seconds 600
+          --repeats 1
+          --timeout-seconds 180
+          --budget-seconds 900
           --output benchmark_outputs/available_batches.json
 
       - name: Upload benchmark results
