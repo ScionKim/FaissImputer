@@ -277,7 +277,7 @@ class FaissImputer(TransformerMixin, BaseEstimator):
         n_donors = self.donors_.shape[0]
         k = min(self.n_neighbors, n_donors)
         batch_size = max(
-            1, min(256, (16 * 1024 * 1024) // (12 * n_donors))
+            1, min(256, (128 * 1024 * 1024) // (12 * n_donors))
         )
 
         for start in range(0, rows.size, batch_size):
