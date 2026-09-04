@@ -17,6 +17,22 @@ See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version hi
 FaissImputer can accelerate nearest-neighbor imputation, especially when
 queries reuse the same missing-feature patterns.
 
+### Which donor policy should I use?
+
+A **donor** is a training row used to supply a missing value.
+
+- **`complete` (default):** Uses only fully observed training rows as donors.
+  Rows containing missing values are excluded from neighbor search.
+  Choose this when you have enough complete training rows.
+- **`available`:** Also allows partially observed training rows as donors.
+  Donors are selected separately for each missing feature: they must contain
+  that feature's value and share at least one originally observed feature
+  with the query row. No fully observed training row is required.
+
+The benchmarks below use fully observed training data for `complete`
+and partially missing training data for `available`. They compare each
+policy against KNNImputer, not the two policies against each other.
+
 Selected benchmark results:
 
 | Donor policy | Training rows | Query missingness | KNNImputer | FaissImputer | Speedup |
