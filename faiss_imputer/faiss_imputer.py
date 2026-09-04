@@ -1,10 +1,10 @@
 import numpy as np
 import faiss
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.utils.validation import check_is_fitted, validate_data
 from ._matrix import MatrixNaNIndex
 
-class FaissImputer(TransformerMixin, BaseEstimator):
+class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     """Impute missing values using faiss."""
 
     def __init__(
