@@ -12,6 +12,47 @@ A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/
 Current release: [0.3.2](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.2).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
+## Performance at a glance
+
+FaissImputer can accelerate nearest-neighbor imputation, especially when
+queries reuse the same missing-feature patterns.
+
+Selected benchmark results:
+
+| Donor policy | Training rows | Query missingness | KNNImputer | FaissImputer | Speedup |
+|---|---:|---|---:|---:|---:|
+| complete | 20,000 | One shared pattern | 314.3 ms | 34.8 ms | **9.04×** |
+| complete | 20,000 | Random patterns | 316.8 ms | 133.0 ms | **2.38×** |
+| complete | 1,000 | Random patterns | 22.6 ms | 30.9 ms | 0.73× — slower |
+| available | 500,000 | Random patterns | 9.027 s | 6.179 s | **1.46×** |
+| available | 1,000,000 | Random patterns | 21.724 s | 19.681 s | **1.10×** |
+
+**What was measured:** fit + transform on synthetic data, with 300 query
+rows, 20 features, 5 neighbors, mean aggregation, and one native thread.
+Each query has four missing features. Training data is fully observed
+for `complete`, and has 10% MCAR missingness for `available`.
+
+Complete-policy times are medians across five seeds of three-run medians,
+measured at commit `9d179b2b`. Available-policy results measure the
+128 MiB batching candidate adopted in 0.3.2: three-run medians at
+500,000 rows and a **single-run pilot** at 1,000,000 rows.
+These are measured development snapshots, not a fresh benchmark of the
+published 0.3.2 package. CPU models differ between experiments;
+compare methods within each row. Speedups use unrounded times.
+
+**Output agreement:** the complete-policy benchmark matched KNNImputer
+exactly on the tested inputs. The available-policy experiments had a
+maximum absolute difference of approximately `2.38e-7` from KNNImputer.
+This measures agreement, not accuracy against ground truth or a guarantee
+for other datasets.
+
+**Tradeoffs:** small datasets with varied missingness can be slower.
+Memory use is not always lower: in the million-row pilot, whole-worker
+peak RSS was about 9.1% higher than KNNImputer.
+
+[Complete-policy results and reproduction](https://github.com/ScionKim/FaissImputer/blob/v0.3.1/docs/benchmarks/complete-patterns-9d179b2b.md)
+· [Available-policy results, memory and thread comparisons](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-batching-90c8cfb8.md)
+
 ## Installation
 
 FaissImputer requires Python 3.10 or newer.
