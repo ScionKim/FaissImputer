@@ -5,11 +5,11 @@
 > Use version 0.2.0 or newer.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.0/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.3/LICENSE)
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-Current release: [0.3.2](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.2).
+Current release: [0.3.3](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.3).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Performance at a glance
@@ -74,7 +74,7 @@ peak RSS was about 9.1% higher than KNNImputer.
 FaissImputer requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.2"
+python -m pip install --upgrade "faiss-imputer>=0.3.3"
 ```
 
 ## Usage
@@ -152,7 +152,39 @@ Expected output:
  [ 1.5 20.  30. ]]
 ```
 
-Both policies return a new NumPy `float32` array. The training and query inputs are not modified.
+By default, both policies return a new NumPy `float32` array. The training and query inputs are not modified.
+
+### Feature names and pandas output
+
+The following example requires FaissImputer 0.3.3 or newer.
+It also requires pandas, which is optional:
+`python -m pip install pandas`.
+
+```python
+import pandas as pd
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+from faiss_imputer import FaissImputer
+
+X = pd.DataFrame({
+    "age": [20.0, None, 40.0],
+    "income": [100.0, 190.0, 300.0],
+})
+
+pipe = make_pipeline(
+    FaissImputer(n_neighbors=1),
+    StandardScaler(),
+).set_output(transform="pandas")
+
+result = pipe.fit_transform(X)
+
+print(pipe.get_feature_names_out())  # ['age' 'income']
+print(result.columns.tolist())      # ['age', 'income']
+```
+
+Use `pipe.set_output(transform="default")` to return NumPy arrays instead.
+For unnamed array inputs, feature names are generated as `x0`, `x1`, and so on.
 
 ## Parameters
 
@@ -221,7 +253,7 @@ Contributions are welcome! Please open an [issue](https://github.com/ScionKim/Fa
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.2/LICENSE).
+This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.3/LICENSE).
 
 ### Third-Party Licenses
 
