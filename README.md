@@ -132,10 +132,17 @@ Both policies return a new NumPy `float32` array. The training and query inputs 
 
 The available-donor policy uses batched NaN-aware distances and Faiss neighbor selection, with float64 safeguards for detected numerical risks. This backend is also used when all training donors are complete.
 
+Batching trades memory for throughput. Its internal batch-sizing budget is
+not a total process-memory limit: fitted donor data, distance calculations,
+and temporary arrays also consume memory. Larger batches can improve speed
+but increase peak memory usage. FaissImputer does not set the number of
+threads; configure thread limits in the application when needed.
+
 ## Benchmarks
 
 Performance depends on donor policy, data size, and missingness patterns. Neither faster execution nor lower memory use than `KNNImputer` is guaranteed. Similar average errors do not imply identical imputed values; ties and numerical precision can affect donor selection.
 
+- [Available-donor batching and threads](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-batching-90c8cfb8.md): compares 16/64/128 MiB batch budgets and 1/2/4 threads, including repeated 500,000-row measurements and a single-run million-row pilot. Documents both speed gains and memory tradeoffs.
 - [Real-data pilot](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/real-data-a3bd1ce3.md): compares SimpleImputer, KNNImputer, and both Faiss donor policies under MCAR and selected MAR missingness. This small dataset is not a scalability test.
 - [Complete-donor patterns](https://github.com/ScionKim/FaissImputer/blob/v0.3.1/docs/benchmarks/complete-patterns-9d179b2b.md): measures the impact of training size and query missingness patterns.
 - [Partial-donor development snapshot](https://github.com/ScionKim/FaissImputer/blob/bc1929f58608033bdca565260878e5c8f2a7571f/docs/benchmarks/partial-donors-0a3cc077.md): historical results for measured commit `0a3cc077`, not the final 0.3.0 implementation.
