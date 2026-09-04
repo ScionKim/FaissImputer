@@ -52,7 +52,7 @@ jobs:
       - name: Run scaling pilot
         run: >-
           python -u -m benchmarks.benchmark_scaling_threads
-          --train-sizes 50000
+          --train-sizes 50000 100000 500000 1000000
           --threads 1 2 4
           --queries 300
           --seeds 101
