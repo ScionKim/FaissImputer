@@ -36,13 +36,18 @@ def worker(config):
     budget = BUDGETS[config["method"]]
     original = base.FaissImputer._transform_available_batched
     source = textwrap.dedent(inspect.getsource(original))
-    token = "(16 * 1024 * 1024)"
-    if source.count(token) != 1:
+    tokens = [
+        f"({value} * 1024 * 1024)"
+        for value in (16, 128)
+        if f"({value} * 1024 * 1024)" in source
+    ]
+    if len(tokens) != 1 or source.count(tokens[0]) != 1:
         raise RuntimeError("Batch formula changed; review this experiment first")
+    token = tokens[0]
 
     effective = source
     cls = base.FaissImputer
-    if budget not in (None, 16):
+    if budget is not None:
         effective = source.replace(token, f"({budget} * 1024 * 1024)", 1)
         namespace = original.__globals__.copy()
         exec(compile(effective, "<batch-budget-experiment>", "exec"), namespace)
@@ -175,7 +180,9 @@ def main():
         "Experimental subclasses change only the batch-budget constant in memory.",
         "The released implementation and product files are unchanged.",
         "16/64/128 MiB are batch-sizing budgets, NOT total process memory caps.",
-        "Each candidate is compared with the original available method in the same repeat.",
+        "FaissImputer[available] denotes the historical 16 MiB baseline in this experiment.",
+        "Each candidate is compared with that 16 MiB baseline in the same repeat.",
+        "original_method_sha256 identifies the current product method, not the 16 MiB baseline.",
         "Numerical tolerance is a diagnostic, not proof of general equivalence.",
         "A candidate outside tolerance makes this experiment fail visibly.",
         "Repeated timings on synthetic data do not establish general performance.",
