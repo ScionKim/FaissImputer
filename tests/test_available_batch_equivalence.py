@@ -197,15 +197,17 @@ def test_exact_ties_select_an_eligible_donor(batch_rows):
 @pytest.mark.parametrize("strategy", ["mean", "median"])
 def test_real_128mib_variant_changes_batch_boundaries(monkeypatch, strategy):
     train, query, _, _ = make_data(50000, 32, 101, "random")
-    original_distance = pairwise.nan_euclidean_distances
+    from faiss_imputer._matrix import MatrixNaNIndex
+
+    original_search = MatrixNaNIndex.search
     calls = []
 
-    def counted(queries, donors, *args, **kwargs):
-        if len(donors) == len(train):
+    def counted(self, queries, k):
+        if queries is not self.query_ref and len(self.donors64) == len(train):
             calls.append(len(queries))
-        return original_distance(queries, donors, *args, **kwargs)
+        return original_search(self, queries, k)
 
-    monkeypatch.setattr(pairwise, "nan_euclidean_distances", counted)
+    monkeypatch.setattr(MatrixNaNIndex, "search", counted)
     results = {}
     for budget, expected_batches in ((16, [27, 5]), (128, [32])):
         calls.clear()
