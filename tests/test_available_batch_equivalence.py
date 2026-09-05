@@ -177,6 +177,41 @@ def test_unique_nearest_donor_at_different_scales(
         result = transform_checked(cls, train, query)
         np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-7)
 
+def test_same_row_has_same_correct_donor_when_processed_alone_or_with_other_rows():
+    train = np.array([
+        [1.0001, 10, np.nan],
+        [1.0, 20, np.nan],
+        [np.nan, np.nan, 0],
+    ], dtype=np.float32)
+
+    target = np.array([
+        [0.0, np.nan, 0],
+    ], dtype=np.float32)
+
+    mixed = np.array([
+        [0.0, np.nan, 0],
+        [1.0, np.nan, 0],
+        [np.nan, np.nan, np.nan],
+    ], dtype=np.float32)
+
+    expected_target = reference(train, target, 1, "mean")
+    expected_mixed = reference(train, mixed, 1, "mean")
+
+    assert expected_target[0, 1] == 20
+    assert expected_mixed[0, 1] == 20
+
+    model = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+        strategy="mean",
+    ).fit(train)
+
+    alone = model.transform(target)
+    together = model.transform(mixed)
+
+    assert alone[0, 1] == 20
+    assert together[0, 1] == 20
+    assert alone[0, 1] == together[0, 1]
 
 @pytest.mark.parametrize("batch_rows", [1, 2, 3])
 def test_exact_ties_select_an_eligible_donor(batch_rows):
@@ -192,7 +227,6 @@ def test_exact_ties_select_an_eligible_donor(batch_rows):
         assert result[0, 1] in (10, 20)
         assert result[1, 1] == 20
         assert result[2, 1] == 15
-
 
 @pytest.mark.parametrize("strategy", ["mean", "median"])
 def test_real_128mib_variant_changes_batch_boundaries(monkeypatch, strategy):
