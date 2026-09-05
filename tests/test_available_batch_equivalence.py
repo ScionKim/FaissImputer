@@ -177,10 +177,11 @@ def test_unique_nearest_donor_at_different_scales(
         result = transform_checked(cls, train, query)
         np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-7)
 
+@pytest.mark.parametrize("strategy", ["mean", "median"])
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize("batch_rows", [1, 2])
 def test_same_row_has_same_correct_donor_when_another_row_triggers_float64(
-    reverse, batch_rows
+    reverse, batch_rows, strategy
 ):
     train = np.array([
         [-1.0, 10, np.nan],
@@ -202,16 +203,16 @@ def test_same_row_has_same_correct_donor_when_another_row_triggers_float64(
     mixed = np.array(rows, dtype=np.float32)
     target_row = 1 if reverse else 0
 
-    expected_target = reference(train, target, 1, "mean")
-    expected_mixed = reference(train, mixed, 1, "mean")
+    expected_target = reference(train, target, 1, strategy)
+    expected_mixed = reference(train, mixed, 1, strategy)
 
     assert expected_target[0, 1] == 20
     assert expected_mixed[target_row, 1] == 20
 
     cls = variant(batch_rows=batch_rows)
 
-    alone = transform_checked(cls, train, target)
-    together = transform_checked(cls, train, mixed)
+    alone = transform_checked(cls, train, target, strategy=strategy)
+    together = transform_checked(cls, train, mixed, strategy=strategy)
 
     assert (alone[0, 1], together[target_row, 1]) == (20, 20)
 
