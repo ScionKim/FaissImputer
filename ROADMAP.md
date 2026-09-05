@@ -1,80 +1,108 @@
 # Roadmap
 
-This roadmap records the next improvements after the 0.2.0 correctness release. Priorities are based on the reproducible [0.2.0 benchmark](docs/benchmarks/v0.2.0.md), not on a claim that one imputer is best for every dataset.
+Updated after [0.3.4](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.4), based on a source and regression review of commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-## 0.2.0 baseline
+The next patch focuses on consistent imputation results and interoperability. Performance work follows those fixes, with measurements tied to the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
-- Correct neighbor-to-donor mapping.
-- Search using only each query row's observed columns.
-- Preserve fitted donors and fitted fallback statistics during `transform()`.
-- Support current scikit-learn validation APIs.
-- Add regression tests, CI, modern packaging, and automated PyPI publishing.
-- Publish a controlled benchmark against `SimpleImputer` and `KNNImputer`.
+## Completed through 0.3.4
 
-## 0.3.0 priorities
+- Correct neighbor-to-donor mapping, observed-feature search, and fitted fallback statistics.
+- Opt-in `donor_policy="available"` support for partially observed training rows, with per-target donor eligibility and fallbacks.
+- Reduced complete-donor column-projection overhead and batched available-donor distance calculations.
+- Prepared donor-side arrays reused across available-donor query batches, with the retained-memory tradeoff documented.
+- Input-preservation checks, failed-refit state cleanup, and available-donor numerical safeguards. Remaining numerical issues are listed below.
+- Pipeline and ColumnTransformer integration, feature names, and optional pandas output.
+- Minimum/latest dependency CI, package metadata checks, installed-wheel smoke tests, and automated PyPI publishing.
+- Reproducible synthetic benchmarks, a real-data MCAR/MAR pilot, and historical batching/thread experiments. Coverage and current-release measurements still need expansion.
 
-### P0: Use partially observed training rows as donors
+## Next patch: correctness and interoperability
 
-**Why:** With 10% independently missing training cells, only about 598 of 5,000 rows were fully observed. In the 0.2.0 benchmark, FaissImputer's RMSE was 0.3495 versus 0.2440 for KNNImputer because FaissImputer discarded every incomplete training row.
+### 1. Make available-donor results independent of query batching
 
-Define the behavior before implementation:
+**Problem:** A numerical safeguard can switch the entire query batch from float32 to float64 neighbor selection. Adding an unrelated query can therefore change the imputation of an existing query.
 
-- For each target column, consider only donors that contain a value for that column.
-- Calculate distance from features observed in both the query and donor.
-- Exclude donors with no commonly observed distance feature.
-- If fewer than `n_neighbors` donors are available, use all valid donors.
-- If no donor is available, use the statistic learned during `fit()`.
-- Document whether exact KNNImputer compatibility is a goal or whether FaissImputer intentionally uses a different rule.
+Reproduced on 0.3.4 with NumPy 2.5.2, scikit-learn 1.9.0, and Faiss 1.15.0:
 
-Implementation work:
+```python
+import numpy as np
+from faiss_imputer import FaissImputer
 
-- Preserve training values and their observation mask during `fit()`.
-- Build or select valid donor pools per target column.
-- Add distance calculation and scaling for shared observed features.
-- Preserve the fast complete-donor path.
-- Add small hand-calculated examples and regression tests for every fallback.
+imputer = FaissImputer(n_neighbors=1, donor_policy="available").fit(
+    [[1, 0.0001, 10], [1, 0, 20]]
+)
+imputer.transform([[0, 0, np.nan]])                  # Missing value: 10
+imputer.transform([[0, 0, np.nan], [1, 0, np.nan]])  # First missing value: 20
+```
 
-Done when:
+In this example, the distances are distinct before float32 rounding; the closer donor supplies 20.
 
-- Fitting succeeds even when there are no fully observed rows, provided valid donors exist for the requested columns.
-- A donor missing the target value is never used for that target.
-- Donors with no shared observed distance feature are excluded.
-- `transform()` leaves no unexpected `NaN` values and does not modify its input.
-- Complete-training results remain compatible with 0.2.0 within `atol=1e-6`.
-- On the fixed 0.2.0 incomplete-training benchmark, RMSE improves from 0.3495, with `<=0.27` used as a regression target rather than a universal accuracy claim.
+Work and completion criteria:
 
-### P1: Reduce the cost of many unique missingness patterns
+- Define a consistent precision and tie-handling rule for each query, independent of other queries in its batch.
+- Add regression checks for single versus grouped calls, query reordering, internal batch boundaries, and repeated transforms.
+- Check small cases against an independent direct-distance reference, including near ties and rows that trigger numerical safeguards.
+- Preserve per-target donor eligibility, originally observed values, mean/median aggregation, and fitted fallbacks.
+- Resolve the example above consistently to the closer donor. Document any intentional changes from 0.3.4; preserving its erroneous donor choices is not a compatibility requirement.
+- Measure the cost of the fix. Do not make equality to `KNNImputer` on every input a release condition: its precision and tie choices can differ.
 
-**Why:** With 20,000 training rows and 300 test rows, one shared missingness pattern was 19.62 times faster than KNNImputer and eight patterns were 10.78 times faster. With 294 patterns, the 0.99 times ratio was effectively tied because index preparation was repeated for almost every pattern.
+### 2. Accept NumPy integer neighbor counts
 
-Investigation and implementation work:
-
-- Measure index construction and search time separately.
-- Prototype a bounded pattern-index cache and record its memory cost.
-- Investigate a single-index exact-search representation for mixed masks.
-- Preserve exact `Flat` L2 results before optimizing approximate indexes.
-- Define safe fallback behavior for other metrics and index factories.
-- Clear cached state correctly after a new `fit()` call.
+**Problem:** The Python-`int`-only validation rejects NumPy integers. A GridSearchCV parameter grid such as `{"faissimputer__n_neighbors": np.arange(1, 3)}` fails for both donor policies.
 
 Done when:
 
-- Imputed values remain compatible with 0.2.0 within `atol=1e-6` on complete-donor tests.
-- The 20,000-row, many-pattern benchmark reaches at least a twofold transform improvement over the 0.2.0 FaissImputer baseline, using `<=170 ms` as the current machine-specific regression target.
-- The one-pattern path does not regress by more than 20%.
-- Memory use cannot grow without a documented bound as new patterns appear.
+- Positive integral scalar values, including NumPy integer types, are accepted; invalid values are rejected and boolean handling is explicit.
+- Values are converted to native integers where required by Faiss, while preserving scikit-learn estimator cloning behavior.
+- A real Pipeline/GridSearchCV regression using a NumPy-generated grid succeeds for both donor policies.
+- Existing donor-count constraints, failed-fit cleanup, and input-preservation checks continue to pass.
 
-### P2: Broaden and automate benchmark coverage
+## Follow-up: targeted performance improvements
 
-- Add public real-world numeric datasets alongside synthetic data.
-- Test MCAR and selected MAR scenarios separately.
-- Vary row count, feature count, missing rate, neighbor count, and repeated-pattern count.
-- Keep accuracy and runtime measurements separate.
-- Record package versions, seeds, thread count, medians, and interquartile ranges.
-- Add a short correctness smoke benchmark to CI; keep longer performance runs manual or scheduled to avoid noisy per-commit timing gates.
+### Avoid unused complete-donor index storage
 
-Done when the benchmark can be recreated from a clean environment with one documented command and every published result contains its environment and scope limitations.
+The complete policy currently builds a full-dimensional index during `fit()`, but `transform()` builds projected indexes for its observed-feature patterns instead of searching that stored index.
 
-## Later work
+- Remove or avoid the unused allocation while retaining appropriate fit-time factory validation and fitted-state checks.
+- Verify supported metrics/factories, failed refits, feature-name handling, and output behavior.
+- Measure fit time, retained fitted memory, and transform time against the corrected baseline.
 
-Approximate indexes, GPU-specific optimization, and very large datasets should be prioritized only after real benchmark evidence identifies a useful target and an acceptable accuracy/performance tradeoff.
+### Avoid unnecessary candidate expansion for sparse targets
 
+The available policy widens candidate selection for the whole batch until every missing target has enough donors or all donors have been considered. A target with fewer than `n_neighbors` observed donors can force exhaustive selection, including repeated work for already-resolved queries.
+
+- Investigate per-target donor counts and candidate pools, and expansion restricted to unresolved queries.
+- Preserve exact eligible-neighbor selection and the documented behavior when fewer than `n_neighbors` donors exist or none share observed features.
+- Add a benchmark with highly missing target columns and mixed easy/difficult queries; uniform low-rate MCAR alone does not cover this case.
+- Compare outputs with an independent reference and the corrected baseline, including ties and insufficient-donor cases.
+
+## Follow-up: current-release benchmarks and documentation
+
+### Measure the workloads users actually run
+
+The [historical million-row pilot](docs/benchmarks/available-batching-90c8cfb8.md) used one million training rows but only 300 query rows and one timing run. It predates 0.3.4 donor preparation. It does not establish the cost of imputing one million query rows or running `fit_transform()` on one million rows.
+
+- Benchmark the released package being documented, against KNNImputer and an appropriate prior FaissImputer baseline on matching hardware and inputs.
+- Vary training rows, query rows, and feature count independently; extend missingness, neighbor-count, and pattern coverage where informative.
+- Separate fit, first transform, repeated transforms, and same-data `fit_transform()` at feasible sizes. Exact available-donor pairwise work grows with both donor and query counts.
+- Report quality against hidden ground truth separately from output agreement with another imputer.
+- Measure retained fitted memory and phase-specific peak memory, distinguishing these from whole-worker peak RSS and internal batch-sizing budgets.
+- Use multiple seeds and repetitions. Record versions, hardware, thread limits, timing dispersion, scope limitations, reproduction commands, and linked raw results.
+- Extend the current single-dataset real-data pilot with datasets representing useful application workloads. Retain SimpleImputer as a low-cost baseline where appropriate.
+- Keep long performance runs manual or scheduled; use small correctness checks in CI rather than noisy per-commit speed gates.
+
+Publish each new report with its measured revision and environment. Keep historical reports labeled as historical rather than relabeling their measurements as current-release results.
+
+### Clarify compatibility and help users choose
+
+- Add a concise KNNImputer comparison covering donor defaults, neighbor defaults, float32 conversion, all-missing columns, and unsupported options such as weights and missing indicators.
+- Explain that scikit-learn integration does not imply identical constructor options or identical donor choices. The [real-data pilot](docs/benchmarks/real-data-a3bd1ce3.md) already documents substantive per-cell differences despite similar average errors.
+- Keep completed items and remaining evidence gaps in this roadmap current as changes ship.
+
+## Later work, driven by evidence and user needs
+
+- **Extreme numerical scales:** protect mean/median aggregation from intermediate float32 overflow and review complete-donor distance underflow/overflow. Use explicit finite-input reproductions and an independent reference. Reproduced errors on ordinary-scale inputs belong in the next correctness patch.
+- **Factory support:** define which index factories remain valid when queries have different observed-feature counts. For example, a factory can accept the fitted dimension and reject a projected dimension. Provide clear validation or a documented fallback.
+- **Broader interoperability checks:** add standard scikit-learn estimator checks and address remaining error-message requirements; expand installation/basic-execution coverage to Windows and macOS.
+- **Memory controls:** use current measurements to evaluate a public batch/working-memory setting and donor-block processing. An internal batch budget must not be presented as a total RAM limit.
+- **Additional API features:** consider distance weighting, missing indicators, and empty-feature policies when concrete use cases justify their behavior and maintenance cost.
+- **Approximate search and GPU work:** pursue a specific workload and an acceptable accuracy/performance tradeoff first. Neither changes the priority of consistent results in the existing exact modes.
