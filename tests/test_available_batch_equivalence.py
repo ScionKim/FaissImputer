@@ -100,7 +100,9 @@ def transform_checked(cls, train, query, neighbors=1, strategy="mean"):
     np.testing.assert_array_equal(query, query_before)
     np.testing.assert_array_equal(model.transform(query), result)
     assert model.available_index_.query_ref is None
+    assert model.available_index_.query64 is None
     assert model.available_index_.matrix is None
+    assert model.available_index_.precise_rows == {}
     return result
 
 
