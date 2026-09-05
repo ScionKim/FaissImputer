@@ -43,8 +43,9 @@ class MatrixNaNIndex:
 
     def clear_cache(self):
         self.query_ref = None
+        self.query64 = None
         self.matrix = None
-        self.use_float64 = False
+        self.precise_rows = {}
 
     def _direct_distances(self, query):
         shared = self.present & ~np.isnan(query)
@@ -94,23 +95,52 @@ class MatrixNaNIndex:
                         suspect[row] = True
                         break
 
-            if suspect.any():
-                for row in np.flatnonzero(suspect):
-                    distances[row] = self._direct_distances(query64[row])
-                self.matrix = distances
-                self.use_float64 = True
-            else:
-                self.matrix = matrix32
+            self.query64 = query64
+            self.matrix = matrix32
+            
+            for row in np.flatnonzero(suspect):
+                self.precise_rows[int(row)] = self._direct_distances(query64[row])
+            
             self.query_ref = queries
 
         k = min(int(k), self.matrix.shape[1])
-        if not self.use_float64:
-            return faiss.kmin(self.matrix, k)
-
-        ids = np.argpartition(self.matrix, k - 1, axis=1)[:, :k]
-        values = np.take_along_axis(self.matrix, ids, axis=1)
-        order = np.argsort(values, axis=1, kind="stable")
-        values = np.take_along_axis(values, order, axis=1)
-        ids = np.take_along_axis(ids, order, axis=1)
-        ids = np.where(np.isfinite(values), ids, -1)
+        probe_k = min(k + 1, self.matrix.shape[1])
+        
+        probe_values, probe_ids = faiss.kmin(self.matrix, probe_k)
+        values = probe_values[:, :k]
+        ids = probe_ids[:, :k]
+        
+        ambiguous = np.zeros(self.matrix.shape[0], dtype=bool)
+        
+        # Distinct float64 distances can collapse to the same float32 value.
+        # If that happens among selected candidates, exact ordering matters.
+        if k > 1:
+            ambiguous |= np.any(
+                np.isfinite(values[:, 1:])
+                & (values[:, 1:] == values[:, :-1]),
+                axis=1,
+            )
+        
+        # Also catch a float32 tie that crosses the top-k boundary.
+        if probe_k > k:
+            ambiguous |= (
+                np.isfinite(probe_values[:, k - 1])
+                & (probe_values[:, k - 1] == probe_values[:, k])
+            )
+        
+        for row in np.flatnonzero(ambiguous):
+            row = int(row)
+            if row not in self.precise_rows:
+                self.precise_rows[row] = self._direct_distances(self.query64[row])
+        
+        if self.precise_rows:
+            values = values.astype(np.float64)
+        
+            for row, exact in self.precise_rows.items():
+                order = np.argsort(exact, kind="stable")[:k]
+                row_values = exact[order]
+        
+                values[row] = row_values
+                ids[row] = np.where(np.isfinite(row_values), order, -1)
+        
         return values, ids
