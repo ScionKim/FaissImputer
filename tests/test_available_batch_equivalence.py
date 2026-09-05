@@ -177,7 +177,11 @@ def test_unique_nearest_donor_at_different_scales(
         result = transform_checked(cls, train, query)
         np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-7)
 
-def test_same_row_has_same_correct_donor_when_another_row_triggers_float64():
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("batch_rows", [1, 2])
+def test_same_row_has_same_correct_donor_when_another_row_triggers_float64(
+    reverse, batch_rows
+):
     train = np.array([
         [-1.0, 10, np.nan],
         [1.0, 20, np.nan],
@@ -188,27 +192,28 @@ def test_same_row_has_same_correct_donor_when_another_row_triggers_float64():
         [1e-8, np.nan, 0],
     ], dtype=np.float32)
 
-    mixed = np.array([
+    rows = [
         [1e-8, np.nan, 0],
         [1.0, np.nan, 0],
-    ], dtype=np.float32)
+    ]
+    if reverse:
+        rows.reverse()
+
+    mixed = np.array(rows, dtype=np.float32)
+    target_row = 1 if reverse else 0
 
     expected_target = reference(train, target, 1, "mean")
     expected_mixed = reference(train, mixed, 1, "mean")
 
     assert expected_target[0, 1] == 20
-    assert expected_mixed[0, 1] == 20
+    assert expected_mixed[target_row, 1] == 20
 
-    model = FaissImputer(
-        n_neighbors=1,
-        donor_policy="available",
-        strategy="mean",
-    ).fit(train)
+    cls = variant(batch_rows=batch_rows)
 
-    alone = model.transform(target)
-    together = model.transform(mixed)
+    alone = transform_checked(cls, train, target)
+    together = transform_checked(cls, train, mixed)
 
-    assert (alone[0, 1], together[0, 1]) == (20, 20)
+    assert (alone[0, 1], together[target_row, 1]) == (20, 20)
 
 @pytest.mark.parametrize("batch_rows", [1, 2, 3])
 def test_exact_ties_select_an_eligible_donor(batch_rows):
