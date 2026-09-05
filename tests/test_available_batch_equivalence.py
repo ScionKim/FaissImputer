@@ -177,21 +177,20 @@ def test_unique_nearest_donor_at_different_scales(
         result = transform_checked(cls, train, query)
         np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-7)
 
-def test_same_row_has_same_correct_donor_when_processed_alone_or_with_other_rows():
+def test_same_row_has_same_correct_donor_when_another_row_triggers_float64():
     train = np.array([
-        [1.0001, 10, np.nan],
+        [-1.0, 10, np.nan],
         [1.0, 20, np.nan],
         [np.nan, np.nan, 0],
     ], dtype=np.float32)
 
     target = np.array([
-        [0.0, np.nan, 0],
+        [1e-8, np.nan, 0],
     ], dtype=np.float32)
 
     mixed = np.array([
-        [0.0, np.nan, 0],
+        [1e-8, np.nan, 0],
         [1.0, np.nan, 0],
-        [np.nan, np.nan, np.nan],
     ], dtype=np.float32)
 
     expected_target = reference(train, target, 1, "mean")
