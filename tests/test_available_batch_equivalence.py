@@ -245,18 +245,34 @@ def test_float32_tie_at_top_k_boundary_uses_correct_second_donor():
 
     assert result[0, 1] == 12.5
 
+@pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize("batch_rows", [1, 2, 3])
-def test_exact_ties_select_an_eligible_donor(batch_rows):
-    train = np.array([
-        [-1, 10, np.nan], [1, 20, np.nan], [np.nan, np.nan, 0]
-    ], dtype=np.float32)
+def test_exact_ties_use_training_row_order(reverse, batch_rows):
+    donors = [
+        [-1, 10, np.nan],
+        [1, 20, np.nan],
+    ]
+    if reverse:
+        donors.reverse()
+
+    train = np.array(
+        donors + [[np.nan, np.nan, 0]],
+        dtype=np.float32,
+    )
+
     query = np.array([
-        [0, np.nan, 0], [1, np.nan, 0], [np.nan, np.nan, np.nan]
+        [0, np.nan, 0],
+        [1, np.nan, 0],
+        [np.nan, np.nan, np.nan],
     ], dtype=np.float32)
+
+    expected_tie = 20 if reverse else 10
+
     for cls in (FaissImputer, variant(batch_rows=batch_rows)):
         result = transform_checked(cls, train, query)
-        # No particular ordering is promised between exactly tied donors.
-        assert result[0, 1] in (10, 20)
+
+        # Truly equal distances are resolved by training-row order.
+        assert result[0, 1] == expected_tie
         assert result[1, 1] == 20
         assert result[2, 1] == 15
 
