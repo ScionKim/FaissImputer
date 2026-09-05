@@ -208,9 +208,7 @@ def test_same_row_has_same_correct_donor_when_another_row_triggers_float64():
     alone = model.transform(target)
     together = model.transform(mixed)
 
-    assert alone[0, 1] == 20
-    assert together[0, 1] == 20
-    assert alone[0, 1] == together[0, 1]
+    assert (alone[0, 1], together[0, 1]) == (20, 20)
 
 @pytest.mark.parametrize("batch_rows", [1, 2, 3])
 def test_exact_ties_select_an_eligible_donor(batch_rows):
