@@ -112,21 +112,43 @@ class MatrixNaNIndex:
         
         ambiguous = np.zeros(self.matrix.shape[0], dtype=bool)
         
-        # Distinct float64 distances can collapse to the same float32 value.
-        # If that happens among selected candidates, exact ordering matters.
-        if k > 1:
-            ambiguous |= np.any(
-                np.isfinite(values[:, 1:])
-                & (values[:, 1:] == values[:, :-1]),
-                axis=1,
-            )
+        ambiguous = np.zeros(self.matrix.shape[0], dtype=bool)
+        query_missing = np.isnan(self.query64)
         
-        # Also catch a float32 tie that crosses the top-k boundary.
-        if probe_k > k:
-            ambiguous |= (
-                np.isfinite(probe_values[:, k - 1])
-                & (probe_values[:, k - 1] == probe_values[:, k])
-            )
+        for row in range(self.matrix.shape[0]):
+            tie_values = []
+        
+            if k > 1:
+                tied = (
+                    np.isfinite(values[row, 1:])
+                    & (values[row, 1:] == values[row, :-1])
+                )
+                if tied.any():
+                    tie_values.extend(values[row, 1:][tied])
+        
+            if (
+                probe_k > k
+                and np.isfinite(probe_values[row, k - 1])
+                and probe_values[row, k - 1] == probe_values[row, k]
+            ):
+                tie_values.append(probe_values[row, k - 1])
+        
+            for tie_value in np.unique(tie_values):
+                tied_donors = np.flatnonzero(
+                    np.isfinite(self.matrix[row])
+                    & (self.matrix[row] == tie_value)
+                )
+        
+                can_fill = (
+                    self.present[tied_donors]
+                    & query_missing[row]
+                )
+        
+                # Exact ordering matters only when at least two tied donors
+                # compete to fill the same missing feature.
+                if np.any(can_fill.sum(axis=0) >= 2):
+                    ambiguous[row] = True
+                    break
         
         for row in np.flatnonzero(ambiguous):
             row = int(row)
