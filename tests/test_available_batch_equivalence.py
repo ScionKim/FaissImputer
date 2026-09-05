@@ -216,6 +216,35 @@ def test_same_row_has_same_correct_donor_when_another_row_triggers_float64(
 
     assert (alone[0, 1], together[target_row, 1]) == (20, 20)
 
+def test_float32_tie_at_top_k_boundary_uses_correct_second_donor():
+    train = np.array([
+        [0.2, 5, np.nan],
+        [-1.0, 10, np.nan],
+        [1.0, 20, np.nan],
+        [np.nan, np.nan, 0],
+    ], dtype=np.float32)
+
+    query = np.array([
+        [1e-8, np.nan, 0],
+    ], dtype=np.float32)
+
+    expected = reference(train, query, 2, "mean")
+
+    # 0.2 donor is clearly nearest.
+    # Between -1 and +1, +1 is slightly nearer in float64,
+    # so the correct two donors are 5 and 20.
+    assert expected[0, 1] == 12.5
+
+    result = transform_checked(
+        FaissImputer,
+        train,
+        query,
+        neighbors=2,
+        strategy="mean",
+    )
+
+    assert result[0, 1] == 12.5
+
 @pytest.mark.parametrize("batch_rows", [1, 2, 3])
 def test_exact_ties_select_an_eligible_donor(batch_rows):
     train = np.array([
