@@ -44,7 +44,7 @@ class MatrixNaNIndex:
     def clear_cache(self):
         self.query_ref = None
         self.matrix = None
-        self.use_float64 = False
+        self.precise_rows = {}
 
     def _direct_distances(self, query):
         shared = self.present & ~np.isnan(query)
@@ -57,6 +57,22 @@ class MatrixNaNIndex:
             squared[usable] * self.donors64.shape[1] / counts[usable]
         )
         return distances
+
+    @staticmethod
+    def _precise_topk(distances, k):
+        if k < distances.size:
+            cutoff = np.partition(distances, k - 1)[k - 1]
+            closer = np.flatnonzero(distances < cutoff)
+            tied = np.flatnonzero(distances == cutoff)[:k - closer.size]
+            ids = np.concatenate((closer, tied))
+        else:
+            ids = np.arange(distances.size)
+        # Each equal-distance group starts in training-row order. Sort only
+        # the selected candidates, retaining that order for genuine ties.
+        order = np.argsort(distances[ids], kind="stable")
+        ids = ids[order]
+        values = distances[ids]
+        return values, np.where(np.isfinite(values), ids, -1)
 
     def search(self, queries, k):
         if queries is not self.query_ref:
@@ -94,23 +110,39 @@ class MatrixNaNIndex:
                         suspect[row] = True
                         break
 
-            if suspect.any():
-                for row in np.flatnonzero(suspect):
-                    distances[row] = self._direct_distances(query64[row])
-                self.matrix = distances
-                self.use_float64 = True
-            else:
-                self.matrix = matrix32
+            self.matrix = matrix32
+            for row in np.flatnonzero(suspect):
+                self.precise_rows[int(row)] = self._direct_distances(query64[row])
             self.query_ref = queries
 
         k = min(int(k), self.matrix.shape[1])
-        if not self.use_float64:
-            return faiss.kmin(self.matrix, k)
+        probe_k = min(k + 1, self.matrix.shape[1])
+        probe_values, probe_ids = faiss.kmin(self.matrix, probe_k)
 
-        ids = np.argpartition(self.matrix, k - 1, axis=1)[:, :k]
-        values = np.take_along_axis(self.matrix, ids, axis=1)
-        order = np.argsort(values, axis=1, kind="stable")
-        values = np.take_along_axis(values, order, axis=1)
-        ids = np.take_along_axis(ids, order, axis=1)
-        ids = np.where(np.isfinite(values), ids, -1)
+        # Includes ties crossing the selection boundary. Ordinary rows require
+        # no Python-level loop; rows already refined need no further tie check.
+        tied = (
+            np.isfinite(probe_values[:, 1:])
+            & (probe_values[:, 1:] == probe_values[:, :-1])
+        )
+        for row in np.flatnonzero(tied.any(axis=1)):
+            row = int(row)
+            if row in self.precise_rows:
+                continue
+            missing = np.isnan(queries[row])
+            for value in np.unique(probe_values[row, 1:][tied[row]]):
+                # Include the whole tie group, even donors outside the probe.
+                donor_ids = np.flatnonzero(self.matrix[row] == value)
+                can_fill = self.present[donor_ids] & missing
+                if np.any(can_fill.sum(axis=0) >= 2):
+                    query64 = np.asarray(queries[row], dtype=np.float64)
+                    self.precise_rows[row] = self._direct_distances(query64)
+                    break
+
+        values = probe_values[:, :k]
+        ids = probe_ids[:, :k]
+        if self.precise_rows:
+            values = values.astype(np.float64)
+            for row, exact in self.precise_rows.items():
+                values[row], ids[row] = self._precise_topk(exact, k)
         return values, ids
