@@ -9,7 +9,7 @@
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-Current release: [0.3.4](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.5).
+Current release: [0.3.5](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.5).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Performance at a glance
