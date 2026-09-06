@@ -228,3 +228,73 @@ def test_real_128mib_variant_changes_batch_boundaries(monkeypatch, strategy):
     ).fit(train).transform(query)
     assert calls == [32]
     np.testing.assert_allclose(default_result, expected, rtol=1e-6, atol=1e-7)
+
+@pytest.mark.parametrize("offset, expected", [
+    (1e-8, 20),
+    (-1e-8, 10),
+])
+def test_available_row_is_correct_alone_and_in_mixed_batch(offset, expected):
+    train = np.array([
+        [-1.0, 10, np.nan],
+        [1.0, 20, np.nan],
+        [np.nan, np.nan, 0],
+    ], dtype=np.float32)
+
+    target = np.array([
+        [offset, np.nan, 0],
+    ], dtype=np.float32)
+
+    mixed = np.array([
+        [offset, np.nan, 0],
+        [1.0, np.nan, 0],
+    ], dtype=np.float32)
+
+    model = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+        strategy="mean",
+    ).fit(train)
+
+    alone = model.transform(target)
+    together = model.transform(mixed)
+
+    assert (alone[0, 1], together[0, 1]) == (expected, expected)
+
+@pytest.mark.parametrize("offset, expected", [
+    (1e-8, 20),
+    (-1e-8, 10),
+])
+def test_public_near_tie_straddles_real_search_boundary(
+    monkeypatch, offset, expected
+):
+    from faiss_imputer._matrix import MatrixNaNIndex
+
+    # Fifteen closer donors cannot fill column 1.
+    # The usable pair straddles the initial 16-candidate boundary.
+    train = np.array(
+        [[i / 100, np.nan, 0] for i in range(1, 16)]
+        + [[-1, 10, np.nan], [1, 20, np.nan]],
+        dtype=np.float32,
+    )
+    query = np.array([[offset, np.nan, 0]], dtype=np.float32)
+
+    observed = []
+    original = MatrixNaNIndex.search
+
+    def counted(index, queries, k):
+        observed.append((k, len(index.donors64)))
+        return original(index, queries, k)
+
+    monkeypatch.setattr(MatrixNaNIndex, "search", counted)
+
+    model = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+    ).fit(train)
+    result = model.transform(query)
+
+    assert observed[0] == (16, 17)
+    assert result[0, 1] == expected
+    assert model.available_index_.query_ref is None
+    assert model.available_index_.matrix is None
+    assert model.available_index_.precise_rows == {}
