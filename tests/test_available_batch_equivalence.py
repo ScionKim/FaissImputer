@@ -259,3 +259,42 @@ def test_available_row_is_correct_alone_and_in_mixed_batch(offset, expected):
     together = model.transform(mixed)
 
     assert (alone[0, 1], together[0, 1]) == (expected, expected)
+
+@pytest.mark.parametrize("offset, expected", [
+    (1e-8, 20),
+    (-1e-8, 10),
+])
+def test_public_near_tie_straddles_real_search_boundary(
+    monkeypatch, offset, expected
+):
+    from faiss_imputer._matrix import MatrixNaNIndex
+
+    # Fifteen closer donors cannot fill column 1.
+    # The usable pair straddles the initial 16-candidate boundary.
+    train = np.array(
+        [[i / 100, np.nan, 0] for i in range(1, 16)]
+        + [[-1, 10, np.nan], [1, 20, np.nan]],
+        dtype=np.float32,
+    )
+    query = np.array([[offset, np.nan, 0]], dtype=np.float32)
+
+    observed = []
+    original = MatrixNaNIndex.search
+
+    def counted(index, queries, k):
+        observed.append((k, len(index.donors64)))
+        return original(index, queries, k)
+
+    monkeypatch.setattr(MatrixNaNIndex, "search", counted)
+
+    model = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+    ).fit(train)
+    result = model.transform(query)
+
+    assert observed[0] == (16, 17)
+    assert result[0, 1] == expected
+    assert model.available_index_.query_ref is None
+    assert model.available_index_.matrix is None
+    assert model.available_index_.precise_rows == {}
