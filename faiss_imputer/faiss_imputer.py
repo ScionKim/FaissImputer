@@ -1,3 +1,5 @@
+from numbers import Integral
+
 import numpy as np
 import faiss
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
@@ -78,7 +80,11 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         )
 
         # Check parameters
-        if not isinstance(self.n_neighbors, int) or self.n_neighbors <= 0:
+        if (
+            isinstance(self.n_neighbors, (bool, np.bool_))
+            or not isinstance(self.n_neighbors, Integral)
+            or self.n_neighbors <= 0
+        ):
             raise ValueError("n_neighbors must be a positive integer")
 
         if self.metric not in ('l2', 'ip'):
@@ -230,7 +236,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
             _, neighbor_indices = index.search(
                 query_vectors,
-                min(self.n_neighbors, self.donors_.shape[0]),
+                min(int(self.n_neighbors), self.donors_.shape[0]),
             )
 
             for sample_idx, neighbors in zip(
@@ -275,7 +281,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         result[missing] = np.broadcast_to(self.statistics_, X.shape)[missing]
         rows = np.flatnonzero(missing.any(axis=1) & ~missing.all(axis=1))
         n_donors = self.donors_.shape[0]
-        k = min(self.n_neighbors, n_donors)
+        k = min(int(self.n_neighbors), n_donors)
         batch_size = max(
             1, min(256, (128 * 1024 * 1024) // (12 * n_donors))
         )
