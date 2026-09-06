@@ -132,7 +132,6 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             self.index_factory,
             self.metric_type_,
         )
-
         # Flat donor storage is unused: transform builds projected indexes.
         # Other factories retain their training and insertion validation.
         if self.index_factory != "Flat":
@@ -286,6 +285,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         rows = np.flatnonzero(missing.any(axis=1) & ~missing.all(axis=1))
         n_donors = self.donors_.shape[0]
         k = min(int(self.n_neighbors), n_donors)
+        required = np.minimum(k, self.available_index_.donor_counts)
         batch_size = max(
             1, min(256, (128 * 1024 * 1024) // (12 * n_donors))
         )
@@ -313,27 +313,41 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     usable = valid & ~np.isnan(values)
                     enough &= (
                         ~batch_missing[:, col]
-                        | (usable.sum(axis=1) >= k)
+                        | (usable.sum(axis=1) >= required[col])
                     )
 
-                if enough.all() or search_k == n_donors:
-                    break
-                search_k = min(n_donors, 2 * search_k)
+                # Use corrected search results: the float32 cache can contain
+                # overflowed values that were repaired by precise refinement.
+                finished = enough | (~valid).any(axis=1)
+                if search_k == n_donors:
+                    finished[:] = True
 
-            for col in columns:
-                values = self.donors_[safe_ids, col]
-                usable = valid & ~np.isnan(values)
-                chosen = usable & (np.cumsum(usable, axis=1) <= k)
-                fill_rows = batch_missing[:, col] & chosen.any(axis=1)
-                if not fill_rows.any():
-                    continue
-                selected = np.where(
-                    chosen[fill_rows], values[fill_rows], np.nan
-                )
-                if self.strategy == "mean":
-                    fill = np.nanmean(selected, axis=1)
-                else:
-                    fill = np.nanmedian(selected, axis=1)
-                result[batch_rows[fill_rows], col] = fill
+                for col in columns:
+                    if not (finished & batch_missing[:, col]).any():
+                        continue
+                    values = self.donors_[safe_ids, col]
+                    usable = valid & ~np.isnan(values)
+                    chosen = usable & (np.cumsum(usable, axis=1) <= k)
+                    fill_rows = finished & batch_missing[:, col] & chosen.any(axis=1)
+                    if not fill_rows.any():
+                        continue
+                    selected = np.where(
+                        chosen[fill_rows], values[fill_rows], np.nan
+                    )
+                    if self.strategy == "mean":
+                        fill = np.nanmean(selected, axis=1)
+                    else:
+                        fill = np.nanmedian(selected, axis=1)
+                    result[batch_rows[fill_rows], col] = fill
+
+                if finished.all():
+                    break
+                if finished.any():
+                    remaining = np.flatnonzero(~finished)
+                    batch_rows = batch_rows[remaining]
+                    batch_missing = batch_missing[remaining]
+                    columns = np.flatnonzero(batch_missing.any(axis=0))
+                    queries = self.available_index_.retain_queries(remaining)
+                search_k = min(n_donors, 2 * search_k)
 
         return result
