@@ -1,8 +1,8 @@
 # Roadmap
 
-Updated after [0.3.4](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.4), based on a source and regression review of commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated after [0.3.5](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.5) to record the available-donor precision fix and its validation. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-The next patch focuses on consistent imputation results and interoperability. Performance work follows those fixes, with measurements tied to the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+Upcoming work focuses on interoperability and remaining numerical validation. Performance work follows those fixes, with measurements tied to the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -15,13 +15,13 @@ The next patch focuses on consistent imputation results and interoperability. Pe
 - Minimum/latest dependency CI, package metadata checks, installed-wheel smoke tests, and automated PyPI publishing.
 - Reproducible synthetic benchmarks, a real-data MCAR/MAR pilot, and historical batching/thread experiments. Coverage and current-release measurements still need expansion.
 
-## Next patch: correctness and interoperability
+## Completed in 0.3.5
 
-### 1. Make available-donor results independent of query batching
+### Isolate available-donor precision refinement per query
 
-**Problem:** A numerical safeguard can switch the entire query batch from float32 to float64 neighbor selection. Adding an unrelated query can therefore change the imputation of an existing query.
+**Previous problem:** In 0.3.4, a numerical safeguard could switch the entire query batch from float32 to float64 neighbor selection. Adding an unrelated query could therefore change the imputation of an existing query.
 
-Reproduced on 0.3.4 with NumPy 2.5.2, scikit-learn 1.9.0, and Faiss 1.15.0:
+Historical reproduction on 0.3.4 with NumPy 2.5.2, scikit-learn 1.9.0, and Faiss 1.15.0:
 
 ```python
 import numpy as np
@@ -30,22 +30,26 @@ from faiss_imputer import FaissImputer
 imputer = FaissImputer(n_neighbors=1, donor_policy="available").fit(
     [[1, 0.0001, 10], [1, 0, 20]]
 )
-imputer.transform([[0, 0, np.nan]])                  # Missing value: 10
-imputer.transform([[0, 0, np.nan], [1, 0, np.nan]])  # First missing value: 20
+imputer.transform([[0, 0, np.nan]])                  # 0.3.4: missing value 10
+imputer.transform([[0, 0, np.nan], [1, 0, np.nan]])  # 0.3.4: first missing value 20
 ```
 
-In this example, the distances are distinct before float32 rounding; the closer donor supplies 20.
+The distances in this example are distinct before float32 rounding; the closer donor supplies 20. The fix shipped in 0.3.5 returns 20 for the target in both calls. Historical comments above describe the reproduced 0.3.4 behavior, not the fixed result.
 
-Work and completion criteria:
+Delivered changes:
 
-- Define a consistent precision and tie-handling rule for each query, independent of other queries in its batch.
-- Add regression checks for single versus grouped calls, query reordering, internal batch boundaries, and repeated transforms.
-- Check small cases against an independent direct-distance reference, including near ties and rows that trigger numerical safeguards.
-- Preserve per-target donor eligibility, originally observed values, mean/median aggregation, and fitted fallbacks.
-- Resolve the example above consistently to the closer donor. Document any intentional changes from 0.3.4; preserving its erroneous donor choices is not a compatibility requirement.
-- Measure the cost of the fix. Do not make equality to `KNNImputer` on every input a release condition: its precision and tie choices can differ.
+- Cache direct float64 distances per affected query, retaining FAISS selection for ordinary rows.
+- Detect relevant float32 ties, including ties across the candidate boundary, and inspect the full tied group for donors competing to fill the same missing feature.
+- Resolve equal direct distances in training-row order for refined rows, reusing their distances as the candidate search expands.
+- Add regressions for single versus grouped calls, query reordering, candidate expansion, near and true ties, mean/median aggregation, cache reuse and cleanup, and the ordinary FAISS path. The full suite passed 150 tests.
 
-### 2. Accept NumPy integer neighbor counts
+A [same-runner paired benchmark](https://github.com/ScionKim/FaissImputer/actions/runs/34009545328) compared baseline commit [`386234bd`](https://github.com/ScionKim/FaissImputer/tree/386234bd138d68e46f2b79d0f8c4f7b2dfcbc9d8) with fix commit [`a279e10e`](https://github.com/ScionKim/FaissImputer/tree/a279e10e9a10226cd89732a2030b7ad7fb7b167d) in main/fix/fix/main order on one AMD EPYC 7763 runner. Across 24 Available configurations, mean transform-time changes ranged from -3.92% to +0.72%. No material slowdown was observed in that workload. These measurements apply to the recorded source revisions; they are not a benchmark of the published 0.3.5 wheel. One seed and two observations per version do not establish a speedup or precise overhead, and tie-heavy workloads were not separately benchmarked.
+
+The existing heuristic numerical-risk guard remains unchanged. This release addresses the reproduced batch-wide precision-switch failure and relevant float32 ties; it does not establish batch-independent or exact neighbor ordering for every floating-point input, or numerical identity with `KNNImputer`.
+
+## Next patch: correctness and interoperability
+
+### Accept NumPy integer neighbor counts
 
 **Problem:** The Python-`int`-only validation rejects NumPy integers. A GridSearchCV parameter grid such as `{"faissimputer__n_neighbors": np.arange(1, 3)}` fails for both donor policies.
 
