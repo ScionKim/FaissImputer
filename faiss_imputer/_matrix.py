@@ -11,6 +11,7 @@ class MatrixNaNIndex:
         # Own this buffer: caller data and public donors_ retain their NaNs.
         self.donors64 = np.array(donors, dtype=np.float64, copy=True)
         self.present = ~np.isnan(self.donors64)
+        self.donor_counts = self.present.sum(axis=0)
         # Preserve the reduction used by the existing numerical-risk guard.
         self.norms = np.nansum(self.donors64 * self.donors64, axis=1)
         self.missing_donors = ~self.present
@@ -45,6 +46,20 @@ class MatrixNaNIndex:
         self.query_ref = None
         self.matrix = None
         self.precise_rows = {}
+
+    def retain_queries(self, rows):
+        """Keep selected cached queries in the supplied row order."""
+        queries = np.ascontiguousarray(self.query_ref[rows])
+        matrix = self.matrix[rows]
+        precise_rows = {
+            new_row: self.precise_rows[int(old_row)]
+            for new_row, old_row in enumerate(rows)
+            if int(old_row) in self.precise_rows
+        }
+        self.query_ref = queries
+        self.matrix = matrix
+        self.precise_rows = precise_rows
+        return queries
 
     def _direct_distances(self, query):
         shared = self.present & ~np.isnan(query)
