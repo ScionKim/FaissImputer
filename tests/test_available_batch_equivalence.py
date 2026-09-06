@@ -228,3 +228,34 @@ def test_real_128mib_variant_changes_batch_boundaries(monkeypatch, strategy):
     ).fit(train).transform(query)
     assert calls == [32]
     np.testing.assert_allclose(default_result, expected, rtol=1e-6, atol=1e-7)
+
+@pytest.mark.parametrize("offset, expected", [
+    (1e-8, 20),
+    (-1e-8, 10),
+])
+def test_available_row_is_correct_alone_and_in_mixed_batch(offset, expected):
+    train = np.array([
+        [-1.0, 10, np.nan],
+        [1.0, 20, np.nan],
+        [np.nan, np.nan, 0],
+    ], dtype=np.float32)
+
+    target = np.array([
+        [offset, np.nan, 0],
+    ], dtype=np.float32)
+
+    mixed = np.array([
+        [offset, np.nan, 0],
+        [1.0, np.nan, 0],
+    ], dtype=np.float32)
+
+    model = FaissImputer(
+        n_neighbors=1,
+        donor_policy="available",
+        strategy="mean",
+    ).fit(train)
+
+    alone = model.transform(target)
+    together = model.transform(mixed)
+
+    assert (alone[0, 1], together[0, 1]) == (expected, expected)
