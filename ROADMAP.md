@@ -1,8 +1,8 @@
 # Roadmap
 
-Updated after [0.3.5](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.5) to record the available-donor precision fix and its validation. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated after [0.3.6](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.6) to record the available-donor precision fix in 0.3.5 and NumPy integer neighbor-count support in 0.3.6. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-Upcoming work focuses on interoperability and remaining numerical validation. Performance work follows those fixes, with measurements tied to the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+Upcoming work focuses on targeted memory and performance improvements, alongside remaining numerical and interoperability validation. Measurements must identify the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -47,18 +47,18 @@ A [same-runner paired benchmark](https://github.com/ScionKim/FaissImputer/action
 
 The existing heuristic numerical-risk guard remains unchanged. This release addresses the reproduced batch-wide precision-switch failure and relevant float32 ties; it does not establish batch-independent or exact neighbor ordering for every floating-point input, or numerical identity with `KNNImputer`.
 
-## Next patch: correctness and interoperability
+## Completed in 0.3.6
 
 ### Accept NumPy integer neighbor counts
 
-**Problem:** The Python-`int`-only validation rejects NumPy integers. A GridSearchCV parameter grid such as `{"faissimputer__n_neighbors": np.arange(1, 3)}` fails for both donor policies.
+- Accept positive Python and NumPy integer scalars for `n_neighbors` under both donor policies.
+- Support Pipeline/GridSearchCV parameter grids generated with `np.arange()`.
+- Preserve the original estimator parameter for scikit-learn cloning.
+- Convert local neighbor counts to Python integers before FAISS search and candidate-expansion arithmetic.
+- Explicitly reject Python and NumPy booleans. Python `True` was previously accepted as `1`.
+- Preserve policy-specific donor-count limits, failed-fit cleanup, and input preservation.
 
-Done when:
-
-- Positive integral scalar values, including NumPy integer types, are accepted; invalid values are rejected and boolean handling is explicit.
-- Values are converted to native integers where required by Faiss, while preserving scikit-learn estimator cloning behavior.
-- A real Pipeline/GridSearchCV regression using a NumPy-generated grid succeeds for both donor policies.
-- Existing donor-count constraints, failed-fit cleanup, and input-preservation checks continue to pass.
+Validation: 189 tests passed, including 39 new regression cases covering integer types, model selection, cloning, invalid parameters, donor limits, and candidate-expansion overflow.
 
 ## Follow-up: targeted performance improvements
 
