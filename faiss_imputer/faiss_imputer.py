@@ -132,8 +132,12 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             self.index_factory,
             self.metric_type_,
         )
-        index.train(self.donors_)
-        index.add(self.donors_)
+
+        # Flat donor storage is unused: transform builds projected indexes.
+        # Other factories retain their training and insertion validation.
+        if self.index_factory != "Flat":
+            index.train(self.donors_)
+            index.add(self.donors_)
 
         # Store the index as an attribute
         self.index_ = index
