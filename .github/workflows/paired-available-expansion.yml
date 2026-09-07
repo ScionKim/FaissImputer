@@ -1,0 +1,405 @@
+name: Paired available expansion benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paired-available-expansion-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      PAIRED_OUTPUT_DIR: ${{ github.workspace }}/paired-results
+      PYTHONHASHSEED: '0'
+      PYTHONPATH: ''
+      PYTHONNOUSERSITE: '1'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      BLIS_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      OMP_DYNAMIC: 'FALSE'
+      MKL_DYNAMIC: 'FALSE'
+
+    steps:
+      - name: Check out v0.3.7
+        uses: actions/checkout@v7
+        with:
+          ref: v0.3.7
+          path: baseline
+          persist-credentials: false
+
+      - name: Check out v0.3.8
+        uses: actions/checkout@v7
+        with:
+          ref: v0.3.8
+          path: candidate
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install shared dependencies and record environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$PAIRED_OUTPUT_DIR"
+          python -m pip install 'numpy==2.5.2' 'scikit-learn==1.9.0' 'faiss-cpu==1.15.0'
+          python -m pip check
+          python -m pip freeze --all > "$PAIRED_OUTPUT_DIR/pip-freeze.txt"
+          lscpu > "$PAIRED_OUTPUT_DIR/lscpu.txt"
+
+      - name: Measure both releases on this runner
+        timeout-minutes: 25
+        shell: python
+        run: |
+          import csv
+          import gc
+          import hashlib
+          import itertools
+          import json
+          import math
+          import os
+          import platform
+          import resource
+          import statistics
+          import subprocess
+          import sys
+          import time
+          import tomllib
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          ORDER = ("0.3.7", "0.3.8", "0.3.8", "0.3.7")
+          THREAD_VARS = (
+              "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
+              "BLIS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+          )
+
+          def digest(array):
+              return hashlib.sha256(memoryview(array).cast("B")).hexdigest()
+
+          def make_data(case, n, seed):
+              import numpy as np
+
+              rng = np.random.default_rng(seed)
+              q, p = 128, 12
+              if case == "ordinary":
+                  train = rng.normal(size=(n, p)).astype(np.float32)
+                  query = rng.normal(size=(q, p)).astype(np.float32)
+                  train_mask = rng.random(train.shape) < 0.10
+                  query_mask = rng.random(query.shape) < 0.20
+                  train_mask[:, 0] = False
+                  query_mask[:, 0] = False
+                  query_mask[:, 1] = True
+                  train[train_mask] = np.nan
+                  query[query_mask] = np.nan
+              elif case == "mixed_sparse":
+                  train = rng.normal(size=(n, p)).astype(np.float32)
+                  anchor = rng.normal(size=p).astype(np.float32)
+                  # Place the only two rare-target donors away from the
+                  # nearest candidates, but before the full donor boundary.
+                  delta = train[:, :-1].astype(np.float64) - anchor[:-1]
+                  rank = np.argsort((delta * delta).sum(axis=1), kind="stable")
+                  rare = rank[[n // 4, n // 3]]
+                  train[:, -1] = np.nan
+                  train[rare, -1] = [-1, 1]
+                  query = np.tile(anchor, (q, 1))
+                  query += rng.normal(scale=0.001, size=query.shape).astype(np.float32)
+                  hard = np.arange(q) % 8 == 0
+                  query[~hard, 1] = np.nan
+                  query[~hard, -1] = 0
+                  query[hard, -1] = np.nan
+              elif case == "finite_exhaustion":
+                  train = np.full((n, p), np.nan, dtype=np.float32)
+                  train[:, -1] = rng.normal(size=n).astype(np.float32)
+                  train[0, :-1] = 0
+                  train[0, -1] = np.nan
+                  train[1, 1:-1] = 0.5
+                  train[1, -1] = 7
+                  query = np.full((q, p), np.nan, dtype=np.float32)
+                  # First-feature queries have no eligible target donor;
+                  # second-feature queries have one. Both exhaust by k=16.
+                  query[::2, 0] = rng.uniform(0.05, 0.15, size=q // 2)
+                  query[1::2, 1] = rng.uniform(0.05, 0.15, size=q // 2)
+              else:
+                  raise ValueError(case)
+              return np.ascontiguousarray(train), np.ascontiguousarray(query)
+
+          def worker(config):
+              source = Path(config["source"]).resolve()
+              sys.path.insert(0, str(source))
+              import faiss
+              import faiss_imputer
+              import faiss_imputer._matrix as matrix
+              import faiss_imputer.faiss_imputer as implementation
+              import numpy as np
+              import scipy
+              import sklearn
+              from faiss_imputer import FaissImputer
+              from threadpoolctl import threadpool_info, threadpool_limits
+
+              imports = {
+                  module.__name__: str(Path(module.__file__).resolve())
+                  for module in (faiss_imputer, matrix, implementation)
+              }
+              if not all(Path(path).is_relative_to(source) for path in imports.values()):
+                  raise RuntimeError(f"Wrong source import: {imports}")
+
+              threads = config["threads"]
+              faiss.omp_set_num_threads(threads)
+              with threadpool_limits(limits=threads):
+                  # Small warmup only; no measured-size transform is repeated
+                  # in this worker, so its memory high-water mark stays useful.
+                  warm_rng = np.random.default_rng(7)
+                  warm_train = warm_rng.normal(size=(32, 12)).astype(np.float32)
+                  warm_query = warm_rng.normal(size=(8, 12)).astype(np.float32)
+                  warm_query[:, 1] = np.nan
+                  FaissImputer(n_neighbors=5, donor_policy="available").fit(
+                      warm_train
+                  ).transform(warm_query)
+                  del warm_train, warm_query
+
+                  train, query = make_data(config["case"], config["rows"], config["seed"])
+                  fingerprints = {"train": digest(train), "query": digest(query)}
+                  observed = ~np.isnan(query)
+                  pools = [
+                      {k: pool.get(k) for k in (
+                          "internal_api", "prefix", "version", "num_threads", "architecture"
+                      )}
+                      for pool in threadpool_info()
+                  ]
+                  if not pools or any(pool["num_threads"] != threads for pool in pools):
+                      raise RuntimeError(f"Unexpected native thread counts: {pools}")
+                  if faiss.omp_get_max_threads() != threads:
+                      raise RuntimeError("FAISS thread count differs from requested threads")
+                  model = FaissImputer(
+                      n_neighbors=5, strategy="mean", donor_policy="available"
+                  )
+                  gc.collect()
+                  started = time.perf_counter()
+                  model.fit(train)
+                  fitted = time.perf_counter()
+                  output = model.transform(query)
+                  finished = time.perf_counter()
+                  # Read before output comparisons or JSON conversion. Linux
+                  # reports KiB; this includes imports, generation, warmup, fit.
+                  peak_mib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+
+              assert output.shape == query.shape and output.dtype == np.float32
+              assert np.isfinite(output).all()
+              assert not np.shares_memory(output, query)
+              np.testing.assert_array_equal(output[observed], query[observed])
+              assert digest(train) == fingerprints["train"]
+              assert digest(query) == fingerprints["query"]
+              backend = model.available_index_
+              assert backend.query_ref is None and backend.matrix is None
+              assert not backend.precise_rows
+              return {
+                  "status": "ok", "fingerprints": fingerprints, "imports": imports,
+                  "versions": {"numpy": np.__version__, "scipy": scipy.__version__,
+                               "sklearn": sklearn.__version__, "faiss": faiss.__version__},
+                  "threadpools": pools, "faiss_threads": threads,
+                  "fit_seconds": fitted - started,
+                  "transform_seconds": finished - fitted,
+                  "total_seconds": finished - started,
+                  "process_peak_through_transform_mib": peak_mib,
+                  "output": output.tolist(),
+              }
+
+          def controller():
+              import numpy as np
+
+              out = Path(os.environ["PAIRED_OUTPUT_DIR"])
+              out.mkdir(parents=True, exist_ok=True)
+              workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+              sources = {"0.3.7": workspace / "baseline", "0.3.8": workspace / "candidate"}
+              manifest = {
+                  "workflow_sha": os.environ["GITHUB_SHA"],
+                  "run_id": os.environ["GITHUB_RUN_ID"],
+                  "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "python": platform.python_version(), "platform": platform.platform(),
+                  "logical_cpus": os.cpu_count(), "affinity_cpus": len(os.sched_getaffinity(0)),
+                  "order_per_configuration": ORDER, "sources": {},
+                  "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                  "queries": 128, "features": 12, "n_neighbors": 5, "strategy": "mean",
+                  "comparison_rtol": 1e-6, "comparison_atol": 1e-7,
+              }
+              requirements = []
+              for label, path in sources.items():
+                  project = tomllib.loads((path / "pyproject.toml").read_text())["project"]
+                  if project["version"] != label:
+                      raise RuntimeError(f"Tag v{label} contains version {project['version']}")
+                  requirements.append(project["dependencies"])
+                  manifest["sources"][label] = {
+                      "tag": f"v{label}", "path": str(path),
+                      "sha": subprocess.check_output(
+                          ["git", "rev-parse", "HEAD"], cwd=path, text=True
+                      ).strip(),
+                      "package_sha256": {
+                          p.relative_to(path).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                          for p in sorted((path / "faiss_imputer").rglob("*.py"))
+                      },
+                  }
+              if requirements[0] != requirements[1]:
+                  raise RuntimeError("Release dependency declarations differ; review the shared environment")
+              manifest["dependencies"] = requirements[0]
+              (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+              metrics = (
+                  "fit_seconds", "transform_seconds", "total_seconds",
+                  "process_peak_through_transform_mib",
+              )
+              cases = itertools.product(
+                  ("ordinary", "mixed_sparse", "finite_exhaustion"), (16384, 65536), (1, 2)
+              )
+              deadline = time.monotonic() + 1200
+              comparisons = []
+              for case, rows, threads in cases:
+                  config = {"case": case, "rows": rows, "threads": threads, "seed": 101}
+                  records = []
+                  for sequence, label in enumerate(ORDER, 1):
+                      entry = {
+                          **config, "sequence": sequence, "release": label,
+                          "sha": manifest["sources"][label]["sha"],
+                          "started_at_utc": datetime.now(timezone.utc).isoformat(),
+                      }
+                      print(f"{case}, N={rows}, threads={threads}: {sequence}/4 v{label}", flush=True)
+                      remaining = deadline - time.monotonic()
+                      try:
+                          if remaining < 1:
+                              raise TimeoutError("Overall 1200-second measurement budget exhausted")
+                          env = os.environ.copy()
+                          env.update({name: str(threads) for name in THREAD_VARS})
+                          command = [sys.executable, "-u", str(Path(__file__).resolve()),
+                                     "--worker", json.dumps({**config, "source": str(sources[label])})]
+                          process = subprocess.run(
+                              command, cwd=sources[label], env=env,
+                              capture_output=True, text=True, timeout=min(120, remaining),
+                          )
+                          if process.returncode:
+                              raise RuntimeError(f"Worker exit {process.returncode}: {process.stderr[-6000:]}")
+                          result = json.loads(process.stdout.strip().splitlines()[-1])
+                          if not isinstance(result, dict) or result.get("status") != "ok":
+                              raise RuntimeError(f"Invalid worker result: {result}")
+                          entry.update(result)
+                          if process.stderr.strip():
+                              entry["stderr"] = process.stderr[-6000:]
+                      except (OSError, ValueError, IndexError, RuntimeError,
+                              TimeoutError, subprocess.SubprocessError) as error:
+                          entry.update(status="error", error=str(error))
+                      records.append(entry)
+                      with (out / "measurements.jsonl").open("a") as handle:
+                          handle.write(json.dumps(entry, allow_nan=False) + "\n")
+
+                  errors = [f"run {r['sequence']}: {r.get('error', r['status'])}"
+                            for r in records if r["status"] != "ok"]
+                  max_difference = None
+                  if not errors:
+                      baseline_output = np.asarray(records[0]["output"], dtype=np.float64)
+                      max_difference = 0.0
+                      for record in records:
+                          for field in ("fingerprints", "versions", "threadpools", "faiss_threads"):
+                              if record[field] != records[0][field]:
+                                  errors.append(f"run {record['sequence']}: {field} mismatch")
+                          output = np.asarray(record["output"], dtype=np.float64)
+                          if output.shape != baseline_output.shape or not np.allclose(
+                              output, baseline_output, rtol=1e-6, atol=1e-7
+                          ):
+                              errors.append(f"run {record['sequence']}: output mismatch")
+                          if output.shape == baseline_output.shape:
+                              max_difference = max(max_difference, float(np.max(np.abs(output - baseline_output))))
+                          for metric in metrics:
+                              value = record[metric]
+                              if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+                                  errors.append(f"run {record['sequence']}: invalid {metric}")
+                  comparison = {**config, "valid": not errors, "errors": errors,
+                                "max_output_abs_difference": max_difference, "metrics": {}}
+                  for metric in metrics:
+                      raw = [r.get(metric) for r in records]
+                      stats = {"raw_abba": raw}
+                      if not errors:
+                          before, after = [raw[0], raw[3]], [raw[1], raw[2]]
+                          mean_before, mean_after = statistics.mean(before), statistics.mean(after)
+                          stats.update(
+                              baseline_mean=mean_before, candidate_mean=mean_after,
+                              delta_percent=100 * (mean_after / mean_before - 1),
+                              baseline_spread_percent=100 * (max(before) - min(before)) / mean_before,
+                              candidate_spread_percent=100 * (max(after) - min(after)) / mean_after,
+                          )
+                      comparison["metrics"][metric] = stats
+                  comparisons.append(comparison)
+                  (out / "comparison.json").write_text(json.dumps(comparisons, indent=2, allow_nan=False) + "\n")
+
+              with (out / "comparison.csv").open("w", newline="") as handle:
+                  fields = ["case", "rows", "threads", "valid", "errors", "metric", "baseline_mean",
+                            "candidate_mean", "delta_percent", "baseline_spread_percent", "candidate_spread_percent"]
+                  writer = csv.DictWriter(handle, fieldnames=fields)
+                  writer.writeheader()
+                  for row in comparisons:
+                      for metric, stats in row["metrics"].items():
+                          writer.writerow({
+                              **{k: row[k] for k in ("case", "rows", "threads", "valid")},
+                              "errors": " | ".join(row["errors"]), "metric": metric,
+                              **{k: v for k, v in stats.items() if k != "raw_abba"},
+                          })
+
+              valid_count = sum(row["valid"] for row in comparisons)
+              lines = [
+                  "# v0.3.7 / v0.3.8 available-donor comparison", "",
+                  f"Validated configurations: {valid_count}/{len(comparisons)}.", "",
+                  "Each configuration runs 0.3.7, 0.3.8, 0.3.8, 0.3.7 sequentially on one runner.",
+                  "Each observation uses a fresh process and the same dependencies and inputs.", "",
+                  "Delta = 100 * (v0.3.8 mean / v0.3.7 mean - 1). Negative means less time or memory.",
+                  "Spread = 100 * (maximum - minimum) / mean within a release.",
+                  "Two observations per release are a pilot, not a statistical significance claim.", "",
+                  "Peak RSS is the process high-water mark read immediately after transform, before validation.",
+                  "It includes imports, data generation, small warmup and fit; it is not transform-only memory.",
+                  "This pilot covers mean aggregation, one seed, 128 queries, 12 features and k=5.",
+                  "The sparse and exhaustion cases are targeted synthetic workloads, not representative averages.", "",
+                  "| Case | Donors | Threads | 0.3.7 transform s | 0.3.8 transform s | Time delta % | 0.3.7 spread % | 0.3.8 spread % | 0.3.7 peak MiB | 0.3.8 peak MiB | Memory delta % |",
+                  "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+              ]
+              for row in comparisons:
+                  prefix = f"| {row['case']} | {row['rows']} | {row['threads']} |"
+                  if not row["valid"]:
+                      lines.append(prefix + " INVALID | INVALID | - | - | - | - | - | - |")
+                      continue
+                  t = row["metrics"]["transform_seconds"]
+                  m = row["metrics"]["process_peak_through_transform_mib"]
+                  lines.append(prefix + (
+                      f" {t['baseline_mean']:.4f} | {t['candidate_mean']:.4f} | {t['delta_percent']:+.2f} |"
+                      f" {t['baseline_spread_percent']:.2f} | {t['candidate_spread_percent']:.2f} |"
+                      f" {m['baseline_mean']:.1f} | {m['candidate_mean']:.1f} | {m['delta_percent']:+.2f} |"
+                  ))
+              lines += ["", "Fit and total time, memory spread, raw observations and output differences are in the artifact."]
+              for row in comparisons:
+                  for error in row["errors"]:
+                      lines.append(f"- {row['case']}/{row['rows']}/{row['threads']}: {error}")
+              summary = "\n".join(lines) + "\n"
+              (out / "summary.md").write_text(summary)
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a") as handle:
+                  handle.write(summary)
+              return 0 if valid_count == len(comparisons) == 12 else 1
+
+          if len(sys.argv) > 1 and sys.argv[1] == "--worker":
+              print(json.dumps(worker(json.loads(sys.argv[2])), allow_nan=False), flush=True)
+          else:
+              raise SystemExit(controller())
+
+      - name: Upload comparison and raw measurements
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: paired-available-expansion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: paired-results/
+          if-no-files-found: error
+          retention-days: 14
