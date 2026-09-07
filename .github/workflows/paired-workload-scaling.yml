@@ -1,0 +1,96 @@
+name: Paired workload scaling benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paired-workload-scaling-benchmark
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PAIRED_OUTPUT_DIR: ${{ github.workspace }}/paired-results
+      PYTHONHASHSEED: '0'
+      PYTHONPATH: ''
+      PYTHONNOUSERSITE: '1'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      BLIS_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      OMP_DYNAMIC: 'FALSE'
+      MKL_DYNAMIC: 'FALSE'
+
+    steps:
+      - name: Check out v0.3.8
+        uses: actions/checkout@v7
+        with:
+          ref: v0.3.8
+          path: baseline
+          persist-credentials: false
+
+      - name: Check out v0.3.9
+        uses: actions/checkout@v7
+        with:
+          ref: v0.3.9
+          path: candidate
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install shared dependencies and record environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$PAIRED_OUTPUT_DIR"
+          python -m pip install 'numpy==2.5.2' 'scikit-learn==1.9.0' 'faiss-cpu==1.15.0'
+          python -m pip check
+          python -m pip freeze --all > "$PAIRED_OUTPUT_DIR/pip-freeze.txt"
+          lscpu > "$PAIRED_OUTPUT_DIR/lscpu.txt"
+
+      - name: Measure both releases on this runner
+        timeout-minutes: 35
+        shell: python
+        run: |
+          import csv
+          import gc
+          import hashlib
+          import itertools
+          import json
+          import math
+          import os
+          import platform
+          import random
+          import resource
+          import statistics
+          import subprocess
+          import sys
+          import time
+          import tomllib
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          BASELINE, CANDIDATE = "0.3.8", "0.3.9"
+          ORDER = (BASELINE, CANDIDATE, CANDIDATE, BASELINE)
+          N_TRAIN, THREADS, K = 8192, 1, 5
+          SEEDS = (101, 202, 303)
+          SHAPES = ((128, 32), (512, 32), (2048, 32), (512, 8), (512, 128))
+          POLICIES, STRATEGIES = ("complete", "available"), ("mean", "median")
+          CONFIG_FIELDS = ("policy", "strategy", "queries", "features", "seed")
+          GROUP_FIELDS = CONFIG_FIELDS[:-1]
+          METRICS = ("fit_seconds", "transform_seconds", "total_seconds",
+                     "process_peak_through_transform_mib")
+
+          def digest(array):
+              return hashlib.sha256(memoryview(array).cast("B")).hexdigest()
+
+          def prepare_fixtures(root):
