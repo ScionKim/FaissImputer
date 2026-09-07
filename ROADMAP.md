@@ -1,8 +1,8 @@
 # Roadmap
 
-Updated after [0.3.6](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.6) to record the available-donor precision fix in 0.3.5 and NumPy integer neighbor-count support in 0.3.6. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated after [0.3.8](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.8) to record completed improvements through 0.3.8 and the paired candidate-expansion benchmark. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-Upcoming work focuses on targeted memory and performance improvements, alongside remaining numerical and interoperability validation. Measurements must identify the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+Next work checks mean/median numerical stability, followed by broader workload benchmarks and remaining interoperability validation. Measurements must identify the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -60,25 +60,45 @@ The existing heuristic numerical-risk guard remains unchanged. This release addr
 
 Validation: 189 tests passed, including 39 new regression cases covering integer types, model selection, cloning, invalid parameters, donor limits, and candidate-expansion overflow.
 
-## Follow-up: targeted performance improvements
+## Completed in 0.3.7
 
-### Avoid unused complete-donor index storage
+### Avoid unused complete-donor Flat index storage
 
-The complete policy currently builds a full-dimensional index during `fit()`, but `transform()` builds projected indexes for its observed-feature patterns instead of searching that stored index.
+- Skip full-dimensional donor insertion during `fit()` when the complete policy uses `index_factory="Flat"`.
+- Retain an empty fitted index for metadata; `transform()` continues to build projected indexes for observed-feature patterns.
+- Preserve training and insertion validation for other index factories.
+- Add regressions for L2/IP behavior, projected donor selection, and factory validation.
 
-- Remove or avoid the unused allocation while retaining appropriate fit-time factory validation and fitted-state checks.
-- Verify supported metrics/factories, failed refits, feature-name handling, and output behavior.
-- Measure fit time, retained fitted memory, and transform time against the corrected baseline.
+Validation: 196 tests passed, including seven new regression cases.
+
+A dedicated released-version comparison of complete-policy fit time, retained fitted memory, and transform time remains part of the benchmark work below.
+
+## Completed in 0.3.8
 
 ### Avoid unnecessary candidate expansion for sparse targets
 
-The available policy widens candidate selection for the whole batch until every missing target has enough donors or all donors have been considered. A target with fewer than `n_neighbors` observed donors can force exhaustive selection, including repeated work for already-resolved queries.
+- Compute per-feature observed donor counts during fit.
+- Exclude completed queries from further candidate expansion.
+- Stop when every missing target has enough donors, all observed donors for those targets have been found, or finite neighbors are exhausted.
+- Reuse prepared distance matrices and per-query float64 refinements for unresolved queries, remapping cached row indices after completed queries are removed.
+- Preserve partial fills, fitted-statistic fallbacks, input preservation, and cache cleanup.
 
-- Investigate per-target donor counts and candidate pools, and expansion restricted to unresolved queries.
-- Preserve exact eligible-neighbor selection and the documented behavior when fewer than `n_neighbors` donors exist or none share observed features.
-- Add a benchmark with highly missing target columns and mixed easy/difficult queries; uniform low-rate MCAR alone does not cover this case.
-- Compare outputs with an independent reference and the corrected baseline, including ties and insufficient-donor cases.
+Validation: 209 tests passed, including 13 new regression cases covering mixed and reordered queries, sparse targets, finite-neighbor exhaustion, cache remapping, later precision refinement, and numerical extremes.
 
+The [v0.3.7 versus v0.3.8 benchmark](docs/benchmarks/available-expansion-0.3.8.md) covered 12 configurations and 48 successful workers on one runner. Each configuration used v0.3.7/v0.3.8/v0.3.8/v0.3.7 order. Output differences were zero within every comparison.
+
+Targeted sparse and exhausted-neighbor workloads reduced mean transform time by 88.79-91.07% and process peak RSS by 27.47-46.66%. Ordinary workloads showed small differences, with baseline variability affecting the largest apparent improvement. Mean fit time increased by 4.60-8.85%, approximately 0.27-1.69 ms.
+
+These are synthetic pilot results using one seed and two observations per release. Peak RSS includes process setup, data generation, warmup, and fit. The report and archived raw results document the full scope and limitations. The existing heuristic numerical-risk guard remains unchanged; general exact neighbor ordering is not established.
+
+## Next: mean/median numerical validation
+
+- Check whether finite float32 inputs with representable mean or median results produce nonfinite values because of intermediate arithmetic overflow.
+- Cover both donor policies, both aggregation strategies, fitted fallback statistics, and selected-neighbor aggregation.
+- Use small finite-input reproductions and an independent higher-precision reference after the estimator's float32 input conversion.
+- Confirm failures through regression tests in GitHub CI before implementing a focused fix.
+- Preserve output dtype, input preservation, donor eligibility, and fallback behavior.
+- 
 ## Follow-up: current-release benchmarks and documentation
 
 ### Measure the workloads users actually run
@@ -104,7 +124,7 @@ Publish each new report with its measured revision and environment. Keep histori
 
 ## Later work, driven by evidence and user needs
 
-- **Extreme numerical scales:** protect mean/median aggregation from intermediate float32 overflow and review complete-donor distance underflow/overflow. Use explicit finite-input reproductions and an independent reference. Reproduced errors on ordinary-scale inputs belong in the next correctness patch.
+- **Distance numerical scales:** review complete-donor distance underflow/overflow using finite-input reproductions and an independent reference. This remains separate from the mean/median aggregation work prioritized above. Reproduced errors on ordinary-scale inputs take priority.
 - **Factory support:** define which index factories remain valid when queries have different observed-feature counts. For example, a factory can accept the fitted dimension and reject a projected dimension. Provide clear validation or a documented fallback.
 - **Broader interoperability checks:** add standard scikit-learn estimator checks and address remaining error-message requirements; expand installation/basic-execution coverage to Windows and macOS.
 - **Memory controls:** use current measurements to evaluate a public batch/working-memory setting and donor-block processing. An internal batch budget must not be presented as a total RAM limit.
