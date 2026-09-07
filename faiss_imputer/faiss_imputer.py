@@ -30,6 +30,30 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         tags.transformer_tags.preserves_dtype = ["float32"]
         return tags
 
+    def _aggregate(self, values, *, axis, ignore_nan):
+        """Reduce a 2-D array, repairing only nonfinite aggregation results."""
+        if self.strategy == "mean":
+            aggregate = np.nanmean if ignore_nan else np.mean
+        else:
+            aggregate = np.nanmedian if ignore_nan else np.median
+
+        # Keep the existing float32 reduction for ordinary inputs. Finite
+        # donor values can still overflow its intermediate sum or midpoint.
+        with np.errstate(over="ignore", invalid="ignore"):
+            result = aggregate(values, axis=axis)
+
+        for position in np.flatnonzero(~np.isfinite(result)):
+            selected = values[:, position] if axis == 0 else values[position, :]
+            if ignore_nan and np.isnan(selected).all():
+                # Preserve the undefined result and original warning for an
+                # all-missing slice instead of reducing it a second time.
+                continue
+            # Recompute one affected slice at a time to bound temporary
+            # float64 storage. Assignment retains the original result dtype.
+            result[position] = aggregate(selected.astype(np.float64))
+
+        return result
+
     def fit(self, X, y=None):
         """Fit the imputer; leave it unfitted if fitting fails."""
         self._clear_fitted_state()
@@ -102,10 +126,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         if self.donor_policy_ == "available":
             return self._fit_available(X)
 
-        if self.strategy == 'mean':
-            self.statistics_ = np.nanmean(X, axis=0)
-        else:
-            self.statistics_ = np.nanmedian(X, axis=0)
+        self.statistics_ = self._aggregate(X, axis=0, ignore_nan=True)
 
         # Extract non-missing data
         mask = ~np.isnan(X).any(axis=1)
@@ -154,10 +175,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         if not observed.any(axis=0).all():
             raise ValueError("X must not contain all-missing columns")
 
-        if self.strategy == "mean":
-            self.statistics_ = np.nanmean(X, axis=0)
-        else:
-            self.statistics_ = np.nanmedian(X, axis=0)
+        self.statistics_ = self._aggregate(X, axis=0, ignore_nan=True)
 
         nonempty_rows = observed.any(axis=1)
         self.donors_ = X[nonempty_rows].copy()
@@ -257,16 +275,9 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     valid_neighbors
                 ][:, missing_cols]
 
-                if self.strategy == 'mean':
-                    column_agg = np.mean(
-                        selected_values,
-                        axis=0,
-                    )
-                else:
-                    column_agg = np.median(
-                        selected_values,
-                        axis=0,
-                    )
+                column_agg = self._aggregate(
+                    selected_values, axis=0, ignore_nan=False,
+                )
 
                 X_tmp[sample_idx, missing_cols] = column_agg
 
@@ -334,10 +345,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     selected = np.where(
                         chosen[fill_rows], values[fill_rows], np.nan
                     )
-                    if self.strategy == "mean":
-                        fill = np.nanmean(selected, axis=1)
-                    else:
-                        fill = np.nanmedian(selected, axis=1)
+                    fill = self._aggregate(selected, axis=1, ignore_nan=True)
                     result[batch_rows[fill_rows], col] = fill
 
                 if finished.all():
