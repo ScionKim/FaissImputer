@@ -1,8 +1,16 @@
 # Roadmap
 
-Updated after [0.3.8](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.8) to record completed improvements through 0.3.8 and the paired candidate-expansion benchmark. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+## Completed in 0.3.9
 
-Next work checks mean/median numerical stability, followed by broader workload benchmarks and remaining interoperability validation. Measurements must identify the version actually tested. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+### Prevent intermediate overflow in mean and median aggregation
+
+- Reproduce nonfinite fitted statistics and imputations from finite float32 inputs whose expected aggregates are representable.
+- Recompute only nonfinite aggregation results using float64, processing one affected row or column at a time.
+- Preserve ordinary float32 aggregation results, output dtype, and input preservation.
+- Cover both donor policies, mean and median, selected-neighbor aggregation, all-missing query fallback, and available-donor no-overlap fallback.
+- Validate against an independent higher-precision reference after float32 input conversion.
+
+Validation: 229 tests passed in GitHub CI, including 20 new regression cases covering positive, negative, and mixed-sign values. Performance measurements for this aggregation change remain pending.
 
 ## Completed through 0.3.4
 
@@ -99,7 +107,7 @@ These are synthetic pilot results using one seed and two observations per releas
 - Confirm failures through regression tests in GitHub CI before implementing a focused fix.
 - Preserve output dtype, input preservation, donor eligibility, and fallback behavior.
 - 
-## Follow-up: current-release benchmarks and documentation
+## Next: current-release benchmarks and documentation
 
 ### Measure the workloads users actually run
 
@@ -124,7 +132,7 @@ Publish each new report with its measured revision and environment. Keep histori
 
 ## Later work, driven by evidence and user needs
 
-- **Distance numerical scales:** review complete-donor distance underflow/overflow using finite-input reproductions and an independent reference. This remains separate from the mean/median aggregation work prioritized above. Reproduced errors on ordinary-scale inputs take priority.
+- **Distance numerical scales:** review complete-donor distance underflow/overflow using finite-input reproductions and an independent reference. This remains separate from the aggregation overflow fix completed in 0.3.9. Reproduced errors on ordinary-scale inputs take priority.
 - **Factory support:** define which index factories remain valid when queries have different observed-feature counts. For example, a factory can accept the fitted dimension and reject a projected dimension. Provide clear validation or a documented fallback.
 - **Broader interoperability checks:** add standard scikit-learn estimator checks and address remaining error-message requirements; expand installation/basic-execution coverage to Windows and macOS.
 - **Memory controls:** use current measurements to evaluate a public batch/working-memory setting and donor-block processing. An internal batch budget must not be presented as a total RAM limit.
