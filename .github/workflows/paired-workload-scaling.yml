@@ -94,3 +94,376 @@ jobs:
               return hashlib.sha256(memoryview(array).cast("B")).hexdigest()
 
           def prepare_fixtures(root):
+              import numpy as np
+
+              fixtures = {}
+              for seed in SEEDS:
+                  streams = [np.random.default_rng(s) for s in
+                             np.random.SeedSequence(seed).spawn(3)]
+                  # Maximum-size generation happens only in the controller.
+                  # Worker RSS therefore does not include unused larger arrays.
+                  train_full = streams[0].normal(size=(N_TRAIN, 128)).astype(np.float32)
+                  query_full = streams[1].normal(size=(2048, 128)).astype(np.float32)
+                  train_mask = streams[2].random((N_TRAIN, 128)) < 0.10
+                  train_mask[:N_TRAIN // 2] = False
+                  train_mask[:, 0] = False
+                  # Exactly half the rows remain incomplete at every width.
+                  train_mask[N_TRAIN // 2:, 1] = True
+                  train_full[train_mask] = np.nan
+                  for q, p in SHAPES:
+                      train = np.ascontiguousarray(train_full[:, :p])
+                      query = np.ascontiguousarray(query_full[:q, :p]).copy()
+                      pattern_rng = np.random.default_rng(np.random.SeedSequence([seed, 4, p]))
+                      patterns = []
+                      while len(patterns) < 8:
+                          pattern = tuple(sorted(pattern_rng.choice(
+                              np.arange(1, p), size=p // 4, replace=False
+                          ).tolist()))
+                          if pattern not in patterns:
+                              patterns.append(pattern)
+                      for row in range(q):
+                          query[row, list(patterns[row % 8])] = np.nan
+                      assert np.count_nonzero(~np.isnan(train).any(axis=1)) == N_TRAIN // 2
+                      assert np.unique(np.isnan(query), axis=0).shape[0] == 8
+                      name = f"seed{seed}-q{q}-p{p}"
+                      folder = root / name
+                      folder.mkdir(parents=True, exist_ok=True)
+                      np.save(folder / "train.npy", train, allow_pickle=False)
+                      np.save(folder / "query.npy", query, allow_pickle=False)
+                      fixtures[name] = {
+                          "train_path": str(folder / "train.npy"),
+                          "query_path": str(folder / "query.npy"),
+                          "fingerprints": {"train": digest(train), "query": digest(query)},
+                          "train_missing_fraction": float(np.isnan(train).mean()),
+                          "query_missing_fraction": float(np.isnan(query).mean()),
+                          "complete_donors": N_TRAIN // 2,
+                          "available_donors": N_TRAIN, "query_patterns": 8,
+                      }
+              return fixtures
+
+          def worker(config):
+              source = Path(config["source"]).resolve()
+              sys.path.insert(0, str(source))
+              import faiss
+              import faiss_imputer
+              import faiss_imputer._matrix as matrix
+              import faiss_imputer.faiss_imputer as implementation
+              import numpy as np
+              import scipy
+              import sklearn
+              from faiss_imputer import FaissImputer
+              from threadpoolctl import threadpool_info, threadpool_limits
+
+              imports = {m.__name__: str(Path(m.__file__).resolve())
+                         for m in (faiss_imputer, matrix, implementation)}
+              if not all(Path(path).is_relative_to(source) for path in imports.values()):
+                  raise RuntimeError(f"Wrong source import: {imports}")
+              parameters = {"n_neighbors": K, "strategy": config["strategy"],
+                            "donor_policy": config["policy"]}
+              faiss.omp_set_num_threads(THREADS)
+              with threadpool_limits(limits=THREADS):
+                  warm_rng = np.random.default_rng(7)
+                  warm_p = min(16, config["features"])
+                  warm_train = warm_rng.normal(size=(32, warm_p)).astype(np.float32)
+                  warm_query = warm_rng.normal(size=(8, warm_p)).astype(np.float32)
+                  warm_train[16:, 1] = np.nan
+                  warm_query[:, 1] = np.nan
+                  warm_model = FaissImputer(**parameters).fit(warm_train)
+                  warm_model.transform(warm_query)
+                  del warm_model, warm_train, warm_query
+
+                  fixture = config["fixture"]
+                  train = np.load(fixture["train_path"], allow_pickle=False)
+                  query = np.load(fixture["query_path"], allow_pickle=False)
+                  assert train.shape == (N_TRAIN, config["features"])
+                  assert query.shape == (config["queries"], config["features"])
+                  assert train.dtype == query.dtype == np.float32
+                  fingerprints = {"train": digest(train), "query": digest(query)}
+                  assert fingerprints == fixture["fingerprints"]
+                  observed = ~np.isnan(query)
+                  pools = [{k: pool.get(k) for k in (
+                      "internal_api", "prefix", "version", "num_threads", "architecture"
+                  )} for pool in threadpool_info()]
+                  if not pools or any(pool["num_threads"] != THREADS for pool in pools):
+                      raise RuntimeError(f"Unexpected native thread counts: {pools}")
+                  if faiss.omp_get_max_threads() != THREADS:
+                      raise RuntimeError("Unexpected FAISS thread count")
+                  model = FaissImputer(**parameters)
+                  gc.collect()
+                  started = time.perf_counter()
+                  model.fit(train)
+                  fitted = time.perf_counter()
+                  output = model.transform(query)
+                  finished = time.perf_counter()
+                  # Linux KiB. Read before validation and saving outputs.
+                  peak_mib = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+
+              assert output.shape == query.shape and output.dtype == np.float32
+              assert np.isfinite(output).all() and np.isfinite(model.statistics_).all()
+              assert not np.shares_memory(output, query)
+              np.testing.assert_array_equal(output[observed], query[observed])
+              assert digest(train) == fingerprints["train"]
+              assert digest(query) == fingerprints["query"]
+              expected_donors = fixture[config["policy"] + "_donors"]
+              assert len(model.donors_) == expected_donors
+              if config["policy"] == "available":
+                  backend = model.available_index_
+                  assert backend.query_ref is None and backend.matrix is None
+                  assert not backend.precise_rows
+              np.save(config["output_path"], output, allow_pickle=False)
+              return {
+                  "status": "ok", "fingerprints": fingerprints, "imports": imports,
+                  "versions": {"numpy": np.__version__, "scipy": scipy.__version__,
+                               "sklearn": sklearn.__version__, "faiss": faiss.__version__},
+                  "threadpools": pools, "faiss_threads": faiss.omp_get_max_threads(),
+                  "donors": len(model.donors_), "statistics_sha256": digest(model.statistics_),
+                  "fit_seconds": fitted - started, "transform_seconds": finished - fitted,
+                  "total_seconds": finished - started,
+                  "process_peak_through_transform_mib": peak_mib,
+                  "output_sha256": digest(output),
+              }
+
+          def write_json(path, value):
+              path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+
+          def compare(config, records, out):
+              import numpy as np
+
+              errors = [f"run {r['sequence']}: {r.get('error', r['status'])}"
+                        for r in records if r["status"] != "ok"]
+              max_difference, differing_cells = None, None
+              if not errors:
+                  arrays = [np.load(out / r["output_file"], allow_pickle=False) for r in records]
+                  max_difference, differing_cells = 0.0, 0
+                  for left, right, description in (
+                      (0, 3, "baseline repeat"), (1, 2, "candidate repeat"),
+                      (0, 1, "cross-release first"), (3, 2, "cross-release second"),
+                  ):
+                      a, b = arrays[left], arrays[right]
+                      difference = float(np.max(np.abs(a.astype(np.float64) - b)))
+                      count = int(np.count_nonzero(a != b))
+                      max_difference = max(max_difference, difference)
+                      differing_cells = max(differing_cells, count)
+                      if count:
+                          errors.append(f"{description}: {count} differing cells; max abs {difference}")
+                  for record in records:
+                      for field in ("fingerprints", "versions", "threadpools", "faiss_threads",
+                                    "donors", "statistics_sha256"):
+                          if record[field] != records[0][field]:
+                              errors.append(f"run {record['sequence']}: {field} mismatch")
+                      for metric in METRICS:
+                          value = record[metric]
+                          if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+                              errors.append(f"run {record['sequence']}: invalid {metric}")
+              comparison = {**config, "valid": not errors, "errors": errors,
+                            "max_output_abs_difference": max_difference,
+                            "max_differing_output_cells": differing_cells, "metrics": {}}
+              for metric in METRICS:
+                  raw = [r.get(metric) for r in records]
+                  stats = {"raw_abba": raw}
+                  if not errors:
+                      before, after = [raw[0], raw[3]], [raw[1], raw[2]]
+                      mean_before, mean_after = statistics.mean(before), statistics.mean(after)
+                      stats.update(
+                          baseline_mean=mean_before, candidate_mean=mean_after,
+                          ratio=mean_after / mean_before,
+                          delta_percent=100 * (mean_after / mean_before - 1),
+                          baseline_spread_percent=100 * (max(before) - min(before)) / mean_before,
+                          candidate_spread_percent=100 * (max(after) - min(after)) / mean_after,
+                      )
+                  comparison["metrics"][metric] = stats
+              return comparison
+
+          def aggregate(comparisons):
+              groups = []
+              for (q, p), policy, strategy in itertools.product(SHAPES, POLICIES, STRATEGIES):
+                  config = {"policy": policy, "strategy": strategy, "queries": q, "features": p}
+                  matches = [r for r in comparisons if all(r[k] == v for k, v in config.items())]
+                  valid = (len(matches) == len(SEEDS) and
+                           {r["seed"] for r in matches} == set(SEEDS) and
+                           all(r["valid"] for r in matches))
+                  group = {**config, "valid": valid, "metrics": {}}
+                  if valid:
+                      for metric in METRICS:
+                          values = [r["metrics"][metric] for r in matches]
+                          ratio = math.exp(statistics.mean(math.log(v["ratio"]) for v in values))
+                          group["metrics"][metric] = {
+                              "baseline_mean": statistics.mean(v["baseline_mean"] for v in values),
+                              "candidate_mean": statistics.mean(v["candidate_mean"] for v in values),
+                              "paired_geomean_delta_percent": 100 * (ratio - 1),
+                              "seed_delta_min_percent": min(v["delta_percent"] for v in values),
+                              "seed_delta_max_percent": max(v["delta_percent"] for v in values),
+                              "max_within_seed_spread_percent": max(
+                                  v[key] for v in values for key in
+                                  ("baseline_spread_percent", "candidate_spread_percent")
+                              ),
+                          }
+                  groups.append(group)
+              return groups
+
+          def controller():
+              out = Path(os.environ["PAIRED_OUTPUT_DIR"]).resolve()
+              (out / "outputs").mkdir(parents=True, exist_ok=True)
+              workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+              sources = {BASELINE: workspace / "baseline", CANDIDATE: workspace / "candidate"}
+              harness = out / "harness.py"
+              harness.write_bytes(Path(__file__).read_bytes())
+              configs = [{"policy": policy, "strategy": strategy, "queries": q,
+                          "features": p, "seed": seed}
+                         for (q, p), policy, strategy, seed in
+                         itertools.product(SHAPES, POLICIES, STRATEGIES, SEEDS)]
+              random.Random(20260907).shuffle(configs)
+              manifest = {
+                  "workflow_sha": os.environ["GITHUB_SHA"],
+                  "run_id": os.environ["GITHUB_RUN_ID"],
+                  "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                  "python": platform.python_version(), "platform": platform.platform(),
+                  "logical_cpus": os.cpu_count(), "affinity_cpus": len(os.sched_getaffinity(0)),
+                  "order_per_seed_configuration": ORDER, "configuration_order": configs,
+                  "expected_seed_comparisons": len(configs), "expected_workers": len(configs) * 4,
+                  "training_rows": N_TRAIN, "threads": THREADS, "n_neighbors": K,
+                  "input_scope": "Normal float32 values; half complete training rows; 8 query patterns; 25% query missingness",
+                  "comparison": "Exact numeric output equality and identical fitted-statistic hashes",
+                  "harness_sha256": hashlib.sha256(harness.read_bytes()).hexdigest(), "sources": {},
+              }
+              requirements = []
+              for label, path in sources.items():
+                  project = tomllib.loads((path / "pyproject.toml").read_text())["project"]
+                  if project["version"] != label:
+                      raise RuntimeError(f"Tag v{label} contains version {project['version']}")
+                  requirements.append(project["dependencies"])
+                  manifest["sources"][label] = {
+                      "tag": f"v{label}", "path": str(path),
+                      "sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=path, text=True).strip(),
+                      "package_sha256": {
+                          p.relative_to(path).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                          for p in sorted((path / "faiss_imputer").rglob("*.py"))
+                      },
+                  }
+              if requirements[0] != requirements[1]:
+                  raise RuntimeError("Release dependency declarations differ; review shared environment")
+              manifest["dependencies"] = requirements[0]
+              write_json(out / "manifest.json", manifest)
+              fixtures = prepare_fixtures(workspace / "benchmark-fixtures")
+              # Inputs can be regenerated by the archived harness; their hashes
+              # are recorded without duplicating the arrays in the artifact.
+              write_json(out / "fixtures.json", fixtures)
+              deadline = time.monotonic() + 1800
+              comparisons = []
+              for number, config in enumerate(configs, 1):
+                  if time.monotonic() >= deadline:
+                      break
+                  fixture_id = f"seed{config['seed']}-q{config['queries']}-p{config['features']}"
+                  records = []
+                  for sequence, label in enumerate(ORDER, 1):
+                      output_file = f"outputs/config{number:02d}-run{sequence}-v{label}.npy"
+                      entry = {**config, "sequence": sequence, "release": label,
+                               "sha": manifest["sources"][label]["sha"], "output_file": output_file,
+                               "started_at_utc": datetime.now(timezone.utc).isoformat()}
+                      print(f"{number}/{len(configs)} {config}: {sequence}/4 v{label}", flush=True)
+                      try:
+                          remaining = deadline - time.monotonic()
+                          if remaining < 1:
+                              raise TimeoutError("Overall 1800-second measurement budget exhausted")
+                          worker_config = {**config, "source": str(sources[label]),
+                                           "fixture": fixtures[fixture_id],
+                                           "output_path": str(out / output_file)}
+                          process = subprocess.run(
+                              [sys.executable, "-u", str(harness), "--worker", json.dumps(worker_config)],
+                              cwd=sources[label], env=os.environ.copy(), capture_output=True,
+                              text=True, timeout=min(120, remaining),
+                          )
+                          if process.returncode:
+                              raise RuntimeError(f"Worker exit {process.returncode}: {process.stderr[-6000:]}")
+                          result = json.loads(process.stdout.strip().splitlines()[-1])
+                          if not isinstance(result, dict) or result.get("status") != "ok":
+                              raise RuntimeError(f"Invalid worker result: {result}")
+                          entry.update(result)
+                          if process.stderr.strip():
+                              entry["stderr"] = process.stderr[-6000:]
+                      except (OSError, ValueError, IndexError, RuntimeError,
+                              TimeoutError, subprocess.SubprocessError) as error:
+                          entry.update(status="error", error=str(error))
+                      records.append(entry)
+                      with (out / "measurements.jsonl").open("a") as handle:
+                          handle.write(json.dumps(entry, allow_nan=False) + "\n")
+                  comparisons.append(compare(config, records, out))
+                  write_json(out / "comparison.json", comparisons)
+
+              groups = aggregate(comparisons)
+              write_json(out / "grouped-comparison.json", groups)
+              for filename, rows, fields, stat_fields in (
+                  ("comparison.csv", comparisons, CONFIG_FIELDS, (
+                      "baseline_mean", "candidate_mean", "ratio", "delta_percent",
+                      "baseline_spread_percent", "candidate_spread_percent")),
+                  ("grouped-comparison.csv", groups, GROUP_FIELDS, (
+                      "baseline_mean", "candidate_mean", "paired_geomean_delta_percent",
+                      "seed_delta_min_percent", "seed_delta_max_percent", "max_within_seed_spread_percent")),
+              ):
+                  with (out / filename).open("w", newline="") as handle:
+                      writer = csv.DictWriter(handle, fieldnames=[*fields, "valid", "metric", *stat_fields])
+                      writer.writeheader()
+                      for row in rows:
+                          for metric in METRICS:
+                              stats = row["metrics"].get(metric, {})
+                              writer.writerow({**{k: row[k] for k in (*fields, "valid")},
+                                               "metric": metric, **{k: stats.get(k) for k in stat_fields}})
+              valid_count = sum(row["valid"] for row in comparisons)
+              lines = [
+                  "# v0.3.8 / v0.3.9 workload scaling pilot", "",
+                  f"Validated seed/configuration comparisons: {valid_count}/{len(configs)}.",
+                  f"Validated shape/policy/strategy groups: {sum(g['valid'] for g in groups)}/{len(groups)}.", "",
+                  "Each seed/configuration uses sequential 0.3.8, 0.3.9, 0.3.9, 0.3.8 on one runner.",
+                  "There are three seeds and two fresh-process observations per release per seed.",
+                  "Training rows=8192; threads=1; k=5; eight query patterns; query missingness=25%.",
+                  "Complete policy uses 4096 donors; available policy uses all 8192 training rows.",
+                  "Compare releases within each policy; the policies have different donor semantics.", "",
+                  "Query scaling holds features=32. Feature scaling holds queries=512.",
+                  "Paired delta is the geometric mean of the three seed-specific candidate/baseline mean ratios, minus one.",
+                  "Displayed release times are arithmetic means of six timings; seed ranges are paired delta ranges.",
+                  "Spread is the largest 100*(max-min)/mean within a release and seed, not a confidence interval.", "",
+                  "Exact output agreement is checked only for these ordinary-scale fixtures; this is not a general accuracy claim.",
+                  "Fit and first transform are timed separately after a small warmup using a different model.",
+                  "Peak RSS includes imports, warmup, input loading, fit and transform, before output validation/saving.",
+                  "It is neither retained fitted memory nor a phase-specific memory measurement.",
+                  "This pilot does not measure extreme-value repair cost, repeated transforms, fit_transform, KNNImputer, or imputation quality.",
+                  "It uses release tag sources, not installed release wheels. Multiple seeds do not establish universal speedups.", "",
+                  "| Policy | Strategy | Queries | Features | 0.3.8 transform ms | 0.3.9 transform ms | Paired time delta % | Seed delta range % | Max spread % |",
+                  "|---|---|---:|---:|---:|---:|---:|---|---:|",
+              ]
+              for group in groups:
+                  prefix = f"| {group['policy']} | {group['strategy']} | {group['queries']} | {group['features']} |"
+                  if not group["valid"]:
+                      lines.append(prefix + " INVALID | INVALID | - | - | - |")
+                  else:
+                      t = group["metrics"]["transform_seconds"]
+                      lines.append(prefix + (
+                          f" {1000*t['baseline_mean']:.3f} | {1000*t['candidate_mean']:.3f} |"
+                          f" {t['paired_geomean_delta_percent']:+.2f} |"
+                          f" {t['seed_delta_min_percent']:+.2f} to {t['seed_delta_max_percent']:+.2f} |"
+                          f" {t['max_within_seed_spread_percent']:.2f} |"
+                      ))
+              lines += ["", "Fit, total time, process peak RSS and all per-seed observations are in the CSV/JSON files.",
+                        "The artifact includes the harness, source hashes, input fingerprints and worker output arrays."]
+              for row in comparisons:
+                  for error in row["errors"]:
+                      lines.append(f"- {tuple(row[k] for k in CONFIG_FIELDS)}: {error}")
+              summary = "\n".join(lines) + "\n"
+              (out / "summary.md").write_text(summary)
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a") as handle:
+                  handle.write(summary)
+              return 0 if valid_count == len(comparisons) == len(configs) else 1
+
+          if len(sys.argv) > 1 and sys.argv[1] == "--worker":
+              print(json.dumps(worker(json.loads(sys.argv[2])), allow_nan=False), flush=True)
+          else:
+              raise SystemExit(controller())
+
+      - name: Upload comparison and raw measurements
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: paired-workload-scaling-${{ github.run_id }}-${{ github.run_attempt }}
+          path: paired-results/
+          if-no-files-found: error
+          retention-days: 14
