@@ -260,26 +260,45 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 min(int(self.n_neighbors), self.donors_.shape[0]),
             )
 
-            for sample_idx, neighbors in zip(
-                sample_indices,
-                neighbor_indices,
-            ):
-                valid_neighbors = neighbors[neighbors >= 0]
+            # Limit the gathered float32 values to roughly 8 MiB per chunk,
+            # with a one-query minimum. Median and repair use extra storage.
+            # Keep the FAISS search batch unchanged: only aggregation is split.
+            neighbor_count = neighbor_indices.shape[1]
+            values_per_query = neighbor_count * missing_cols.size
+            aggregation_rows = max(
+                1, min(256, (8 * 1024 * 1024) // (4 * values_per_query)),
+            )
+            for start in range(0, len(sample_indices), aggregation_rows):
+                rows = sample_indices[start:start + aggregation_rows]
+                neighbors = neighbor_indices[start:start + aggregation_rows]
 
-                if valid_neighbors.size == 0:
-                    raise ValueError(
-                        "FAISS did not return any valid neighbors"
-                    )
+                if (neighbors < 0).any():
+                    # Approximate indexes can return different valid counts.
+                    # Retain filtering, duplicate ids and rowwise reduction.
+                    for sample_idx, row_neighbors in zip(rows, neighbors):
+                        valid_neighbors = row_neighbors[row_neighbors >= 0]
+                        if valid_neighbors.size == 0:
+                            raise ValueError(
+                                "FAISS did not return any valid neighbors"
+                            )
+                        selected_values = self.donors_[
+                            valid_neighbors
+                        ][:, missing_cols]
+                        X_tmp[sample_idx, missing_cols] = self._aggregate(
+                            selected_values, axis=0, ignore_nan=False,
+                        )
+                    continue
 
-                selected_values = self.donors_[
-                    valid_neighbors
-                ][:, missing_cols]
-
-                column_agg = self._aggregate(
-                    selected_values, axis=0, ignore_nan=False,
-                )
-
-                X_tmp[sample_idx, missing_cols] = column_agg
+                # A contiguous last axis preserves the neighbor order and
+                # reduction layout of the previous columnwise aggregation.
+                selected_values = np.ascontiguousarray(self.donors_[
+                    neighbors[:, None, :], missing_cols[None, :, None]
+                ])
+                aggregates = self._aggregate(
+                    selected_values.reshape(-1, neighbor_count),
+                    axis=1, ignore_nan=False,
+                ).reshape(len(rows), missing_cols.size)
+                X_tmp[np.ix_(rows, missing_cols)] = aggregates
 
         return X_tmp
 
