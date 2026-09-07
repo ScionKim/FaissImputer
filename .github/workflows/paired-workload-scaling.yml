@@ -35,10 +35,10 @@ jobs:
           path: baseline
           persist-credentials: false
 
-      - name: Check out v0.3.9
+      - name: Check out benchmark candidate
         uses: actions/checkout@v7
         with:
-          ref: v0.3.9
+          ref: ${{ github.sha }}
           path: candidate
           persist-credentials: false
 
@@ -79,7 +79,7 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
 
-          BASELINE, CANDIDATE = "0.3.8", "0.3.9"
+          BASELINE, CANDIDATE = "0.3.8", "candidate"
           ORDER = (BASELINE, CANDIDATE, CANDIDATE, BASELINE)
           N_TRAIN, THREADS, K = 8192, 1, 5
           SEEDS = (101, 202, 303)
@@ -329,17 +329,21 @@ jobs:
               requirements = []
               for label, path in sources.items():
                   project = tomllib.loads((path / "pyproject.toml").read_text())["project"]
-                  if project["version"] != label:
-                      raise RuntimeError(f"Tag v{label} contains version {project['version']}")
+                  expected_version = BASELINE if label == BASELINE else "0.3.9"
+                  if project["version"] != expected_version:
+                      raise RuntimeError(f"Source {label} contains version {project['version']}; expected {expected_version}")
                   requirements.append(project["dependencies"])
                   manifest["sources"][label] = {
-                      "tag": f"v{label}", "path": str(path),
+                      "ref": f"v{label}" if label == BASELINE else os.environ["GITHUB_REF"],
+                      "package_version": project["version"], "path": str(path),
                       "sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=path, text=True).strip(),
                       "package_sha256": {
                           p.relative_to(path).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                           for p in sorted((path / "faiss_imputer").rglob("*.py"))
                       },
                   }
+              if manifest["sources"][CANDIDATE]["sha"] != os.environ["GITHUB_SHA"]:
+                  raise RuntimeError("Candidate checkout differs from workflow commit")
               if requirements[0] != requirements[1]:
                   raise RuntimeError("Release dependency declarations differ; review shared environment")
               manifest["dependencies"] = requirements[0]
@@ -410,10 +414,10 @@ jobs:
                                                "metric": metric, **{k: stats.get(k) for k in stat_fields}})
               valid_count = sum(row["valid"] for row in comparisons)
               lines = [
-                  "# v0.3.8 / v0.3.9 workload scaling pilot", "",
+                  "# v0.3.8 / unreleased complete-aggregation candidate", "",
                   f"Validated seed/configuration comparisons: {valid_count}/{len(configs)}.",
                   f"Validated shape/policy/strategy groups: {sum(g['valid'] for g in groups)}/{len(groups)}.", "",
-                  "Each seed/configuration uses sequential 0.3.8, 0.3.9, 0.3.9, 0.3.8 on one runner.",
+                  "Each seed/configuration uses sequential 0.3.8, candidate, candidate, 0.3.8 on one runner.",
                   "There are three seeds and two fresh-process observations per release per seed.",
                   "Training rows=8192; threads=1; k=5; eight query patterns; query missingness=25%.",
                   "Complete policy uses 4096 donors; available policy uses all 8192 training rows.",
@@ -427,8 +431,8 @@ jobs:
                   "Peak RSS includes imports, warmup, input loading, fit and transform, before output validation/saving.",
                   "It is neither retained fitted memory nor a phase-specific memory measurement.",
                   "This pilot does not measure extreme-value repair cost, repeated transforms, fit_transform, KNNImputer, or imputation quality.",
-                  "It uses release tag sources, not installed release wheels. Multiple seeds do not establish universal speedups.", "",
-                  "| Policy | Strategy | Queries | Features | 0.3.8 transform ms | 0.3.9 transform ms | Paired time delta % | Seed delta range % | Max spread % |",
+                  "Baseline is the v0.3.8 tag source; candidate is the workflow commit based on v0.3.9. Neither is an installed wheel.", "",
+                  "| Policy | Strategy | Queries | Features | 0.3.8 transform ms | Candidate transform ms | Paired time delta % | Seed delta range % | Max spread % |",
                   "|---|---|---:|---:|---:|---:|---:|---|---:|",
               ]
               for group in groups:
@@ -463,7 +467,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: paired-workload-scaling-${{ github.run_id }}-${{ github.run_attempt }}
+          name: paired-complete-aggregation-${{ github.run_id }}-${{ github.run_attempt }}
           path: paired-results/
           if-no-files-found: error
           retention-days: 14
