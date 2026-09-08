@@ -12,6 +12,34 @@ A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/
 Current release: [0.3.10](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.10).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
+## Comparison with KNNImputer
+
+FaissImputer supports scikit-learn pipelines, but its defaults and options
+differ from [KNNImputer](https://scikit-learn.org/stable/modules/generated/sklearn.impute.KNNImputer.html).
+The comparison below describes FaissImputer 0.3.10.
+
+| Behavior | FaissImputer | KNNImputer |
+| --- | --- | --- |
+| Donors | Fully observed training rows by default; `donor_policy="available"` permits partially observed donors selected per missing feature. | Donors selected per missing feature; other donor features may be missing. |
+| Neighbors | `n_neighbors=3`; complete mode requires at least that many complete donors. Available mode permits fewer eligible donors. | `n_neighbors=5`; fewer usable neighbors are allowed. |
+| Aggregation | Unweighted mean (default) or median via `strategy`; no `weights` option. | Mean with uniform (default), distance, or callable weights; no median strategy. |
+| Numeric precision | Converts inputs and produces imputed values as `float32`. | Supports floating inputs including `float64`, without forcing conversion to `float32`. |
+| All-missing training columns | Fitting fails under either donor policy. | Dropped by default; `keep_empty_features=True` retains them with zero values. |
+| Missing-value marker | `NaN`; no configurable `missing_values` parameter. | Configurable `missing_values`, default `np.nan`. |
+| Missing indicators | No built-in `add_indicator` option. | `add_indicator=True` appends indicators for features missing during fit. |
+
+For a closer comparison, use `donor_policy="available"`, match `n_neighbors`,
+and compare `strategy="mean"` with KNNImputer's `weights="uniform"` and default
+`metric="nan_euclidean"`. Available mode requires `metric="l2"` and
+`index_factory="Flat"`.
+
+These settings do not guarantee identical donor choices or imputed values:
+float32 conversion, distance calculations, and ties can affect results.
+See the [real-data comparison](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/docs/benchmarks/real-data-a3bd1ce3.md)
+for measured per-cell differences, and the
+[scikit-learn imputation guide](https://scikit-learn.org/stable/modules/impute.html#nearest-neighbors-imputation)
+for KNNImputer behavior.
+
 ## Performance at a glance
 
 FaissImputer can accelerate nearest-neighbor imputation, especially when
