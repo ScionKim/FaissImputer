@@ -329,8 +329,8 @@ jobs:
               requirements = []
               for label, path in sources.items():
                   project = tomllib.loads((path / "pyproject.toml").read_text())["project"]
-                  expected_version = BASELINE if label == BASELINE else "0.3.9"
-                  if project["version"] != expected_version:
+                  expected_version = BASELINE
+                  if label == BASELINE and project["version"] != expected_version:
                       raise RuntimeError(f"Source {label} contains version {project['version']}; expected {expected_version}")
                   requirements.append(project["dependencies"])
                   manifest["sources"][label] = {
@@ -414,7 +414,7 @@ jobs:
                                                "metric": metric, **{k: stats.get(k) for k in stat_fields}})
               valid_count = sum(row["valid"] for row in comparisons)
               lines = [
-                  "# v0.3.8 / unreleased complete-aggregation candidate", "",
+                  "# v0.3.8 / workflow-commit candidate", "",
                   f"Validated seed/configuration comparisons: {valid_count}/{len(configs)}.",
                   f"Validated shape/policy/strategy groups: {sum(g['valid'] for g in groups)}/{len(groups)}.", "",
                   "Each seed/configuration uses sequential 0.3.8, candidate, candidate, 0.3.8 on one runner.",
@@ -431,7 +431,7 @@ jobs:
                   "Peak RSS includes imports, warmup, input loading, fit and transform, before output validation/saving.",
                   "It is neither retained fitted memory nor a phase-specific memory measurement.",
                   "This pilot does not measure extreme-value repair cost, repeated transforms, fit_transform, KNNImputer, or imputation quality.",
-                  "Baseline is the v0.3.8 tag source; candidate is the workflow commit based on v0.3.9. Neither is an installed wheel.", "",
+                  "Baseline is the v0.3.8 tag source; candidate is the workflow-commit source. Neither is an installed wheel.", "",
                   "| Policy | Strategy | Queries | Features | 0.3.8 transform ms | Candidate transform ms | Paired time delta % | Seed delta range % | Max spread % |",
                   "|---|---|---:|---:|---:|---:|---:|---|---:|",
               ]
