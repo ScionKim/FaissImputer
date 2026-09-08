@@ -1,16 +1,8 @@
 # Roadmap
 
-## Completed in 0.3.9
+Updated for [0.3.10](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.10) to record complete-donor aggregation batching and its paired performance measurements. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-### Prevent intermediate overflow in mean and median aggregation
-
-- Reproduce nonfinite fitted statistics and imputations from finite float32 inputs whose expected aggregates are representable.
-- Recompute only nonfinite aggregation results using float64, processing one affected row or column at a time.
-- Preserve ordinary float32 aggregation results, output dtype, and input preservation.
-- Cover both donor policies, mean and median, selected-neighbor aggregation, all-missing query fallback, and available-donor no-overlap fallback.
-- Validate against an independent higher-precision reference after float32 input conversion.
-
-Validation: 229 tests passed in GitHub CI, including 20 new regression cases covering positive, negative, and mixed-sign values. Performance measurements for this aggregation change remain pending.
+Upcoming work expands released-package benchmarks and compatibility documentation, with remaining numerical and interoperability work guided by reproductions. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -99,14 +91,34 @@ Targeted sparse and exhausted-neighbor workloads reduced mean transform time by 
 
 These are synthetic pilot results using one seed and two observations per release. Peak RSS includes process setup, data generation, warmup, and fit. The report and archived raw results document the full scope and limitations. The existing heuristic numerical-risk guard remains unchanged; general exact neighbor ordering is not established.
 
-## Next: mean/median numerical validation
+## Completed in 0.3.9
 
-- Check whether finite float32 inputs with representable mean or median results produce nonfinite values because of intermediate arithmetic overflow.
-- Cover both donor policies, both aggregation strategies, fitted fallback statistics, and selected-neighbor aggregation.
-- Use small finite-input reproductions and an independent higher-precision reference after the estimator's float32 input conversion.
-- Confirm failures through regression tests in GitHub CI before implementing a focused fix.
-- Preserve output dtype, input preservation, donor eligibility, and fallback behavior.
-- 
+### Prevent intermediate overflow in mean and median aggregation
+
+- Reproduce nonfinite fitted statistics and imputations from finite float32 inputs whose expected aggregates are representable.
+- Recompute only nonfinite aggregation results using float64, processing one affected row or column at a time.
+- Preserve ordinary float32 aggregation results, output dtype, and input preservation.
+- Cover both donor policies, mean and median, selected-neighbor aggregation, all-missing query fallback, and available-donor no-overlap fallback.
+- Validate against an independent higher-precision reference after float32 input conversion.
+
+Validation: 229 tests passed in GitHub CI, including 20 new regression cases covering positive, negative, and mixed-sign values. A [paired v0.3.8/v0.3.9 run](https://github.com/ScionKim/FaissImputer/actions/runs/34134144596) subsequently found complete-policy transform regressions. The batching change below addresses that overhead while retaining the overflow repair.
+
+## Completed in 0.3.10
+
+### Batch complete-donor aggregation while retaining overflow repair
+
+- Aggregate selected donor values across query chunks instead of calling the aggregation helper once per query.
+- Preserve neighbor search, ordinary float32 reduction order, nonfinite-result repair, output dtype, and input preservation.
+- Retain per-query handling for search results containing invalid neighbor IDs, including the existing all-invalid error.
+- Bound query chunk size and target an approximately 8 MiB donor-value gather. This is an internal sizing target, not a total-memory limit; a single query and other temporary arrays can exceed it.
+- Add 15 regression cases covering reduction order, chunk boundaries, reordered queries, extreme-value repair, invalid IDs, and all-invalid errors. The implementation PR passed all eight GitHub checks.
+
+The [complete-aggregation recovery pilot](docs/benchmarks/complete-aggregation-e5ef482.md) compared v0.3.8 source with commit `e5ef4825213d86228e3e041ea4a69c3396f39416`, which still carried 0.3.9 package metadata. It used one runner, three seeds, five query/feature shapes, and baseline/candidate/candidate/baseline order. All 240 workers and 60 seed/configuration comparisons validated; outputs were byte-identical and fitted-statistic hashes matched within each comparison.
+
+Complete-policy first-transform time improved in every group and seed: paired group reductions were 16.69-38.77% for mean and 29.69-60.96% for median. Available-policy changes ranged from -3.59% to +3.84%, with nine of ten groups slower. Some complete-policy measurements had substantial repeat spread; the report records both improvements and remaining overhead.
+
+This ordinary-scale source-checkout pilot does not establish released-wheel performance, extreme-value repair cost, repeated-transform performance, imputation quality, or retained fitted memory. Those evidence gaps remain below.
+
 ## Next: current-release benchmarks and documentation
 
 ### Measure the workloads users actually run
@@ -114,7 +126,7 @@ These are synthetic pilot results using one seed and two observations per releas
 The [historical million-row pilot](docs/benchmarks/available-batching-90c8cfb8.md) used one million training rows but only 300 query rows and one timing run. It predates 0.3.4 donor preparation. It does not establish the cost of imputing one million query rows or running `fit_transform()` on one million rows.
 
 - Benchmark the released package being documented, against KNNImputer and an appropriate prior FaissImputer baseline on matching hardware and inputs.
-- Vary training rows, query rows, and feature count independently; extend missingness, neighbor-count, and pattern coverage where informative.
+- Extend the query/feature-size pilot with independent training-size sweeps and broader missingness, neighbor-count, and pattern coverage. Repeat the available-policy controls to determine whether their observed overhead persists.
 - Separate fit, first transform, repeated transforms, and same-data `fit_transform()` at feasible sizes. Exact available-donor pairwise work grows with both donor and query counts.
 - Report quality against hidden ground truth separately from output agreement with another imputer.
 - Measure retained fitted memory and phase-specific peak memory, distinguishing these from whole-worker peak RSS and internal batch-sizing budgets.
