@@ -5,11 +5,11 @@
 > Use version 0.2.0 or newer.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.9/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/LICENSE)
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-Current release: [0.3.9](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.9).
+Current release: [0.3.10](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.10).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Performance at a glance
@@ -74,7 +74,7 @@ peak RSS was about 9.1% higher than KNNImputer.
 FaissImputer requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.9"
+python -m pip install --upgrade "faiss-imputer>=0.3.10"
 ```
 
 ## Usage
@@ -235,6 +235,7 @@ lower peak memory is not guaranteed.
 
 Performance depends on donor policy, data size, and missingness patterns. Neither faster execution nor lower memory use than `KNNImputer` is guaranteed. Similar average errors do not imply identical imputed values; ties and numerical precision can affect donor selection.
 
+- [Complete-aggregation recovery pilot](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/docs/benchmarks/complete-aggregation-e5ef482.md): compares v0.3.8 source with the implementation prepared for 0.3.10 on one runner, across three seeds and five query/feature shapes. Complete-policy first transform was 16.69-60.96% faster; available-policy changes ranged from -3.59% to +3.84%. These are source-checkout measurements with ordinary-scale inputs, not published-wheel measurements or a KNNImputer comparison.
 - [Available-donor batching and threads](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-batching-90c8cfb8.md): compares 16/64/128 MiB batch budgets and 1/2/4 threads, including repeated 500,000-row measurements and a single-run million-row pilot. Documents both speed gains and memory tradeoffs.
 - [Real-data pilot](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/real-data-a3bd1ce3.md): compares SimpleImputer, KNNImputer, and both Faiss donor policies under MCAR and selected MAR missingness. This small dataset is not a scalability test.
 - [Complete-donor patterns](https://github.com/ScionKim/FaissImputer/blob/v0.3.1/docs/benchmarks/complete-patterns-9d179b2b.md): measures the impact of training size and query missingness patterns.
@@ -257,7 +258,7 @@ Contributions are welcome! Please open an [issue](https://github.com/ScionKim/Fa
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.9/LICENSE).
+This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/LICENSE).
 
 ### Third-Party Licenses
 
