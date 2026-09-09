@@ -16,7 +16,15 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         strategy="mean",
         index_factory="Flat",
         donor_policy="complete",
+        weights="uniform",
     ):
+        super().__init__()
+        self.n_neighbors = n_neighbors
+        self.metric = metric
+        self.strategy = strategy
+        self.index_factory = index_factory
+        self.donor_policy = donor_policy
+        self.weights = weights
         super().__init__()
         self.n_neighbors = n_neighbors
         self.metric = metric
@@ -51,6 +59,86 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             # Recompute one affected slice at a time to bound temporary
             # float64 storage. Assignment retains the original result dtype.
             result[position] = aggregate(selected.astype(np.float64))
+
+        return result
+
+    def _uses_uniform_weights(self):
+        return self.weights is None or (
+            isinstance(self.weights, str) and self.weights == "uniform"
+        )
+
+    def _weighted_mean(self, values, squared_distances):
+        """Average selected donors using actual, unsquared distances."""
+        valid = ~np.isnan(values) & np.isfinite(squared_distances)
+        distances = np.sqrt(
+            np.maximum(
+                np.asarray(squared_distances, dtype=np.float64), 0.0
+            )
+        )
+        distances[~valid] = np.nan
+
+        if callable(self.weights):
+            raw_weights = np.asarray(self.weights(distances))
+            if raw_weights.shape != values.shape:
+                raise ValueError(
+                    "weights callable must return an array with "
+                    "the same shape as the distances"
+                )
+            if np.iscomplexobj(raw_weights):
+                raise ValueError(
+                    "weights callable must return real numeric weights"
+                )
+            try:
+                weights = np.array(
+                    raw_weights, dtype=np.float64, copy=True
+                )
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "weights callable must return real numeric weights"
+                ) from exc
+
+            # Undefined or unavailable neighbors cannot contribute.
+            weights[~valid | np.isnan(weights)] = 0.0
+            if not np.isfinite(weights).all():
+                raise ValueError("weights must be finite")
+        else:
+            weights = np.zeros_like(distances)
+            np.divide(
+                1.0,
+                distances,
+                out=weights,
+                where=valid & (distances > 0),
+            )
+
+            # Exact matches exclude all nonzero-distance neighbors.
+            zero_distance = valid & (distances == 0)
+            zero_rows = zero_distance.any(axis=1)
+            weights[zero_rows] = zero_distance[zero_rows]
+
+        # Scaling avoids overflow from large finite callable weights.
+        scale = np.max(np.abs(weights), axis=1, keepdims=True)
+        if (scale == 0).any():
+            raise ValueError(
+                "weights must have a nonzero sum for every imputed value"
+            )
+        weights /= scale
+        totals = weights.sum(axis=1)
+        if (totals == 0).any():
+            raise ValueError(
+                "weights must have a nonzero sum for every imputed value"
+            )
+
+        safe_values = np.where(valid, values, 0.0).astype(np.float64)
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            result = np.sum(safe_values * weights, axis=1) / totals
+
+        if (
+            not np.isfinite(result).all()
+            or (np.abs(result) > np.finfo(np.float32).max).any()
+        ):
+            raise ValueError(
+                "weighted mean must be finite and representable as float32"
+            )
 
         return result
 
@@ -116,6 +204,28 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         if self.strategy not in ('mean', 'median'):
             raise ValueError("strategy must be either 'mean' or 'median'")
+
+        if not (
+            self._uses_uniform_weights()
+            or callable(self.weights)
+            or (
+                isinstance(self.weights, str)
+                and self.weights == "distance"
+            )
+        ):
+            raise ValueError(
+                "weights must be 'uniform', 'distance', None, or a callable"
+            )
+
+        if not self._uses_uniform_weights():
+            if self.strategy != "mean":
+                raise ValueError(
+                    "non-uniform weights require strategy='mean'"
+                )
+            if self.metric != "l2":
+                raise ValueError(
+                    "non-uniform weights require metric='l2'"
+                )
 
         if self.donor_policy not in ("complete", "available"):
             raise ValueError(
@@ -260,6 +370,41 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 min(int(self.n_neighbors), self.donors_.shape[0]),
             )
 
+            if not self._uses_uniform_weights():
+                for query_position, sample_idx in enumerate(sample_indices):
+                    row_neighbors = neighbor_indices[query_position]
+                    valid_neighbors = row_neighbors[
+                        (row_neighbors >= 0)
+                        & (row_neighbors < self.donors_.shape[0])
+                    ]
+                    if valid_neighbors.size == 0:
+                        raise ValueError(
+                            "FAISS did not return any valid neighbors"
+                        )
+
+                    selected_donors = self.donors_[valid_neighbors]
+
+                    # Keep FAISS neighbor selection. Compute weighting
+                    # distances directly for those selected donors only.
+                    delta = selected_donors[:, observed_cols].astype(
+                        np.float64
+                    )
+                    delta -= query_vectors[query_position]
+                    squared = np.einsum("ij,ij->i", delta, delta)
+
+                    # Match the missing-feature scaling used by
+                    # nan_euclidean distances, including for callables.
+                    squared *= X.shape[1] / observed_cols.size
+
+                    selected_values = selected_donors[:, missing_cols].T
+                    selected_distances = np.broadcast_to(
+                        squared, selected_values.shape
+                    )
+                    X_tmp[sample_idx, missing_cols] = self._weighted_mean(
+                        selected_values, selected_distances
+                    )
+                continue
+
             # Limit the gathered float32 values to roughly 8 MiB per chunk,
             # with a one-query minimum. Median and repair use extra storage.
             # Keep the FAISS search batch unchanged: only aggregation is split.
@@ -361,10 +506,46 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     fill_rows = finished & batch_missing[:, col] & chosen.any(axis=1)
                     if not fill_rows.any():
                         continue
-                    selected = np.where(
-                        chosen[fill_rows], values[fill_rows], np.nan
-                    )
-                    fill = self._aggregate(selected, axis=1, ignore_nan=True)
+                    if self._uses_uniform_weights():
+                        selected = np.where(
+                            chosen[fill_rows], values[fill_rows], np.nan
+                        )
+                        fill = self._aggregate(
+                            selected, axis=1, ignore_nan=True
+                        )
+                    else:
+                        # Pack only the selected neighbors for this feature.
+                        # Missing slots represent unavailable distances.
+                        selected_mask = chosen[fill_rows]
+                        receiver_rows, candidate_cols = np.nonzero(
+                            selected_mask
+                        )
+                        slots = (
+                            np.cumsum(selected_mask, axis=1)[
+                                receiver_rows, candidate_cols
+                            ] - 1
+                        )
+                        source_rows = np.flatnonzero(fill_rows)[receiver_rows]
+                        shape = (
+                            int(fill_rows.sum()),
+                            int(required[col]),
+                        )
+                        selected_values = np.full(
+                            shape, np.nan, dtype=np.float32
+                        )
+                        selected_distances = np.full(
+                            shape, np.nan, dtype=np.float64
+                        )
+                        selected_values[receiver_rows, slots] = values[
+                            source_rows, candidate_cols
+                        ]
+                        selected_distances[receiver_rows, slots] = distances[
+                            source_rows, candidate_cols
+                        ]
+                        fill = self._weighted_mean(
+                            selected_values, selected_distances
+                        )
+
                     result[batch_rows[fill_rows], col] = fill
 
                 if finished.all():
