@@ -61,15 +61,21 @@ The benchmarks below use fully observed training data for `complete`
 and partially missing training data for `available`. They compare each
 policy against KNNImputer, not the two policies against each other.
 
-### Released 0.3.10 benchmark
+### Released 0.3.10 benchmarks
 
-PyPI FaissImputer 0.3.10 versus KNNImputer on the same runner, using
-one thread, 20,000 training rows, 300 queries, 20 features, five
-neighbors, and mean aggregation.
+Both runs compared PyPI FaissImputer 0.3.10 with scikit-learn 1.9.0's
+KNNImputer on synthetic float32 data, using one thread, 300 queries,
+20 features, five neighbors, and mean aggregation.
 
-Each query had four missing features. Available training data had
-approximately 10% MCAR missingness; inputs were identical within
-each policy comparison.
+Each query had four missing features. Complete training data was fully
+observed; available training data had approximately 10% MCAR missingness.
+Inputs were identical within each policy comparison.
+
+Times measure the first transform after fitting, excluding fit time.
+Medians cover three seeds and three fresh runs per seed. Speedups are
+KNNImputer/FaissImputer ratios of unrounded median times.
+
+#### 20,000-row comparison — AMD runner
 
 | Donor policy | Query missingness | KNNImputer | FaissImputer | Speedup |
 |---|---|---:|---:|---:|
@@ -78,19 +84,34 @@ each policy comparison.
 | available | One shared pattern | 391.4 ms | 166.2 ms | **2.35×** |
 | available | Random patterns | 385.6 ms | 167.5 ms | **2.30×** |
 
-Times are median **first-transform times, excluding fit**, across
-three seeds and three fresh runs per seed. Speedups use unrounded times.
-
-- **Outputs:** complete matched KNNImputer exactly; available differed
-  by at most `4.77e-7` on these inputs.
-- **Memory:** median whole-worker peak RSS was 36–50% lower for complete,
-  but 6–21% higher for available.
-
-These synthetic results do not guarantee speed or memory advantages
-on other workloads.
-
 [Raw results and environment](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34297607304.json)
 · [Workflow run](https://github.com/ScionKim/FaissImputer/actions/runs/34297607304)
+
+#### Training-size comparison — Intel runner
+
+Values above 1× mean FaissImputer is faster.
+
+| Training rows | complete / fixed | complete / random | available / fixed | available / random |
+|---:|---:|---:|---:|---:|
+| 1,000 | 6.75× | **0.71× — slower** | 1.24× | 1.19× |
+| 5,000 | 9.64× | 1.46× | 1.34× | 1.34× |
+| 20,000 | 11.00× | 1.63× | 1.32× | 1.33× |
+| 100,000 | 15.56× | 2.30× | 1.73× | 1.64× |
+
+[Raw results and environment](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34310124369.json)
+· [Workflow run](https://github.com/ScionKim/FaissImputer/actions/runs/34310124369)
+
+In both runs, complete outputs matched KNNImputer exactly; available
+outputs differed by at most `4.77e-7` on the tested inputs.
+Repeated outputs were unchanged.
+
+Memory advantages varied with size. In the scaling run, available's
+median whole-worker peak RSS was 6–21% higher at 5,000 and 20,000 rows,
+but 15–27% lower at 100,000 rows, compared with KNNImputer.
+
+These runs used different CPUs. Differences between their results do
+not measure a change between software versions. Speed and memory
+advantages are not guaranteed on other workloads.
 
 ## Installation
 
