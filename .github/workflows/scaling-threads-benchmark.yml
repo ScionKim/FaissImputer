@@ -3,7 +3,7 @@ name: Scaling and thread benchmark
 on:
   push:
     branches:
-      - bench/released-0.3.10
+      - bench/released-scaling
     paths:
       - .github/workflows/scaling-threads-benchmark.yml
       - benchmarks/benchmark_scaling_threads.py
@@ -26,7 +26,7 @@ concurrency:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     env:
       RELEASE_VERSION: ${{ inputs.release_version || '0.3.10' }}
@@ -89,7 +89,7 @@ jobs:
             -u -m benchmarks.benchmark_scaling_threads \
             --expected-version "$RELEASE_VERSION" \
             --policy-matched-data \
-            --train-sizes 20000 \
+            --train-sizes 1000 5000 20000 100000 \
             --threads 1 \
             --queries 300 \
             --seeds 11 23 37 \
@@ -97,7 +97,7 @@ jobs:
             --repeats 3 \
             --repeated-transforms 3 \
             --timeout-seconds 180 \
-            --budget-seconds 900 \
+            --budget-seconds 1800 \
             --output "$RUNNER_TEMP/scaling-benchmark-results/scaling_threads.json"
 
       - name: Upload benchmark results
