@@ -61,41 +61,36 @@ The benchmarks below use fully observed training data for `complete`
 and partially missing training data for `available`. They compare each
 policy against KNNImputer, not the two policies against each other.
 
-Selected benchmark results:
+### Released 0.3.10 benchmark
 
-| Donor policy | Training rows | Query missingness | KNNImputer | FaissImputer | Speedup |
-|---|---:|---|---:|---:|---:|
-| complete | 1,000 | Random patterns | 22.6 ms | 30.9 ms | 0.73× — slower |
-| complete | 20,000 | One shared pattern | 314.3 ms | 34.8 ms | **9.04×** |
-| complete | 20,000 | Random patterns | 316.8 ms | 133.0 ms | **2.38×** |
-| available | 500,000 | Random patterns | 9.027 s | 6.179 s | **1.46×** |
-| available | 1,000,000 | Random patterns | 21.724 s | 19.681 s | **1.10×** |
+PyPI FaissImputer 0.3.10 versus KNNImputer on the same runner, using
+one thread, 20,000 training rows, 300 queries, 20 features, five
+neighbors, and mean aggregation.
 
-**What was measured:** fit + transform on synthetic data, with 300 query
-rows, 20 features, 5 neighbors, mean aggregation, and one native thread.
-Each query has four missing features. Training data is fully observed
-for `complete`, and has 10% MCAR missingness for `available`.
+Each query had four missing features. Available training data had
+approximately 10% MCAR missingness; inputs were identical within
+each policy comparison.
 
-Complete-policy times are medians across five seeds of three-run medians,
-measured at commit `9d179b2b`. Available-policy results measure the
-128 MiB batching candidate adopted in 0.3.2: three-run medians at
-500,000 rows and a **single-run pilot** at 1,000,000 rows.
-These are measured development snapshots, not a fresh benchmark of the
-published 0.3.2 package. CPU models differ between experiments;
-compare methods within each row. Speedups use unrounded times.
+| Donor policy | Query missingness | KNNImputer | FaissImputer | Speedup |
+|---|---|---:|---:|---:|
+| complete | One shared pattern | 422.4 ms | 22.0 ms | **19.24×** |
+| complete | Random patterns | 409.8 ms | 107.2 ms | **3.82×** |
+| available | One shared pattern | 391.4 ms | 166.2 ms | **2.35×** |
+| available | Random patterns | 385.6 ms | 167.5 ms | **2.30×** |
 
-**Output agreement:** the complete-policy benchmark matched KNNImputer
-exactly on the tested inputs. The available-policy experiments had a
-maximum absolute difference of approximately `2.38e-7` from KNNImputer.
-This measures agreement, not accuracy against ground truth or a guarantee
-for other datasets.
+Times are median **first-transform times, excluding fit**, across
+three seeds and three fresh runs per seed. Speedups use unrounded times.
 
-**Tradeoffs:** small datasets with varied missingness can be slower.
-Memory use is not always lower: in the million-row pilot, whole-worker
-peak RSS was about 9.1% higher than KNNImputer.
+- **Outputs:** complete matched KNNImputer exactly; available differed
+  by at most `4.77e-7` on these inputs.
+- **Memory:** median whole-worker peak RSS was 36–50% lower for complete,
+  but 6–21% higher for available.
 
-[Complete-policy results and reproduction](https://github.com/ScionKim/FaissImputer/blob/v0.3.1/docs/benchmarks/complete-patterns-9d179b2b.md)
-· [Available-policy results, memory and thread comparisons](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-batching-90c8cfb8.md)
+These synthetic results do not guarantee speed or memory advantages
+on other workloads.
+
+[Raw results and environment](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34297607304.json)
+· [Workflow run](https://github.com/ScionKim/FaissImputer/actions/runs/34297607304)
 
 ## Installation
 
