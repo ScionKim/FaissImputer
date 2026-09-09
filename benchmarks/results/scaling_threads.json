@@ -1,0 +1,5703 @@
+{
+  "metadata": {
+    "created_at_utc": "2026-09-09T01:03:47.312777+00:00",
+    "git_commit": "f7e5253c39b4a2905122e45e0c7b5a00342ab48f",
+    "github_run_id": "34297607304",
+    "github_run_attempt": "1",
+    "python": "3.12.14",
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "logical_cpus": 4,
+    "affinity_cpus": 4,
+    "faiss_imputer": "0.3.10",
+    "faiss_imputer_module": "/home/runner/work/_temp/scaling-benchmark-venv/lib/python3.12/site-packages/faiss_imputer/__init__.py",
+    "numpy": "2.5.3",
+    "scikit_learn": "1.9.0",
+    "faiss": "1.15.0"
+  },
+  "parameters": {
+    "train_sizes": [
+      20000
+    ],
+    "threads": [
+      1
+    ],
+    "queries": 300,
+    "features": 20,
+    "n_neighbors": 5,
+    "seeds": [
+      11,
+      23,
+      37
+    ],
+    "patterns": [
+      "fixed",
+      "random"
+    ],
+    "repeats": 3,
+    "repeated_transforms": 3,
+    "policy_matched_data": true,
+    "training_cases": [
+      {
+        "training_policy": "complete",
+        "methods": [
+          "KNNImputer",
+          "FaissImputer[complete]"
+        ],
+        "target_missing_rate": 0.0
+      },
+      {
+        "training_policy": "available",
+        "methods": [
+          "KNNImputer",
+          "FaissImputer[available]"
+        ],
+        "target_missing_rate": 0.1
+      }
+    ],
+    "expected_version": "0.3.10",
+    "sklearn_working_memory_mib": 256,
+    "worker_timeout_seconds": 180,
+    "run_budget_seconds": 900,
+    "expected_workers": 72
+  },
+  "notes": [
+    "Synthetic low-rank Gaussian data with theoretical variance normalization.",
+    "Queries are held out; each query has four missing features.",
+    "Within each training policy, inputs are shared across methods and repeats.",
+    "Training prefixes are shared across sizes; data generation uses one thread.",
+    "Policy-matched mode uses fully observed training for complete/KNN pairs and 10% MCAR training for available/KNN pairs.",
+    "Without policy-matched mode, all three methods use 10% MCAR training.",
+    "Fresh sequential subprocesses; small warmup before timed fit/transform.",
+    "repeats counts fresh workers; repeated_transforms counts additional transform calls on the same fitted model.",
+    "transform_seconds is the first transform after fit; total_seconds is fit plus that first transform and excludes additional transforms.",
+    "Timings exclude data generation, validation and process startup.",
+    "Memory is full-worker lifetime peak RSS, including imports, inputs, generation, warmup, validation and repeated transforms.",
+    "Worker peak RSS is not retained fitted memory or a phase-specific peak.",
+    "sklearn working_memory is a distance-chunk setting, not a process RAM cap.",
+    "Timeout includes the entire worker; killed-worker peak memory is unavailable.",
+    "Errors, timeouts and unrun cases remain in the results.",
+    "Output comparisons use the first successful reference per configuration and stay within the same training policy.",
+    "RMSE and MAE use hidden synthetic truth; differences from KNN measure output agreement, not imputation quality.",
+    "No accuracy or speed threshold, or exact equality to KNN, is required.",
+    "git_commit identifies the benchmark definition, not the installed wheel."
+  ],
+  "records": [
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0014104929999803062,
+      "transform_seconds": 0.42373422600002186,
+      "total_seconds": 0.42514471900000217,
+      "repeated_transform_seconds": [
+        0.4166430960000298,
+        0.4155924069999628,
+        0.41522858799999085
+      ],
+      "repeated_transform_median_seconds": 0.4155924069999628,
+      "worker_peak_rss_mib": 280.15625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19424031862538388,
+      "mae": 0.14717650389329112,
+      "output_dtype": "float32",
+      "output_sha256": "6b6bd164895a2fae1ebbfe193643c1df34ef724fa836fb62123fcf066c97582b",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.616230433999988,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.003437280000014198,
+      "transform_seconds": 0.021983324000018456,
+      "total_seconds": 0.025420604000032654,
+      "repeated_transform_seconds": [
+        0.02136856300001,
+        0.021493317000022216,
+        0.02136393500001077
+      ],
+      "repeated_transform_median_seconds": 0.02136856300001,
+      "worker_peak_rss_mib": 151.78125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19424031862538388,
+      "mae": 0.14717650389329112,
+      "output_dtype": "float32",
+      "output_sha256": "6b6bd164895a2fae1ebbfe193643c1df34ef724fa836fb62123fcf066c97582b",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.0002757560000077,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.003333846000032281,
+      "transform_seconds": 0.021986068999979125,
+      "total_seconds": 0.025319915000011406,
+      "repeated_transform_seconds": [
+        0.021406908999949792,
+        0.021557142000006024,
+        0.0214778040000283
+      ],
+      "repeated_transform_median_seconds": 0.0214778040000283,
+      "worker_peak_rss_mib": 151.67578125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19424031862538388,
+      "mae": 0.14717650389329112,
+      "output_dtype": "float32",
+      "output_sha256": "6b6bd164895a2fae1ebbfe193643c1df34ef724fa836fb62123fcf066c97582b",
+      "checks_passed": true,
+      "worker_wall_seconds": 0.998998505999964,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0014427010000304108,
+      "transform_seconds": 0.41864252199997054,
+      "total_seconds": 0.42008522300000095,
+      "repeated_transform_seconds": [
+        0.4187503569999649,
+        0.41454010799998287,
+        0.41457816400003367
+      ],
+      "repeated_transform_median_seconds": 0.41457816400003367,
+      "worker_peak_rss_mib": 301.15625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19424031862538388,
+      "mae": 0.14717650389329112,
+      "output_dtype": "float32",
+      "output_sha256": "6b6bd164895a2fae1ebbfe193643c1df34ef724fa836fb62123fcf066c97582b",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.6064980319999904,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0013808589999939613,
+      "transform_seconds": 0.42367998899999293,
+      "total_seconds": 0.4250608479999869,
+      "repeated_transform_seconds": [
+        0.4412020690000418,
+        0.41954621600001474,
+        0.4140281580000078
+      ],
+      "repeated_transform_median_seconds": 0.41954621600001474,
+      "worker_peak_rss_mib": 301.08203125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19424031862538388,
+      "mae": 0.14717650389329112,
+      "output_dtype": "float32",
+      "output_sha256": "6b6bd164895a2fae1ebbfe193643c1df34ef724fa836fb62123fcf066c97582b",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.6192925619999983,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0033350279999808663,
+      "transform_seconds": 0.021910370999989937,
+      "total_seconds": 0.025245398999970803,
+      "repeated_transform_seconds": [
+        0.021523205999983475,
+        0.021391510000000835,
+        0.021542423999960647
+      ],
+      "repeated_transform_median_seconds": 0.021523205999983475,
+      "worker_peak_rss_mib": 151.62890625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19424031862538388,
+      "mae": 0.14717650389329112,
+      "output_dtype": "float32",
+      "output_sha256": "6b6bd164895a2fae1ebbfe193643c1df34ef724fa836fb62123fcf066c97582b",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.0016594610000311,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.0015736249999918073,
+      "transform_seconds": 0.4102698219999752,
+      "total_seconds": 0.411843446999967,
+      "repeated_transform_seconds": [
+        0.41443946800001186,
+        0.4038733400000183,
+        0.40829496100002416
+      ],
+      "repeated_transform_median_seconds": 0.40829496100002416,
+      "worker_peak_rss_mib": 271.26171875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2054876283592482,
+      "mae": 0.15513089159786128,
+      "output_dtype": "float32",
+      "output_sha256": "f6fd6d96e8128d49cc3b80f64db3ae557dfd6d02b5ffcbcf19efc29db4ddf7a7",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5425399530000163,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.015699360999974488,
+      "transform_seconds": 0.1636462510000456,
+      "total_seconds": 0.17934561200002008,
+      "repeated_transform_seconds": [
+        0.15835008299995934,
+        0.15829493199998979,
+        0.15856391099998746
+      ],
+      "repeated_transform_median_seconds": 0.15835008299995934,
+      "worker_peak_rss_mib": 287.4609375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.20548762876799054,
+      "mae": 0.15513089197000227,
+      "output_dtype": "float32",
+      "output_sha256": "ac4683106a3413c74a76dfae5d83b9b218b1db1f622141d95c75b118581aa44d",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5643430640000133,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.009885394999969321,
+      "transform_seconds": 0.164262205,
+      "total_seconds": 0.17414759999996932,
+      "repeated_transform_seconds": [
+        0.160732988999996,
+        0.1600942009999926,
+        0.1612394610000365
+      ],
+      "repeated_transform_median_seconds": 0.160732988999996,
+      "worker_peak_rss_mib": 287.67578125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.20548762876799054,
+      "mae": 0.15513089197000227,
+      "output_dtype": "float32",
+      "output_sha256": "ac4683106a3413c74a76dfae5d83b9b218b1db1f622141d95c75b118581aa44d",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5665506290000053,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.0013878990000080194,
+      "transform_seconds": 0.40803838400000814,
+      "total_seconds": 0.40942628300001616,
+      "repeated_transform_seconds": [
+        0.4091151310000214,
+        0.40359102600001506,
+        0.40570633400000133
+      ],
+      "repeated_transform_median_seconds": 0.40570633400000133,
+      "worker_peak_rss_mib": 271.2734375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2054876283592482,
+      "mae": 0.15513089159786128,
+      "output_dtype": "float32",
+      "output_sha256": "f6fd6d96e8128d49cc3b80f64db3ae557dfd6d02b5ffcbcf19efc29db4ddf7a7",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.551359923000007,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.0013955600000485902,
+      "transform_seconds": 0.406826806999959,
+      "total_seconds": 0.4082223670000076,
+      "repeated_transform_seconds": [
+        0.40826776400001563,
+        0.4053600910000341,
+        0.404469129000006
+      ],
+      "repeated_transform_median_seconds": 0.4053600910000341,
+      "worker_peak_rss_mib": 271.2890625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2054876283592482,
+      "mae": 0.15513089159786128,
+      "output_dtype": "float32",
+      "output_sha256": "f6fd6d96e8128d49cc3b80f64db3ae557dfd6d02b5ffcbcf19efc29db4ddf7a7",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5470961670000065,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "646a5cd2672786f6c68fa99ff10a6784a2131974ec0b4bfef5eaffaebb95bb9e",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.01022184699996842,
+      "transform_seconds": 0.16657328799999505,
+      "total_seconds": 0.17679513499996347,
+      "repeated_transform_seconds": [
+        0.16183709300003102,
+        0.1616775749999988,
+        0.16180493500002058
+      ],
+      "repeated_transform_median_seconds": 0.16180493500002058,
+      "worker_peak_rss_mib": 287.64453125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.20548762876799054,
+      "mae": 0.15513089197000227,
+      "output_dtype": "float32",
+      "output_sha256": "ac4683106a3413c74a76dfae5d83b9b218b1db1f622141d95c75b118581aa44d",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.579414552000003,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0013876499999696534,
+      "transform_seconds": 0.40978116700000555,
+      "total_seconds": 0.4111688169999752,
+      "repeated_transform_seconds": [
+        0.40467365800003563,
+        0.407979929000021,
+        0.40617110499999853
+      ],
+      "repeated_transform_median_seconds": 0.40617110499999853,
+      "worker_peak_rss_mib": 237.3671875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18295935553582113,
+      "mae": 0.13959617681716432,
+      "output_dtype": "float32",
+      "output_sha256": "e9f46f6acba3239ea8c5793d89862e89ed203cdc54a87a51080d4a336be2cd83",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.553748697000003,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0033677760000045964,
+      "transform_seconds": 0.1074861640000222,
+      "total_seconds": 0.1108539400000268,
+      "repeated_transform_seconds": [
+        0.10623359599998139,
+        0.10525301000001264,
+        0.1058837069999754
+      ],
+      "repeated_transform_median_seconds": 0.1058837069999754,
+      "worker_peak_rss_mib": 151.5859375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18295935553582113,
+      "mae": 0.13959617681716432,
+      "output_dtype": "float32",
+      "output_sha256": "e9f46f6acba3239ea8c5793d89862e89ed203cdc54a87a51080d4a336be2cd83",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.3602494910000473,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.003450558999986697,
+      "transform_seconds": 0.10946547100002135,
+      "total_seconds": 0.11291603000000805,
+      "repeated_transform_seconds": [
+        0.10867781199999627,
+        0.1093758170000001,
+        0.10977090400001543
+      ],
+      "repeated_transform_median_seconds": 0.1093758170000001,
+      "worker_peak_rss_mib": 151.6640625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18295935553582113,
+      "mae": 0.13959617681716432,
+      "output_dtype": "float32",
+      "output_sha256": "e9f46f6acba3239ea8c5793d89862e89ed203cdc54a87a51080d4a336be2cd83",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.3800622640000029,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.001451233000011598,
+      "transform_seconds": 0.4094370010000148,
+      "total_seconds": 0.4108882340000264,
+      "repeated_transform_seconds": [
+        0.40639957700000195,
+        0.4118641489999959,
+        0.413058263000039
+      ],
+      "repeated_transform_median_seconds": 0.4118641489999959,
+      "worker_peak_rss_mib": 237.4296875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18295935553582113,
+      "mae": 0.13959617681716432,
+      "output_dtype": "float32",
+      "output_sha256": "e9f46f6acba3239ea8c5793d89862e89ed203cdc54a87a51080d4a336be2cd83",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.586706738000032,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0014287510000485781,
+      "transform_seconds": 0.41191873099995746,
+      "total_seconds": 0.41334748200000604,
+      "repeated_transform_seconds": [
+        0.4092413660000034,
+        0.4132460510000442,
+        0.41269481299997324
+      ],
+      "repeated_transform_median_seconds": 0.41269481299997324,
+      "worker_peak_rss_mib": 237.421875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18295935553582113,
+      "mae": 0.13959617681716432,
+      "output_dtype": "float32",
+      "output_sha256": "e9f46f6acba3239ea8c5793d89862e89ed203cdc54a87a51080d4a336be2cd83",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5809053659999677,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "06f34ac89b02e627b6f1c886895df836449c8483a8d2550cd37d18c79c4f27fd"
+        }
+      },
+      "fit_seconds": 0.0035687380000126723,
+      "transform_seconds": 0.10758066400001098,
+      "total_seconds": 0.11114940200002366,
+      "repeated_transform_seconds": [
+        0.1057508769999913,
+        0.10546090599996205,
+        0.10551529700001083
+      ],
+      "repeated_transform_median_seconds": 0.10551529700001083,
+      "worker_peak_rss_mib": 151.71875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18295935553582113,
+      "mae": 0.13959617681716432,
+      "output_dtype": "float32",
+      "output_sha256": "e9f46f6acba3239ea8c5793d89862e89ed203cdc54a87a51080d4a336be2cd83",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.3581171980000022,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.0014990149999789537,
+      "transform_seconds": 0.39079289000000017,
+      "total_seconds": 0.3922919049999791,
+      "repeated_transform_seconds": [
+        0.3839808310000308,
+        0.3866286630000104,
+        0.38692992000000004
+      ],
+      "repeated_transform_median_seconds": 0.3866286630000104,
+      "worker_peak_rss_mib": 237.71875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19151593091297495,
+      "mae": 0.14469478797655028,
+      "output_dtype": "float32",
+      "output_sha256": "4d07cd2ccc43eaa36cdd2986deb395f54a3a26a5979d07a8637ca8255e17c2d4",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.4901883900000144,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.009905168999978287,
+      "transform_seconds": 0.16879357599998457,
+      "total_seconds": 0.17869874499996286,
+      "repeated_transform_seconds": [
+        0.16314040599996815,
+        0.1631380019999824,
+        0.16346864300004427
+      ],
+      "repeated_transform_median_seconds": 0.16314040599996815,
+      "worker_peak_rss_mib": 287.5546875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19151593065480532,
+      "mae": 0.1446947878140539,
+      "output_dtype": "float32",
+      "output_sha256": "4c08533f6e03d77cb8ebbaf33f366ab27929490ad9a92103fc374ef7ed29752b",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5898429110000052,
+      "max_abs_difference_from_knn": 4.76837158203125e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.009167993000005481,
+      "transform_seconds": 0.16723582100001977,
+      "total_seconds": 0.17640381400002525,
+      "repeated_transform_seconds": [
+        0.16344986600000766,
+        0.16310236999999006,
+        0.16351143700001103
+      ],
+      "repeated_transform_median_seconds": 0.16344986600000766,
+      "worker_peak_rss_mib": 287.76171875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19151593065480532,
+      "mae": 0.1446947878140539,
+      "output_dtype": "float32",
+      "output_sha256": "4c08533f6e03d77cb8ebbaf33f366ab27929490ad9a92103fc374ef7ed29752b",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5800901179999869,
+      "max_abs_difference_from_knn": 4.76837158203125e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.0015464580000070782,
+      "transform_seconds": 0.3882327279999913,
+      "total_seconds": 0.3897791859999984,
+      "repeated_transform_seconds": [
+        0.38541777399996136,
+        0.3872125220000271,
+        0.38591582499998367
+      ],
+      "repeated_transform_median_seconds": 0.38591582499998367,
+      "worker_peak_rss_mib": 237.4921875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19151593091297495,
+      "mae": 0.14469478797655028,
+      "output_dtype": "float32",
+      "output_sha256": "4d07cd2ccc43eaa36cdd2986deb395f54a3a26a5979d07a8637ca8255e17c2d4",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.465835948000006,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.0013450960000227496,
+      "transform_seconds": 0.38768698799998447,
+      "total_seconds": 0.3890320840000072,
+      "repeated_transform_seconds": [
+        0.38434715099998584,
+        0.3866424279999592,
+        0.38609430399998246
+      ],
+      "repeated_transform_median_seconds": 0.38609430399998246,
+      "worker_peak_rss_mib": 237.515625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19151593091297495,
+      "mae": 0.14469478797655028,
+      "output_dtype": "float32",
+      "output_sha256": "4d07cd2ccc43eaa36cdd2986deb395f54a3a26a5979d07a8637ca8255e17c2d4",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.460213746000022,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 11,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2471,
+      "train_missing_rate": 0.0996925,
+      "query_missing_rate": 0.2,
+      "query_patterns": 291,
+      "fingerprints": {
+        "query": "ee0967d30ddf511c2db838ef010d6c99ccf56b5512a5b28544cc9895cdb254e2",
+        "truth": "6bc44e2e9a78b01f41fe287f4ff79faf922cd31b0c5e04ef3b3b01423754b59f",
+        "prefixes": {
+          "20000": "8aac252381cc6b5abd8a09f30792aa2340d9ca07f639b13ea1e862f75377db59"
+        }
+      },
+      "fit_seconds": 0.008991793000006965,
+      "transform_seconds": 0.16811143799998263,
+      "total_seconds": 0.1771032309999896,
+      "repeated_transform_seconds": [
+        0.16381753500002105,
+        0.16376466699995262,
+        0.1636901170000442
+      ],
+      "repeated_transform_median_seconds": 0.16376466699995262,
+      "worker_peak_rss_mib": 287.5625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19151593065480532,
+      "mae": 0.1446947878140539,
+      "output_dtype": "float32",
+      "output_sha256": "4c08533f6e03d77cb8ebbaf33f366ab27929490ad9a92103fc374ef7ed29752b",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.578170899999975,
+      "max_abs_difference_from_knn": 4.76837158203125e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.003455509999980677,
+      "transform_seconds": 0.021894001000021035,
+      "total_seconds": 0.025349511000001712,
+      "repeated_transform_seconds": [
+        0.021446048000029805,
+        0.021364236000010806,
+        0.0213310569999976
+      ],
+      "repeated_transform_median_seconds": 0.021364236000010806,
+      "worker_peak_rss_mib": 151.64453125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18899199167592448,
+      "mae": 0.14129762688806902,
+      "output_dtype": "float32",
+      "output_sha256": "7f68e5bb2214553e7250116e3710f953185567c4e280762b3084a3443dfc4a85",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.004293342999972,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.001414817000011226,
+      "transform_seconds": 0.4224148289999903,
+      "total_seconds": 0.4238296460000015,
+      "repeated_transform_seconds": [
+        0.42555810599998267,
+        0.42040331900000183,
+        0.42143321500003594
+      ],
+      "repeated_transform_median_seconds": 0.42143321500003594,
+      "worker_peak_rss_mib": 301.14453125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18899199167592448,
+      "mae": 0.14129762688806902,
+      "output_dtype": "float32",
+      "output_sha256": "7f68e5bb2214553e7250116e3710f953185567c4e280762b3084a3443dfc4a85",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.605131749999998,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.001344014000039806,
+      "transform_seconds": 0.4292832969999836,
+      "total_seconds": 0.4306273110000234,
+      "repeated_transform_seconds": [
+        0.42139555099998915,
+        0.418288490000009,
+        0.4208429709999564
+      ],
+      "repeated_transform_median_seconds": 0.4208429709999564,
+      "worker_peak_rss_mib": 280.2421875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18899199167592448,
+      "mae": 0.14129762688806902,
+      "output_dtype": "float32",
+      "output_sha256": "7f68e5bb2214553e7250116e3710f953185567c4e280762b3084a3443dfc4a85",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.6078294769999957,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.003425794000008864,
+      "transform_seconds": 0.021818526000004113,
+      "total_seconds": 0.025244320000012976,
+      "repeated_transform_seconds": [
+        0.021287819000008312,
+        0.021532252000042718,
+        0.021512683000025845
+      ],
+      "repeated_transform_median_seconds": 0.021512683000025845,
+      "worker_peak_rss_mib": 151.80859375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18899199167592448,
+      "mae": 0.14129762688806902,
+      "output_dtype": "float32",
+      "output_sha256": "7f68e5bb2214553e7250116e3710f953185567c4e280762b3084a3443dfc4a85",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.0059756009999887,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.0034402150000119036,
+      "transform_seconds": 0.021951284000010673,
+      "total_seconds": 0.025391499000022577,
+      "repeated_transform_seconds": [
+        0.021439434000001256,
+        0.021514384999989034,
+        0.02151107000003094
+      ],
+      "repeated_transform_median_seconds": 0.02151107000003094,
+      "worker_peak_rss_mib": 151.73046875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18899199167592448,
+      "mae": 0.14129762688806902,
+      "output_dtype": "float32",
+      "output_sha256": "7f68e5bb2214553e7250116e3710f953185567c4e280762b3084a3443dfc4a85",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.007449274999999,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.0014058460000114792,
+      "transform_seconds": 0.4282248330000016,
+      "total_seconds": 0.42963067900001306,
+      "repeated_transform_seconds": [
+        0.42346501000002945,
+        0.4184753750000141,
+        0.4200416400000222
+      ],
+      "repeated_transform_median_seconds": 0.4200416400000222,
+      "worker_peak_rss_mib": 280.26171875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18899199167592448,
+      "mae": 0.14129762688806902,
+      "output_dtype": "float32",
+      "output_sha256": "7f68e5bb2214553e7250116e3710f953185567c4e280762b3084a3443dfc4a85",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.6114443840000376,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.009965257000033034,
+      "transform_seconds": 0.1668071049999753,
+      "total_seconds": 0.17677236200000834,
+      "repeated_transform_seconds": [
+        0.16231770399997458,
+        0.1626993799999923,
+        0.16252656400001797
+      ],
+      "repeated_transform_median_seconds": 0.16252656400001797,
+      "worker_peak_rss_mib": 292.890625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1919341944759716,
+      "mae": 0.1424853922833851,
+      "output_dtype": "float32",
+      "output_sha256": "cef75eca92d85015b2f66d93c3c3ba56b3494df4157ddbafb059b1d7dd2db768",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.584535983999956,
+      "max_abs_difference_from_knn": 4.76837158203125e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.0014457249999964006,
+      "transform_seconds": 0.39384666000000834,
+      "total_seconds": 0.39529238500000474,
+      "repeated_transform_seconds": [
+        0.3882370850000143,
+        0.3862661800000069,
+        0.3861063100000024
+      ],
+      "repeated_transform_median_seconds": 0.3862661800000069,
+      "worker_peak_rss_mib": 271.5234375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1919341944210675,
+      "mae": 0.14248539150832584,
+      "output_dtype": "float32",
+      "output_sha256": "d914b689d958531260c9cfc753cb840e22059d9d8c3c8347160e216b3b2434ec",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.465570279000019,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.001394126999969103,
+      "transform_seconds": 0.3908276370000294,
+      "total_seconds": 0.39222176399999853,
+      "repeated_transform_seconds": [
+        0.38833108500000435,
+        0.3885421479999991,
+        0.38594062000004214
+      ],
+      "repeated_transform_median_seconds": 0.38833108500000435,
+      "worker_peak_rss_mib": 271.23046875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1919341944210675,
+      "mae": 0.14248539150832584,
+      "output_dtype": "float32",
+      "output_sha256": "d914b689d958531260c9cfc753cb840e22059d9d8c3c8347160e216b3b2434ec",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.4711273020000135,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.009342063000019607,
+      "transform_seconds": 0.16749862799997572,
+      "total_seconds": 0.17684069099999533,
+      "repeated_transform_seconds": [
+        0.1626097179999988,
+        0.16326400799999874,
+        0.16356350299997757
+      ],
+      "repeated_transform_median_seconds": 0.16326400799999874,
+      "worker_peak_rss_mib": 292.85546875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1919341944759716,
+      "mae": 0.1424853922833851,
+      "output_dtype": "float32",
+      "output_sha256": "cef75eca92d85015b2f66d93c3c3ba56b3494df4157ddbafb059b1d7dd2db768",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5808901379999725,
+      "max_abs_difference_from_knn": 4.76837158203125e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.009300862000031884,
+      "transform_seconds": 0.1671601360000068,
+      "total_seconds": 0.17646099800003867,
+      "repeated_transform_seconds": [
+        0.16330577900004073,
+        0.16355868499999815,
+        0.1632870119999552
+      ],
+      "repeated_transform_median_seconds": 0.16330577900004073,
+      "worker_peak_rss_mib": 287.64453125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1919341944759716,
+      "mae": 0.1424853922833851,
+      "output_dtype": "float32",
+      "output_sha256": "cef75eca92d85015b2f66d93c3c3ba56b3494df4157ddbafb059b1d7dd2db768",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5831560679999939,
+      "max_abs_difference_from_knn": 4.76837158203125e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "43b63aaee095a62b2ee97e63347be01c4bc4fde1c0952e41ee1f454d34ae47c2",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.0015384820000008403,
+      "transform_seconds": 0.39143516800004363,
+      "total_seconds": 0.39297365000004447,
+      "repeated_transform_seconds": [
+        0.3908238320000237,
+        0.38667414799999733,
+        0.38569033999999647
+      ],
+      "repeated_transform_median_seconds": 0.38667414799999733,
+      "worker_peak_rss_mib": 271.45703125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1919341944210675,
+      "mae": 0.14248539150832584,
+      "output_dtype": "float32",
+      "output_sha256": "d914b689d958531260c9cfc753cb840e22059d9d8c3c8347160e216b3b2434ec",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.474409482999988,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.0034680120000416537,
+      "transform_seconds": 0.10696257600000081,
+      "total_seconds": 0.11043058800004246,
+      "repeated_transform_seconds": [
+        0.10620857899999692,
+        0.1066036640000334,
+        0.10528104299999086
+      ],
+      "repeated_transform_median_seconds": 0.10620857899999692,
+      "worker_peak_rss_mib": 151.59375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19167922933165693,
+      "mae": 0.14279567104119148,
+      "output_dtype": "float32",
+      "output_sha256": "8de2d367d1492ee3bbd87d5bc186b84c0498218c5720a6c990ba9eacd5879b76",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.3448013199999878,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.0014244820000044456,
+      "transform_seconds": 0.41215659800002413,
+      "total_seconds": 0.4135810800000286,
+      "repeated_transform_seconds": [
+        0.4082220140000459,
+        0.4088249289999908,
+        0.4099549740000157
+      ],
+      "repeated_transform_median_seconds": 0.4088249289999908,
+      "worker_peak_rss_mib": 239.92578125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19167922933165693,
+      "mae": 0.14279567104119148,
+      "output_dtype": "float32",
+      "output_sha256": "8de2d367d1492ee3bbd87d5bc186b84c0498218c5720a6c990ba9eacd5879b76",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.558661102999963,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.00138265999999021,
+      "transform_seconds": 0.4122112890000267,
+      "total_seconds": 0.4135939490000169,
+      "repeated_transform_seconds": [
+        0.407409849999965,
+        0.4082435969999665,
+        0.4102297209999506
+      ],
+      "repeated_transform_median_seconds": 0.4082435969999665,
+      "worker_peak_rss_mib": 240.08984375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19167922933165693,
+      "mae": 0.14279567104119148,
+      "output_dtype": "float32",
+      "output_sha256": "8de2d367d1492ee3bbd87d5bc186b84c0498218c5720a6c990ba9eacd5879b76",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.549372902000016,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.0033747570000173255,
+      "transform_seconds": 0.10715156899999556,
+      "total_seconds": 0.11052632600001289,
+      "repeated_transform_seconds": [
+        0.10526944600002253,
+        0.10507099200003722,
+        0.10537564399999155
+      ],
+      "repeated_transform_median_seconds": 0.10526944600002253,
+      "worker_peak_rss_mib": 151.3515625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19167922933165693,
+      "mae": 0.14279567104119148,
+      "output_dtype": "float32",
+      "output_sha256": "8de2d367d1492ee3bbd87d5bc186b84c0498218c5720a6c990ba9eacd5879b76",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.3495523889999959,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.0036618720000092253,
+      "transform_seconds": 0.10716812199996184,
+      "total_seconds": 0.11082999399997107,
+      "repeated_transform_seconds": [
+        0.10512079500000482,
+        0.10511350299998412,
+        0.10519210000001067
+      ],
+      "repeated_transform_median_seconds": 0.10512079500000482,
+      "worker_peak_rss_mib": 151.8203125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19167922933165693,
+      "mae": 0.14279567104119148,
+      "output_dtype": "float32",
+      "output_sha256": "8de2d367d1492ee3bbd87d5bc186b84c0498218c5720a6c990ba9eacd5879b76",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.3428860079999936,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "86efdcfd81f05ab8de0cb7d548442e998e64dcfedaccf7a4c226812317d9c807"
+        }
+      },
+      "fit_seconds": 0.0013261770000099204,
+      "transform_seconds": 0.41122134699998014,
+      "total_seconds": 0.41254752399999006,
+      "repeated_transform_seconds": [
+        0.4081163000000174,
+        0.41033829600002036,
+        0.41065680899998824
+      ],
+      "repeated_transform_median_seconds": 0.41033829600002036,
+      "worker_peak_rss_mib": 237.8359375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19167922933165693,
+      "mae": 0.14279567104119148,
+      "output_dtype": "float32",
+      "output_sha256": "8de2d367d1492ee3bbd87d5bc186b84c0498218c5720a6c990ba9eacd5879b76",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5512486800000147,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.009395428999994238,
+      "transform_seconds": 0.1668763029999809,
+      "total_seconds": 0.17627173199997515,
+      "repeated_transform_seconds": [
+        0.162547490999998,
+        0.16235784900004546,
+        0.16290213700000322
+      ],
+      "repeated_transform_median_seconds": 0.162547490999998,
+      "worker_peak_rss_mib": 287.73046875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19976426853829135,
+      "mae": 0.15092202042253727,
+      "output_dtype": "float32",
+      "output_sha256": "38d6b5ef7191a9fedbfca6718e7d067539f970c5df8e50ef53a6a7788e3b03ef",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5812088470000276,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.0013940180000417968,
+      "transform_seconds": 0.3832418369999573,
+      "total_seconds": 0.3846358549999991,
+      "repeated_transform_seconds": [
+        0.37804171200002656,
+        0.3825864649999744,
+        0.3812022509999906
+      ],
+      "repeated_transform_median_seconds": 0.3812022509999906,
+      "worker_peak_rss_mib": 237.2578125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1997642704420779,
+      "mae": 0.15092202159428172,
+      "output_dtype": "float32",
+      "output_sha256": "f35af49a35d432e630fe71befbcf7e58c8ff102695c36ac114634e11e8b67a0a",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.4486736430000065,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.0013628230000222175,
+      "transform_seconds": 0.38561556899998095,
+      "total_seconds": 0.38697839200000317,
+      "repeated_transform_seconds": [
+        0.3798556130000179,
+        0.38080868700001247,
+        0.38092052299998613
+      ],
+      "repeated_transform_median_seconds": 0.38080868700001247,
+      "worker_peak_rss_mib": 237.52734375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1997642704420779,
+      "mae": 0.15092202159428172,
+      "output_dtype": "float32",
+      "output_sha256": "f35af49a35d432e630fe71befbcf7e58c8ff102695c36ac114634e11e8b67a0a",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.45498213999997,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.009091541000032066,
+      "transform_seconds": 0.1662454949999983,
+      "total_seconds": 0.17533703600003037,
+      "repeated_transform_seconds": [
+        0.16348359700003812,
+        0.16324274999999489,
+        0.16285202900002105
+      ],
+      "repeated_transform_median_seconds": 0.16324274999999489,
+      "worker_peak_rss_mib": 287.67578125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19976426853829135,
+      "mae": 0.15092202042253727,
+      "output_dtype": "float32",
+      "output_sha256": "38d6b5ef7191a9fedbfca6718e7d067539f970c5df8e50ef53a6a7788e3b03ef",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5873451189999628,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.009238107999976819,
+      "transform_seconds": 0.16762616400001207,
+      "total_seconds": 0.1768642719999889,
+      "repeated_transform_seconds": [
+        0.1632415569999921,
+        0.16310884099999612,
+        0.16313273699995534
+      ],
+      "repeated_transform_median_seconds": 0.16313273699995534,
+      "worker_peak_rss_mib": 287.73046875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19976426853829135,
+      "mae": 0.15092202042253727,
+      "output_dtype": "float32",
+      "output_sha256": "38d6b5ef7191a9fedbfca6718e7d067539f970c5df8e50ef53a6a7788e3b03ef",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5862255679999748,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 23,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2437,
+      "train_missing_rate": 0.09994,
+      "query_missing_rate": 0.2,
+      "query_patterns": 290,
+      "fingerprints": {
+        "query": "e1bdeb197cf04a3d230a8cb3042ac41e279b8d7285fe443669107a28dad397df",
+        "truth": "4e957d8a6059c9af06865ca6a54e99a1e4e2c357af651487ce2ee20f23a123e6",
+        "prefixes": {
+          "20000": "2929685ed0bf64e82e92aa65e6fcabc0cea0edd811dcbdc1fe51939a56f45c3a"
+        }
+      },
+      "fit_seconds": 0.0014650439999854825,
+      "transform_seconds": 0.3809127110000077,
+      "total_seconds": 0.38237775499999316,
+      "repeated_transform_seconds": [
+        0.37677901799997926,
+        0.3799652060000085,
+        0.3822520680000139
+      ],
+      "repeated_transform_median_seconds": 0.3799652060000085,
+      "worker_peak_rss_mib": 237.6328125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1997642704420779,
+      "mae": 0.15092202159428172,
+      "output_dtype": "float32",
+      "output_sha256": "f35af49a35d432e630fe71befbcf7e58c8ff102695c36ac114634e11e8b67a0a",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.436866043000009,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0014243640000017876,
+      "transform_seconds": 0.4097392959999979,
+      "total_seconds": 0.4111636599999997,
+      "repeated_transform_seconds": [
+        0.40786491400001523,
+        0.4069714880000106,
+        0.4075515179999911
+      ],
+      "repeated_transform_median_seconds": 0.4075515179999911,
+      "worker_peak_rss_mib": 301.09765625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19796245969491924,
+      "mae": 0.14986639813287184,
+      "output_dtype": "float32",
+      "output_sha256": "10e0f268fda297af7a18ee8ad00a0f43bb15bb1bd1b17c862d76aa65d721708c",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5420271099999923,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0033730769999920085,
+      "transform_seconds": 0.022098711000012372,
+      "total_seconds": 0.02547178800000438,
+      "repeated_transform_seconds": [
+        0.021464709999975184,
+        0.02135654900001782,
+        0.021311071000013726
+      ],
+      "repeated_transform_median_seconds": 0.02135654900001782,
+      "worker_peak_rss_mib": 151.8828125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19796245969491924,
+      "mae": 0.14986639813287184,
+      "output_dtype": "float32",
+      "output_sha256": "10e0f268fda297af7a18ee8ad00a0f43bb15bb1bd1b17c862d76aa65d721708c",
+      "checks_passed": true,
+      "worker_wall_seconds": 0.9925484959999835,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0034737760000211892,
+      "transform_seconds": 0.022007384999994883,
+      "total_seconds": 0.025481161000016073,
+      "repeated_transform_seconds": [
+        0.02139584700000796,
+        0.021382017000007636,
+        0.021408827000016117
+      ],
+      "repeated_transform_median_seconds": 0.02139584700000796,
+      "worker_peak_rss_mib": 151.71484375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19796245969491924,
+      "mae": 0.14986639813287184,
+      "output_dtype": "float32",
+      "output_sha256": "10e0f268fda297af7a18ee8ad00a0f43bb15bb1bd1b17c862d76aa65d721708c",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.0137733500000081,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0013056980000101248,
+      "transform_seconds": 0.41217410999996673,
+      "total_seconds": 0.41347980799997686,
+      "repeated_transform_seconds": [
+        0.4086761880000154,
+        0.4066944969999895,
+        0.4038462089999939
+      ],
+      "repeated_transform_median_seconds": 0.4066944969999895,
+      "worker_peak_rss_mib": 301.2578125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19796245969491924,
+      "mae": 0.14986639813287184,
+      "output_dtype": "float32",
+      "output_sha256": "10e0f268fda297af7a18ee8ad00a0f43bb15bb1bd1b17c862d76aa65d721708c",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.557074134000004,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0013579749999621527,
+      "transform_seconds": 0.4088459069999999,
+      "total_seconds": 0.41020388199996205,
+      "repeated_transform_seconds": [
+        0.4062897439999915,
+        0.40356143699995073,
+        0.4045898629999556
+      ],
+      "repeated_transform_median_seconds": 0.4045898629999556,
+      "worker_peak_rss_mib": 301.13671875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19796245969491924,
+      "mae": 0.14986639813287184,
+      "output_dtype": "float32",
+      "output_sha256": "10e0f268fda297af7a18ee8ad00a0f43bb15bb1bd1b17c862d76aa65d721708c",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.543948795999995,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0036673410000389595,
+      "transform_seconds": 0.02187102999999979,
+      "total_seconds": 0.02553837100003875,
+      "repeated_transform_seconds": [
+        0.021514461999970536,
+        0.021478067000032297,
+        0.02134058299998287
+      ],
+      "repeated_transform_median_seconds": 0.021478067000032297,
+      "worker_peak_rss_mib": 151.7109375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.19796245969491924,
+      "mae": 0.14986639813287184,
+      "output_dtype": "float32",
+      "output_sha256": "10e0f268fda297af7a18ee8ad00a0f43bb15bb1bd1b17c862d76aa65d721708c",
+      "checks_passed": true,
+      "worker_wall_seconds": 0.9969409979999568,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.0014062559999956648,
+      "transform_seconds": 0.388404037999976,
+      "total_seconds": 0.3898102939999717,
+      "repeated_transform_seconds": [
+        0.3882995019999953,
+        0.3807700709999722,
+        0.3803452209999705
+      ],
+      "repeated_transform_median_seconds": 0.3807700709999722,
+      "worker_peak_rss_mib": 271.3359375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2052943876222027,
+      "mae": 0.15572089207630294,
+      "output_dtype": "float32",
+      "output_sha256": "71100f3413cba963ee356c085bcee63b4275e558dcb3e9b3636413e0b147132f",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.4516357370000037,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.009254961999999978,
+      "transform_seconds": 0.16622063200003367,
+      "total_seconds": 0.17547559400003365,
+      "repeated_transform_seconds": [
+        0.16028489500001797,
+        0.1606327819999933,
+        0.1610267570000019
+      ],
+      "repeated_transform_median_seconds": 0.1606327819999933,
+      "worker_peak_rss_mib": 287.81640625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2052943889217396,
+      "mae": 0.15572089073830284,
+      "output_dtype": "float32",
+      "output_sha256": "887bb5a3bb611c5280bca8b86fc4b47f22272e4ca16fb272b1db19f0424f9071",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5720364899999595,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.009686372000032861,
+      "transform_seconds": 0.16615380299998606,
+      "total_seconds": 0.17584017500001892,
+      "repeated_transform_seconds": [
+        0.16210308299997678,
+        0.1612206109999761,
+        0.16083806599999662
+      ],
+      "repeated_transform_median_seconds": 0.1612206109999761,
+      "worker_peak_rss_mib": 287.5703125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2052943889217396,
+      "mae": 0.15572089073830284,
+      "output_dtype": "float32",
+      "output_sha256": "887bb5a3bb611c5280bca8b86fc4b47f22272e4ca16fb272b1db19f0424f9071",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5723724390000484,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.0014933159999941381,
+      "transform_seconds": 0.3893934700000159,
+      "total_seconds": 0.39088678600001003,
+      "repeated_transform_seconds": [
+        0.41931303999996317,
+        0.3886601119999682,
+        0.3848344859999884
+      ],
+      "repeated_transform_median_seconds": 0.3886601119999682,
+      "worker_peak_rss_mib": 271.171875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2052943876222027,
+      "mae": 0.15572089207630294,
+      "output_dtype": "float32",
+      "output_sha256": "71100f3413cba963ee356c085bcee63b4275e558dcb3e9b3636413e0b147132f",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.509740865000026,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.001365566000004037,
+      "transform_seconds": 0.3887090949999674,
+      "total_seconds": 0.39007466099997146,
+      "repeated_transform_seconds": [
+        0.38395920799996475,
+        0.38294501299998274,
+        0.3865732360000038
+      ],
+      "repeated_transform_median_seconds": 0.38395920799996475,
+      "worker_peak_rss_mib": 271.31640625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2052943876222027,
+      "mae": 0.15572089207630294,
+      "output_dtype": "float32",
+      "output_sha256": "71100f3413cba963ee356c085bcee63b4275e558dcb3e9b3636413e0b147132f",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.4685063580000133,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "fixed",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 1,
+      "fingerprints": {
+        "query": "105616cf27f159b0e4f92b7069116da612aad377d367a49f6ccbd980b7c1d2c2",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.009171175999995285,
+      "transform_seconds": 0.16546695400001,
+      "total_seconds": 0.17463813000000528,
+      "repeated_transform_seconds": [
+        0.16022294399999737,
+        0.1606887350000079,
+        0.16045633900000666
+      ],
+      "repeated_transform_median_seconds": 0.16045633900000666,
+      "worker_peak_rss_mib": 287.7265625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.2052943889217396,
+      "mae": 0.15572089073830284,
+      "output_dtype": "float32",
+      "output_sha256": "887bb5a3bb611c5280bca8b86fc4b47f22272e4ca16fb272b1db19f0424f9071",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5716623540000114,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0013952700000459117,
+      "transform_seconds": 0.4000787169999853,
+      "total_seconds": 0.40147398700003123,
+      "repeated_transform_seconds": [
+        0.3967142870000089,
+        0.3984740789999819,
+        0.3992840699999647
+      ],
+      "repeated_transform_median_seconds": 0.3984740789999819,
+      "worker_peak_rss_mib": 237.5078125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.17220692960534503,
+      "mae": 0.1319559089241132,
+      "output_dtype": "float32",
+      "output_sha256": "45d685771724dedb4de61d5a30051e9141e20702be9b382b7828c07f1cc0d318",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5131355270000313,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.003394627000034234,
+      "transform_seconds": 0.10651983100001416,
+      "total_seconds": 0.1099144580000484,
+      "repeated_transform_seconds": [
+        0.10462842600003341,
+        0.10443099200000461,
+        0.10476284499998201
+      ],
+      "repeated_transform_median_seconds": 0.10462842600003341,
+      "worker_peak_rss_mib": 151.4453125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.17220692960534503,
+      "mae": 0.1319559089241132,
+      "output_dtype": "float32",
+      "output_sha256": "45d685771724dedb4de61d5a30051e9141e20702be9b382b7828c07f1cc0d318",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.3476859070000273,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0033844820000012987,
+      "transform_seconds": 0.10638263800001369,
+      "total_seconds": 0.10976712000001498,
+      "repeated_transform_seconds": [
+        0.10494328299995459,
+        0.10492548599995644,
+        0.10492341299999453
+      ],
+      "repeated_transform_median_seconds": 0.10492548599995644,
+      "worker_peak_rss_mib": 151.83984375,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.17220692960534503,
+      "mae": 0.1319559089241132,
+      "output_dtype": "float32",
+      "output_sha256": "45d685771724dedb4de61d5a30051e9141e20702be9b382b7828c07f1cc0d318",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.333387502999983,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0014865449999774683,
+      "transform_seconds": 0.4003026620000014,
+      "total_seconds": 0.4017892069999789,
+      "repeated_transform_seconds": [
+        0.3989933290000067,
+        0.42420734899997115,
+        0.39844316200003504
+      ],
+      "repeated_transform_median_seconds": 0.3989933290000067,
+      "worker_peak_rss_mib": 237.25,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.17220692960534503,
+      "mae": 0.1319559089241132,
+      "output_dtype": "float32",
+      "output_sha256": "45d685771724dedb4de61d5a30051e9141e20702be9b382b7828c07f1cc0d318",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5412413430000242,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.0012974649999932808,
+      "transform_seconds": 0.3995082530000218,
+      "total_seconds": 0.4008057180000151,
+      "repeated_transform_seconds": [
+        0.39504483700000037,
+        0.40304394399998955,
+        0.3972189670000148
+      ],
+      "repeated_transform_median_seconds": 0.3972189670000148,
+      "worker_peak_rss_mib": 237.5703125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.17220692960534503,
+      "mae": 0.1319559089241132,
+      "output_dtype": "float32",
+      "output_sha256": "45d685771724dedb4de61d5a30051e9141e20702be9b382b7828c07f1cc0d318",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.5141801350000037,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "complete",
+      "threads": 1,
+      "method": "FaissImputer[complete]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 20000,
+      "train_missing_rate": 0.0,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "e32617e8bbc916be68d15078977b5091ea43a8ff009bdd68b8d40269ebcde622"
+        }
+      },
+      "fit_seconds": 0.003440497999974923,
+      "transform_seconds": 0.10621380700001737,
+      "total_seconds": 0.10965430499999229,
+      "repeated_transform_seconds": [
+        0.10687509000001683,
+        0.10427649199999678,
+        0.10431205500003671
+      ],
+      "repeated_transform_median_seconds": 0.10431205500003671,
+      "worker_peak_rss_mib": 151.765625,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.17220692960534503,
+      "mae": 0.1319559089241132,
+      "output_dtype": "float32",
+      "output_sha256": "45d685771724dedb4de61d5a30051e9141e20702be9b382b7828c07f1cc0d318",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.332098770000016,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.0013809300000389158,
+      "transform_seconds": 0.38412557099997,
+      "total_seconds": 0.38550650100000894,
+      "repeated_transform_seconds": [
+        0.3811036559999934,
+        0.3818978340000285,
+        0.38358650099996794
+      ],
+      "repeated_transform_median_seconds": 0.3818978340000285,
+      "worker_peak_rss_mib": 237.67578125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1804399786419706,
+      "mae": 0.13645539560367373,
+      "output_dtype": "float32",
+      "output_sha256": "7c8f8041f7d5fb97c4371f50912c366e513b6f5bff61c72547763ba84aa01f56",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.4427666079999995,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 1,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.009833046999972339,
+      "transform_seconds": 0.1672042740000279,
+      "total_seconds": 0.17703732100000025,
+      "repeated_transform_seconds": [
+        0.16266170199997987,
+        0.16219433800000616,
+        0.1623081769999999
+      ],
+      "repeated_transform_median_seconds": 0.1623081769999999,
+      "worker_peak_rss_mib": 287.78125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18043997848237708,
+      "mae": 0.13645539587821987,
+      "output_dtype": "float32",
+      "output_sha256": "655e6d5960eb80656c09fe8532930c9594d29241e4ad5dd69fcc7b4de7425a75",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5739757709999935,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.008801705999985643,
+      "transform_seconds": 0.16766402700000071,
+      "total_seconds": 0.17646573299998636,
+      "repeated_transform_seconds": [
+        0.1641981020000003,
+        0.16362650299998904,
+        0.16411080300002823
+      ],
+      "repeated_transform_median_seconds": 0.16411080300002823,
+      "worker_peak_rss_mib": 287.71875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18043997848237708,
+      "mae": 0.13645539587821987,
+      "output_dtype": "float32",
+      "output_sha256": "655e6d5960eb80656c09fe8532930c9594d29241e4ad5dd69fcc7b4de7425a75",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5847918300000288,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 2,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.001532324000038443,
+      "transform_seconds": 0.38750612699999465,
+      "total_seconds": 0.3890384510000331,
+      "repeated_transform_seconds": [
+        0.38334977900001377,
+        0.3848648379999986,
+        0.38426851200000556
+      ],
+      "repeated_transform_median_seconds": 0.38426851200000556,
+      "worker_peak_rss_mib": 237.5703125,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1804399786419706,
+      "mae": 0.13645539560367373,
+      "output_dtype": "float32",
+      "output_sha256": "7c8f8041f7d5fb97c4371f50912c366e513b6f5bff61c72547763ba84aa01f56",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.463422455,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "KNNImputer",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.0014263369999980569,
+      "transform_seconds": 0.38445688199999495,
+      "total_seconds": 0.385883218999993,
+      "repeated_transform_seconds": [
+        0.3841818750000243,
+        0.38588216700003386,
+        0.38655097000003025
+      ],
+      "repeated_transform_median_seconds": 0.38588216700003386,
+      "worker_peak_rss_mib": 237.60546875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.1804399786419706,
+      "mae": 0.13645539560367373,
+      "output_dtype": "float32",
+      "output_sha256": "7c8f8041f7d5fb97c4371f50912c366e513b6f5bff61c72547763ba84aa01f56",
+      "checks_passed": true,
+      "worker_wall_seconds": 2.4552718909999953,
+      "max_abs_difference_from_knn": 0.0,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    },
+    {
+      "size": 20000,
+      "queries": 300,
+      "seed": 37,
+      "pattern": "random",
+      "training_policy": "available",
+      "threads": 1,
+      "method": "FaissImputer[available]",
+      "repeat": 3,
+      "prefix_sizes": [
+        20000
+      ],
+      "repeated_transforms": 3,
+      "expected_version": "0.3.10",
+      "status": "ok",
+      "complete_donors": 2395,
+      "train_missing_rate": 0.1003075,
+      "query_missing_rate": 0.2,
+      "query_patterns": 287,
+      "fingerprints": {
+        "query": "b00f213db79f9a00cc30872282223f136ce58db1cb740e97254f7a56766fa2ba",
+        "truth": "3539c69a3cfcba2df988d959ddcf4c4fb336a3bea0587aed7f1a7938022f563c",
+        "prefixes": {
+          "20000": "d34b0c40d2c985bce00978a17593825a2e8ed3da0a498978175c140a07b9d1b9"
+        }
+      },
+      "fit_seconds": 0.01025834200004283,
+      "transform_seconds": 0.16746135899995807,
+      "total_seconds": 0.1777197010000009,
+      "repeated_transform_seconds": [
+        0.16350130299997545,
+        0.16287743599997384,
+        0.16237670399999615
+      ],
+      "repeated_transform_median_seconds": 0.16287743599997384,
+      "worker_peak_rss_mib": 287.73046875,
+      "threadpools": [
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.34.106.0",
+          "architecture": "SkylakeX"
+        },
+        {
+          "internal_api": "openmp",
+          "prefix": "libgomp",
+          "num_threads": 1,
+          "version": null,
+          "architecture": null
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libopenblas",
+          "num_threads": 1,
+          "version": "0.3.15",
+          "architecture": "Zen"
+        },
+        {
+          "internal_api": "openblas",
+          "prefix": "libscipy_openblas",
+          "num_threads": 1,
+          "version": "0.3.31.dev",
+          "architecture": "SkylakeX"
+        }
+      ],
+      "faiss_omp_threads": 1,
+      "scored_cells": 1200,
+      "rmse": 0.18043997848237708,
+      "mae": 0.13645539587821987,
+      "output_dtype": "float32",
+      "output_sha256": "655e6d5960eb80656c09fe8532930c9594d29241e4ad5dd69fcc7b4de7425a75",
+      "checks_passed": true,
+      "worker_wall_seconds": 1.5907886389999817,
+      "max_abs_difference_from_knn": 2.384185791015625e-07,
+      "max_abs_difference_from_one_thread": 0.0,
+      "max_abs_difference_from_first_repeat": 0.0
+    }
+  ]
+}
