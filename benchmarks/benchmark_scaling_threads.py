@@ -8,12 +8,15 @@ import os
 import platform
 import subprocess
 import sys
+import sysconfig
 import time
 from datetime import datetime, timezone
 from importlib.metadata import version
 from pathlib import Path
+from statistics import median
 
 import faiss
+import faiss_imputer
 import numpy as np
 from sklearn import config_context
 from sklearn.impute import KNNImputer
@@ -34,8 +37,33 @@ def digest(array):
     return hashlib.sha256(memoryview(array).cast("B")).hexdigest()
 
 
-def make_data(size, queries, seed, pattern):
+def check_released_package(expected_version):
+    """When requested, require an installed distribution outside the checkout."""
+    if expected_version is None:
+        return
+
+    installed_version = version("faiss-imputer")
+    if installed_version != expected_version:
+        raise RuntimeError(
+            f"Expected faiss-imputer {expected_version}, got {installed_version}"
+        )
+
+    module_path = Path(faiss_imputer.__file__).resolve()
+    install_roots = {
+        Path(sysconfig.get_paths()[key]).resolve()
+        for key in ("purelib", "platlib")
+    }
+    if not any(module_path.is_relative_to(root) for root in install_roots):
+        raise RuntimeError(
+            f"FaissImputer was not imported from the installed package: {module_path}"
+        )
+
+
+def make_data(size, queries, seed, pattern, training_policy="partial"):
     """Fixed-size blocks and independent streams preserve training prefixes."""
+    if training_policy not in ("partial", "complete", "available"):
+        raise ValueError(f"Unknown training policy: {training_policy}")
+
     loadings = np.random.default_rng([seed, 0]).normal(size=(5, FEATURES))
     scale = np.sqrt(np.sum(loadings * loadings, axis=0) + 0.15 ** 2)
 
@@ -46,7 +74,6 @@ def make_data(size, queries, seed, pattern):
         output = np.empty((rows, FEATURES), dtype=np.float32)
         block_size = 16384
         for start in range(0, rows, block_size):
-            # Always generate a full block, including the final block.
             latent = latent_rng.normal(size=(block_size, 5))
             noise = noise_rng.normal(size=(block_size, FEATURES))
             block = ((latent @ loadings + 0.15 * noise) / scale).astype(np.float32)
@@ -56,8 +83,11 @@ def make_data(size, queries, seed, pattern):
             output[start:start + count] = block[:count]
         return output
 
+    train_missing_rate = (
+        0.0 if training_policy == "complete" else TRAIN_MISSING_RATE
+    )
     with threadpool_limits(limits=1):
-        train = draw(size, 1, 2, TRAIN_MISSING_RATE)
+        train = draw(size, 1, 2, train_missing_rate)
         truth = draw(queries, 3, 4, 0.0)
     missing = make_missing_mask(seed + 10000, queries, FEATURES, pattern)
     query = truth.copy()
@@ -85,8 +115,10 @@ def peak_rss_mib():
 
 
 def worker(config):
+    check_released_package(config.get("expected_version"))
     train, query, truth, missing = make_data(
-        config["size"], config["queries"], config["seed"], config["pattern"]
+        config["size"], config["queries"], config["seed"], config["pattern"],
+        config.get("training_policy", "partial"),
     )
     fingerprints = {
         "query": digest(query),
@@ -107,17 +139,34 @@ def worker(config):
         "fingerprints": fingerprints,
     }
     if config["method"] == "FaissImputer[complete]" and complete_donors < NEIGHBORS:
-        return {"status": "not_applicable", "worker_peak_rss_mib": peak_rss_mib(), **details}
+        return {
+            "status": "not_applicable",
+            "worker_peak_rss_mib": peak_rss_mib(),
+            **details,
+        }
+
+    def check_output(output):
+        assert output.shape == query_before.shape
+        assert np.isfinite(output).all()
+        assert not np.shares_memory(output, query)
+        np.testing.assert_array_equal(output[~missing], query_before[~missing])
+        np.testing.assert_array_equal(query, query_before)
+        assert digest(train) == train_hash
+        if config["method"].startswith("FaissImputer"):
+            assert output.dtype == np.float32
 
     threads = config["threads"]
     faiss.omp_set_num_threads(threads)
     with threadpool_limits(limits=threads), config_context(
         working_memory=WORKING_MEMORY_MIB
     ):
-        warm_train = np.random.default_rng(7).normal(size=(32, FEATURES)).astype(np.float32)
+        warm_train = np.random.default_rng(7).normal(
+            size=(32, FEATURES)
+        ).astype(np.float32)
         warm_query = warm_train[:8].copy()
         warm_query[:, :4] = np.nan
         make_model(config["method"]).fit(warm_train).transform(warm_query)
+
         pools = [
             {key: pool.get(key) for key in (
                 "internal_api", "prefix", "num_threads", "version", "architecture"
@@ -126,33 +175,45 @@ def worker(config):
         ]
         model = make_model(config["method"])
         gc.collect()
+
         started = time.perf_counter()
         model.fit(train)
         fitted = time.perf_counter()
         output = model.transform(query)
         finished = time.perf_counter()
 
-    assert output.shape == query.shape
-    assert np.isfinite(output).all()
-    assert not np.shares_memory(output, query)
-    np.testing.assert_array_equal(output[~missing], query[~missing])
-    np.testing.assert_array_equal(query, query_before)
-    assert digest(train) == train_hash
-    if config["method"].startswith("FaissImputer"):
-        assert output.dtype == np.float32
-    values = output[missing].astype(np.float64)
+        check_output(output)
+        first_output = output.copy()
+        repeated_times = []
+        for _ in range(config.get("repeated_transforms", 0)):
+            repeat_started = time.perf_counter()
+            repeated_output = model.transform(query)
+            repeated_times.append(time.perf_counter() - repeat_started)
+            check_output(repeated_output)
+            np.testing.assert_array_equal(repeated_output, first_output)
+
+        actual_faiss_threads = int(faiss.omp_get_max_threads())
+
+    values = first_output[missing].astype(np.float64)
     errors = values - truth[missing].astype(np.float64)
     return {
-        "status": "ok", **details,
+        "status": "ok",
+        **details,
         "fit_seconds": fitted - started,
         "transform_seconds": finished - fitted,
         "total_seconds": finished - started,
+        "repeated_transform_seconds": repeated_times,
+        "repeated_transform_median_seconds": (
+            median(repeated_times) if repeated_times else None
+        ),
         "worker_peak_rss_mib": peak_rss_mib(),
         "threadpools": pools,
-        "faiss_omp_threads": int(faiss.omp_get_max_threads()),
+        "faiss_omp_threads": actual_faiss_threads,
         "scored_cells": int(missing.sum()),
         "rmse": float(np.sqrt(np.mean(errors * errors))),
         "mae": float(np.mean(np.abs(errors))),
+        "output_dtype": str(first_output.dtype),
+        "output_sha256": digest(first_output),
         "checks_passed": True,
         "_values": values.tolist(),
     }
@@ -172,7 +233,8 @@ def run_worker(config, timeout):
     started = time.perf_counter()
     try:
         process = subprocess.run(
-            command, cwd=ROOT, env=env, capture_output=True, text=True, timeout=timeout
+            command, cwd=ROOT, env=env, capture_output=True,
+            text=True, timeout=timeout,
         )
     except subprocess.TimeoutExpired:
         return {
@@ -210,12 +272,21 @@ def metadata():
                 break
     return {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "git_commit": commit, "python": platform.python_version(),
-        "platform": platform.platform(), "cpu_model": cpu_model,
+        "git_commit": commit,
+        "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "cpu_model": cpu_model,
         "logical_cpus": os.cpu_count(),
-        "affinity_cpus": len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
+        "affinity_cpus": (
+            len(os.sched_getaffinity(0))
+            if hasattr(os, "sched_getaffinity") else None
+        ),
         "faiss_imputer": version("faiss-imputer"),
-        "numpy": np.__version__, "scikit_learn": version("scikit-learn"),
+        "faiss_imputer_module": str(Path(faiss_imputer.__file__).resolve()),
+        "numpy": np.__version__,
+        "scikit_learn": version("scikit-learn"),
         "faiss": getattr(faiss, "__version__", "unknown"),
     }
 
@@ -226,18 +297,30 @@ def main():
     parser.add_argument("--threads", type=int, nargs="+", default=[1, 2, 4])
     parser.add_argument("--queries", type=int, default=300)
     parser.add_argument("--seeds", type=int, nargs="+", default=[101])
-    parser.add_argument("--patterns", nargs="+", choices=["fixed", "random"], default=["fixed", "random"])
+    parser.add_argument(
+        "--patterns", nargs="+", choices=["fixed", "random"],
+        default=["fixed", "random"],
+    )
     parser.add_argument("--repeats", type=int, default=1)
+    parser.add_argument("--repeated-transforms", type=int, default=0)
+    parser.add_argument("--policy-matched-data", action="store_true")
+    parser.add_argument("--expected-version")
     parser.add_argument("--timeout-seconds", type=int, default=180)
     parser.add_argument("--budget-seconds", type=int, default=900)
-    parser.add_argument("--output", type=Path, default=ROOT / "benchmark_outputs/scaling_threads.json")
+    parser.add_argument(
+        "--output", type=Path,
+        default=ROOT / "benchmark_outputs/scaling_threads.json",
+    )
     parser.add_argument("--worker", help=argparse.SUPPRESS)
     args = parser.parse_args()
+
     if args.worker:
         try:
             result = worker(json.loads(args.worker))
         except MemoryError:
-            result = {"status": "memory_error", "worker_peak_rss_mib": peak_rss_mib()}
+            result = {
+                "status": "memory_error", "worker_peak_rss_mib": peak_rss_mib()
+            }
         except Exception as error:
             result = {
                 "status": "error", "error": f"{type(error).__name__}: {error}",
@@ -250,6 +333,8 @@ def main():
         parser.error("train sizes must be >= 5 and seeds must be nonnegative")
     if min(args.queries, args.repeats, args.timeout_seconds, args.budget_seconds) < 1:
         parser.error("queries, repeats, timeout and budget must be positive")
+    if args.repeated_transforms < 0:
+        parser.error("repeated-transforms must be nonnegative")
     if 1 not in args.threads or any(t not in (1, 2, 4) for t in args.threads):
         parser.error("threads must include 1 and use only 1, 2, or 4")
     for name in ("train_sizes", "seeds", "threads", "patterns"):
@@ -257,35 +342,69 @@ def main():
         if len(set(values)) != len(values):
             parser.error(f"{name} must not contain duplicates")
     args.threads.sort()
+    check_released_package(args.expected_version)
 
+    cases = (
+        [
+            ("complete", ("KNNImputer", "FaissImputer[complete]")),
+            ("available", ("KNNImputer", "FaissImputer[available]")),
+        ]
+        if args.policy_matched_data else [("partial", METHODS)]
+    )
     results = {
         "metadata": metadata(),
         "parameters": {
-            "train_sizes": args.train_sizes, "threads": args.threads,
-            "queries": args.queries, "features": FEATURES, "n_neighbors": NEIGHBORS,
-            "seeds": args.seeds, "patterns": args.patterns, "repeats": args.repeats,
-            "train_missing_rate": TRAIN_MISSING_RATE,
+            "train_sizes": args.train_sizes,
+            "threads": args.threads,
+            "queries": args.queries,
+            "features": FEATURES,
+            "n_neighbors": NEIGHBORS,
+            "seeds": args.seeds,
+            "patterns": args.patterns,
+            "repeats": args.repeats,
+            "repeated_transforms": args.repeated_transforms,
+            "policy_matched_data": args.policy_matched_data,
+            "training_cases": [
+                {
+                    "training_policy": policy,
+                    "methods": methods,
+                    "target_missing_rate": (
+                        0.0 if policy == "complete" else TRAIN_MISSING_RATE
+                    ),
+                }
+                for policy, methods in cases
+            ],
+            "expected_version": args.expected_version,
             "sklearn_working_memory_mib": WORKING_MEMORY_MIB,
             "worker_timeout_seconds": args.timeout_seconds,
             "run_budget_seconds": args.budget_seconds,
         },
         "notes": [
             "Synthetic low-rank Gaussian data with theoretical variance normalization.",
-            "Training has 10% MCAR cells; each query has four missing features.",
-            "Queries are held out; query values and masks are shared across sizes.",
+            "Queries are held out; each query has four missing features.",
+            "Within each training policy, inputs are shared across methods and repeats.",
             "Training prefixes are shared across sizes; data generation uses one thread.",
-            "Complete policy uses only complete donors, unlike available and KNN.",
-            "Fresh sequential subprocesses; small warmup before each timed fit/transform.",
+            "Policy-matched mode uses fully observed training for complete/KNN pairs "
+            "and 10% MCAR training for available/KNN pairs.",
+            "Without policy-matched mode, all three methods use 10% MCAR training.",
+            "Fresh sequential subprocesses; small warmup before timed fit/transform.",
+            "repeats counts fresh workers; repeated_transforms counts additional "
+            "transform calls on the same fitted model.",
+            "transform_seconds is the first transform after fit; total_seconds is "
+            "fit plus that first transform and excludes additional transforms.",
             "Timings exclude data generation, validation and process startup.",
             "Memory is full-worker lifetime peak RSS, including imports, inputs, "
-            "generation, warmup and validation; excludes the controller.",
+            "generation, warmup, validation and repeated transforms.",
+            "Worker peak RSS is not retained fitted memory or a phase-specific peak.",
             "sklearn working_memory is a distance-chunk setting, not a process RAM cap.",
             "Timeout includes the entire worker; killed-worker peak memory is unavailable.",
             "Errors, timeouts and unrun cases remain in the results.",
-            "Output comparisons use the first successful reference in each configuration.",
-            "A null output comparison means no successful reference was available.",
+            "Output comparisons use the first successful reference per configuration "
+            "and stay within the same training policy.",
+            "RMSE and MAE use hidden synthetic truth; differences from KNN measure "
+            "output agreement, not imputation quality.",
             "No accuracy or speed threshold, or exact equality to KNN, is required.",
-            "One seed and one repeat constitute a pilot, not robust performance evidence.",
+            "git_commit identifies the benchmark definition, not the installed wheel.",
         ],
         "records": [],
     }
@@ -293,67 +412,117 @@ def main():
 
     def save():
         args.output.write_text(
-            json.dumps(results, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+            json.dumps(results, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
         )
 
     save()
-    inputs = {}
-    references = {}
-    outputs = []
-    started = time.perf_counter()
+    inputs, references, outputs = {}, {}, []
+    configs = []
     for size in args.train_sizes:
-        for seed in args.seeds:
+        for seed_index, seed in enumerate(args.seeds):
             for pattern in args.patterns:
-                for repeat in range(args.repeats):
-                    thread_order = args.threads[repeat % len(args.threads):] + args.threads[:repeat % len(args.threads)]
-                    for threads in thread_order:
-                        offset = (repeat + args.threads.index(threads)) % len(METHODS)
-                        order = METHODS[offset:] + METHODS[:offset]
-                        for method in order:
-                            config = {
-                                "size": size, "queries": args.queries, "seed": seed,
-                                "pattern": pattern, "threads": threads, "method": method,
-                                "repeat": repeat + 1, "prefix_sizes": args.train_sizes,
-                            }
-                            remaining = args.budget_seconds - (time.perf_counter() - started)
-                            print(f"START {size} {pattern} seed={seed} threads={threads} {method}", flush=True)
-                            record = (
-                                run_worker(config, min(args.timeout_seconds, remaining))
-                                if remaining > 0 else {"status": "not_run_budget"}
-                            )
-                            values = record.pop("_values", None)
-                            record = {**config, **record}
-                            if record["status"] == "ok":
-                                marks = record["fingerprints"]
-                                checks = {
-                                    (seed, "query", pattern): marks["query"],
-                                    (seed, "truth"): marks["truth"],
-                                    **{(seed, "train", n): h for n, h in marks["prefixes"].items()},
-                                }
-                                if any(inputs.setdefault(key, value) != value for key, value in checks.items()):
-                                    record["status"] = "input_mismatch"
-                                else:
-                                    key = (size, seed, pattern, threads, method)
-                                    values = np.asarray(values, dtype=np.float64)
-                                    references.setdefault(key, values)
-                                    outputs.append((record, values))
-                            results["records"].append(record)
-                            print(f"DONE {record['status']} total={record.get('total_seconds')}", flush=True)
-                            save()
+                for training_policy, methods in cases:
+                    for repeat in range(args.repeats):
+                        start = repeat % len(args.threads)
+                        thread_order = args.threads[start:] + args.threads[:start]
+                        for threads in thread_order:
+                            offset = (
+                                repeat + seed_index + args.threads.index(threads)
+                            ) % len(methods)
+                            order = methods[offset:] + methods[:offset]
+                            for method in order:
+                                configs.append({
+                                    "size": size,
+                                    "queries": args.queries,
+                                    "seed": seed,
+                                    "pattern": pattern,
+                                    "training_policy": training_policy,
+                                    "threads": threads,
+                                    "method": method,
+                                    "repeat": repeat + 1,
+                                    "prefix_sizes": args.train_sizes,
+                                    "repeated_transforms": args.repeated_transforms,
+                                    "expected_version": args.expected_version,
+                                })
+
+    results["parameters"]["expected_workers"] = len(configs)
+    save()
+    started = time.perf_counter()
+    for config in configs:
+        remaining = args.budget_seconds - (time.perf_counter() - started)
+        print(
+            f"START {config['training_policy']} {config['size']} "
+            f"{config['pattern']} seed={config['seed']} "
+            f"repeat={config['repeat']} threads={config['threads']} "
+            f"{config['method']}",
+            flush=True,
+        )
+        record = (
+            run_worker(config, min(args.timeout_seconds, remaining))
+            if remaining > 0 else {"status": "not_run_budget"}
+        )
+        values = record.pop("_values", None)
+        record = {**config, **record}
+        if record["status"] == "ok":
+            marks = record["fingerprints"]
+            policy, seed = config["training_policy"], config["seed"]
+            checks = {
+                (seed, "query", config["pattern"]): marks["query"],
+                (seed, "truth"): marks["truth"],
+                **{
+                    (policy, seed, "train", n): h
+                    for n, h in marks["prefixes"].items()
+                },
+            }
+            if any(
+                inputs.setdefault(key, value) != value
+                for key, value in checks.items()
+            ):
+                record["status"] = "input_mismatch"
+            else:
+                key = (
+                    policy, config["size"], seed, config["pattern"],
+                    config["threads"], config["method"],
+                )
+                values = np.asarray(values, dtype=np.float64)
+                references.setdefault(key, values)
+                outputs.append((record, values))
+        results["records"].append(record)
+        print(
+            f"DONE {record['status']} total={record.get('total_seconds')}",
+            flush=True,
+        )
+        save()
 
     for record, values in outputs:
-        base = (record["size"], record["seed"], record["pattern"])
+        base = (
+            record["training_policy"], record["size"],
+            record["seed"], record["pattern"],
+        )
         comparisons = {
-            "max_abs_difference_from_knn": (*base, record["threads"], "KNNImputer"),
-            "max_abs_difference_from_one_thread": (*base, 1, record["method"]),
-            "max_abs_difference_from_first_repeat": (*base, record["threads"], record["method"]),
+            "max_abs_difference_from_knn": (
+                *base, record["threads"], "KNNImputer"
+            ),
+            "max_abs_difference_from_one_thread": (
+                *base, 1, record["method"]
+            ),
+            "max_abs_difference_from_first_repeat": (
+                *base, record["threads"], record["method"]
+            ),
         }
         for name, key in comparisons.items():
             reference = references.get(key)
-            record[name] = None if reference is None else float(np.max(np.abs(values - reference)))
+            record[name] = (
+                None if reference is None
+                else float(np.max(np.abs(values - reference)))
+            )
     save()
     print(f"Saved: {args.output}", flush=True)
-    return int(any(r["status"] not in ("ok", "not_applicable") for r in results["records"]))
+    return int(any(
+        record["status"] not in ("ok", "not_applicable")
+        for record in results["records"]
+    ))
 
 
 if __name__ == "__main__":
