@@ -2,6 +2,7 @@ from numbers import Integral
 
 import numpy as np
 import faiss
+from sklearn.impute import MissingIndicator
 from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from sklearn.utils.validation import check_is_fitted, validate_data
 from ._matrix import MatrixNaNIndex
@@ -17,6 +18,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         index_factory="Flat",
         donor_policy="complete",
         weights="uniform",
+        add_indicator=False,
     ):
         super().__init__()
         self.n_neighbors = n_neighbors
@@ -25,12 +27,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         self.index_factory = index_factory
         self.donor_policy = donor_policy
         self.weights = weights
-        super().__init__()
-        self.n_neighbors = n_neighbors
-        self.metric = metric
-        self.strategy = strategy
-        self.index_factory = index_factory
-        self.donor_policy = donor_policy
+        self.add_indicator = add_indicator
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -164,6 +161,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             "donors_",
             "metric_type_",
             "index_",
+            "indicator_",
             "donor_policy_",
             "donor_groups_",
             "available_index_",
@@ -232,6 +230,21 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 "donor_policy must be either 'complete' or 'available'"
             )
 
+        if not isinstance(self.add_indicator, (bool, np.bool_)):
+            raise ValueError("add_indicator must be a boolean")
+
+        # Learn missingness from all training rows before donor filtering.
+        self.indicator_ = None
+        if self.add_indicator:
+            indicator = MissingIndicator(
+                features="missing-only",
+                sparse=False,
+                error_on_new=False,
+            )
+            self.indicator_ = indicator.set_output(
+                transform="default"
+            ).fit(X)
+        
         self.donor_policy_ = self.donor_policy
         if self.donor_policy_ == "available":
             return self._fit_available(X)
@@ -294,6 +307,26 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         return self
 
+    def get_feature_names_out(self, input_features=None):
+        names = super().get_feature_names_out(input_features)
+        if self.indicator_ is None:
+            return names
+
+        indicator_names = self.indicator_.get_feature_names_out(names)
+        return np.concatenate((names, indicator_names))
+
+    def _append_indicator(self, imputed, original):
+        """Append indicators computed from the original query values."""
+        if self.indicator_ is None:
+            return imputed
+
+        indicators = self.indicator_.transform(original)
+        if indicators.shape[1] == 0:
+            return imputed
+
+        # Boolean indicators become 0/1 in the float32 output array.
+        return np.concatenate((imputed, indicators), axis=1)
+
     def transform(self, X):
         """
         Impute missing values in the provided data using the fitted Faiss index.
@@ -317,7 +350,8 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         )
 
         if self.donor_policy_ == "available":
-            return self._transform_available(X)
+            imputed = self._transform_available(X)
+            return self._append_indicator(imputed, X)
 
         # Copy X to avoid modifying the original data
         X_tmp = X.copy()
@@ -445,7 +479,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 ).reshape(len(rows), missing_cols.size)
                 X_tmp[np.ix_(rows, missing_cols)] = aggregates
 
-        return X_tmp
+        return self._append_indicator(X_tmp, X)
 
     def _transform_available(self, X):
         try:
