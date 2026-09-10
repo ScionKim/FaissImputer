@@ -5,20 +5,18 @@
 > Use version 0.2.0 or newer.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.11/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.12/LICENSE)
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-Current release: [0.3.11](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.11).
+Current release: [0.3.12](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.12).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Comparison with KNNImputer
 
 FaissImputer supports scikit-learn pipelines, but its defaults and options
 differ from [KNNImputer](https://scikit-learn.org/stable/modules/generated/sklearn.impute.KNNImputer.html).
-The comparison below describes the current source version, including the
-unreleased `add_indicator` option. PyPI FaissImputer 0.3.11 does not include
-`add_indicator`.
+The comparison below describes FaissImputer 0.3.12.
 
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
@@ -120,7 +118,7 @@ advantages are not guaranteed on other workloads.
 FaissImputer requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.11"
+python -m pip install --upgrade "faiss-imputer>=0.3.12"
 ```
 
 ## Usage
@@ -328,7 +326,7 @@ Contributions are welcome! Please open an [issue](https://github.com/ScionKim/Fa
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.11/LICENSE).
+This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.12/LICENSE).
 
 ### Third-Party Licenses
 
