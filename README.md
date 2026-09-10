@@ -16,7 +16,9 @@ See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version hi
 
 FaissImputer supports scikit-learn pipelines, but its defaults and options
 differ from [KNNImputer](https://scikit-learn.org/stable/modules/generated/sklearn.impute.KNNImputer.html).
-The comparison below describes FaissImputer 0.3.11.
+The comparison below describes the current source version, including the
+unreleased `add_indicator` option. PyPI FaissImputer 0.3.11 does not include
+`add_indicator`.
 
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
@@ -26,7 +28,7 @@ The comparison below describes FaissImputer 0.3.11.
 | Numeric precision | Converts inputs and produces imputed values as `float32`. | Supports floating inputs including `float64`, without forcing conversion to `float32`. |
 | All-missing training columns | Fitting fails under either donor policy. | Dropped by default; `keep_empty_features=True` retains them with zero values. |
 | Missing-value marker | `NaN`; no configurable `missing_values` parameter. | Configurable `missing_values`, default `np.nan`. |
-| Missing indicators | No built-in `add_indicator` option. | `add_indicator=True` appends indicators for features missing during fit. |
+| Missing indicators | `add_indicator=True` appends 0/1 columns for features missing during fit; disabled by default. | `add_indicator=True` appends indicators for features missing during fit. |
 
 For a closer comparison, use `donor_policy="available"` and `strategy="mean"`,
 and match `n_neighbors` and `weights`. Available mode requires `metric="l2"`
@@ -238,6 +240,7 @@ For unnamed array inputs, feature names are generated as `x0`, `x1`, and so on.
 - `index_factory` (default: `"Flat"`): Faiss index description for the complete-donor policy. The available-donor policy accepts only `"Flat"` and uses the distance backend described below.
 - `donor_policy` (default: `"complete"`): Use fully observed training rows with `"complete"`, or allow partially observed training rows with `"available"`.
 - `weights` (default: `"uniform"`): `"uniform"` or `None` preserves the existing unweighted aggregation. `"distance"` uses inverse Euclidean distance; a callable supplies custom weights. Distance and callable weights require `strategy="mean"` and `metric="l2"` under either donor policy.
+- `add_indicator` (default: `False`): Append missingness indicators to the imputed output. Indicator columns are selected during `fit()` and remain fixed until refitting.
 
 With distance weighting, if any selected donor has distance zero, only
 the selected zero-distance donors contribute to that missing feature.
@@ -260,6 +263,15 @@ zero weight sums, or results outside the finite `float32` range raise
 - `transform()` requires the same number of features as `fit()`.
 - An entirely missing query row uses column means or medians learned during `fit()`.
 - A failed `fit()`, including a failed refit, clears the fitted state.
+
+With `add_indicator=True`, appended values are `1` for originally missing
+query entries and `0` otherwise. Indicator features are selected from all
+training rows before donor filtering, in original column order. A feature
+first missing only at transform time does not receive a new indicator column.
+
+Indicator names use `missingindicator_<feature_name>`, such as
+`missingindicator_age` or `missingindicator_x0`. Both
+`get_feature_names_out()` and pandas output include the added columns.
 
 ### Complete-donor policy
 
