@@ -16,22 +16,23 @@ See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version hi
 
 FaissImputer supports scikit-learn pipelines, but its defaults and options
 differ from [KNNImputer](https://scikit-learn.org/stable/modules/generated/sklearn.impute.KNNImputer.html).
-The comparison below describes FaissImputer 0.3.10.
+The comparison below describes the current source version, including the
+unreleased `weights` option. PyPI FaissImputer 0.3.10 does not include `weights`.
 
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
 | Donors | Fully observed training rows by default; `donor_policy="available"` permits partially observed donors selected per missing feature. | Donors selected per missing feature; other donor features may be missing. |
 | Neighbors | `n_neighbors=3`; complete mode requires at least that many complete donors. Available mode permits fewer eligible donors. | `n_neighbors=5`; fewer usable neighbors are allowed. |
-| Aggregation | Unweighted mean (default) or median via `strategy`; no `weights` option. | Mean with uniform (default), distance, or callable weights; no median strategy. |
+| Aggregation | Mean (default) or median via `strategy`, with uniform weights by default. Distance and callable weights require `strategy="mean"` and `metric="l2"`. | Mean with uniform (default), distance, or callable weights; no median strategy. |
 | Numeric precision | Converts inputs and produces imputed values as `float32`. | Supports floating inputs including `float64`, without forcing conversion to `float32`. |
 | All-missing training columns | Fitting fails under either donor policy. | Dropped by default; `keep_empty_features=True` retains them with zero values. |
 | Missing-value marker | `NaN`; no configurable `missing_values` parameter. | Configurable `missing_values`, default `np.nan`. |
 | Missing indicators | No built-in `add_indicator` option. | `add_indicator=True` appends indicators for features missing during fit. |
 
-For a closer comparison, use `donor_policy="available"`, match `n_neighbors`,
-and compare `strategy="mean"` with KNNImputer's `weights="uniform"` and default
-`metric="nan_euclidean"`. Available mode requires `metric="l2"` and
-`index_factory="Flat"`.
+For a closer comparison, use `donor_policy="available"` and `strategy="mean"`,
+and match `n_neighbors` and `weights`. Available mode requires `metric="l2"`
+and `index_factory="Flat"`; compare it with KNNImputer's default
+`metric="nan_euclidean"`.
 
 These settings do not guarantee identical donor choices or imputed values:
 float32 conversion, distance calculations, and ties can affect results.
@@ -65,7 +66,7 @@ policy against KNNImputer, not the two policies against each other.
 
 Both runs compared PyPI FaissImputer 0.3.10 with scikit-learn 1.9.0's
 KNNImputer on synthetic float32 data, using one thread, 300 queries,
-20 features, five neighbors, and mean aggregation.
+20 features, five neighbors, and uniform-weight mean aggregation.
 
 Each query had four missing features. Complete training data was fully
 observed; available training data had approximately 10% MCAR missingness.
@@ -237,6 +238,20 @@ For unnamed array inputs, feature names are generated as `x0`, `x1`, and so on.
 - `strategy` (default: `"mean"`): Supports `"mean"` and `"median"` for aggregating donor values and calculating fallback column statistics.
 - `index_factory` (default: `"Flat"`): Faiss index description for the complete-donor policy. The available-donor policy accepts only `"Flat"` and uses the distance backend described below.
 - `donor_policy` (default: `"complete"`): Use fully observed training rows with `"complete"`, or allow partially observed training rows with `"available"`.
+- `weights` (default: `"uniform"`): `"uniform"` or `None` preserves the existing unweighted aggregation. `"distance"` uses inverse Euclidean distance; a callable supplies custom weights. Distance and callable weights require `strategy="mean"` and `metric="l2"` under either donor policy.
+
+With distance weighting, if any selected donor has distance zero, only
+the selected zero-distance donors contribute to that missing feature.
+
+Callables receive a two-dimensional array of NaN-aware Euclidean distances
+and must return real weights of the same shape. They should operate
+independently on each row, without relying on batch size or neighbor order.
+Unavailable neighbors have `NaN` distances and are excluded regardless of
+the returned weight. Returned `NaN` weights contribute zero.
+
+Invalid shapes, non-real weights, infinite weights for usable donors,
+zero weight sums, or results outside the finite `float32` range raise
+`ValueError`. Fitted fallback column statistics remain unweighted.
 
 ## Important behavior
 
@@ -256,7 +271,7 @@ For unnamed array inputs, feature names are generated as `x0`, `x1`, and so on.
 
 ### Available-donor policy
 
-- Only `metric="l2"` and `index_factory="Flat"` are supported. Both `"mean"` and `"median"` strategies are supported.
+- Only `metric="l2"` and `index_factory="Flat"` are supported. Mean supports all weight options; median requires uniform weighting.
 - A donor must observe the feature being imputed and share at least one originally observed feature with the query row.
 - Donors are ranked by squared L2 distance over shared observed features, scaled by the total feature count divided by the shared feature count.
 - Each missing feature uses up to `n_neighbors` eligible donors. Fewer eligible donors are allowed.
