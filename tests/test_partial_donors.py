@@ -37,10 +37,11 @@ def test_available_mode_failed_fit_clears_state(previously_fitted):
     if previously_fitted:
         imputer.fit(_partial_train())
 
-    with pytest.raises(ValueError, match="all-missing"):
+    # Empty columns are supported; nonfinite observations remain invalid.
+    with pytest.raises(ValueError, match="infinity"):
         imputer.fit(
             [
-                [1.0, 10.0, np.nan],
+                [1.0, 10.0, np.inf],
                 [2.0, 20.0, np.nan],
             ]
         )

@@ -1,8 +1,8 @@
 # Roadmap
 
-Updated for [0.3.10](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.10) to record complete-donor aggregation batching and its paired performance measurements. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated after [0.3.12](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.12) to record distance weighting and missing indicators, and to track the next compatibility options. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-Upcoming work expands released-package benchmarks and compatibility documentation, with remaining numerical and interoperability work guided by reproductions. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+The current implementation work adds `keep_empty_features`, followed by configurable `missing_values`. Further numerical and interoperability work remains guided by reproductions. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -119,7 +119,25 @@ Complete-policy first-transform time improved in every group and seed: paired gr
 
 This ordinary-scale source-checkout pilot does not establish released-wheel performance, extreme-value repair cost, repeated-transform performance, imputation quality, or retained fitted memory. Those evidence gaps remain below.
 
-## Next: current-release benchmarks and documentation
+## Completed after 0.3.10, through 0.3.12
+
+- Add distance and callable weights for mean aggregation under both donor policies, with uniform weighting remaining the default.
+- Add optional missingness indicators learned from all training rows before donor filtering, including feature names and pandas output.
+- Document the released 0.3.10 KNNImputer comparisons and the differences in supported options and defaults. Historical performance results retain their measured versions.
+
+## Current implementation: empty training columns (unreleased)
+
+- Add `keep_empty_features=False`: omit columns entirely missing during fit, or retain them with zero values when enabled.
+- Use non-empty features for donor selection and imputation while preserving the original input schema and distance normalization.
+- Keep indicators based on original query values and align output feature names and pandas columns with the selected policy.
+- Support entirely empty training data, and clear learned feature selection after failed refits.
+
+## Next API option
+
+- Add configurable `missing_values` to support missing-value markers other than `NaN`.
+- Later compatibility candidates are the `nan_euclidean` metric name and callable metrics, preserving float64 inputs, and a `copy` option. Their implementation cost and performance effects should guide prioritization.
+
+## Remaining benchmark and documentation work
 
 ### Measure the workloads users actually run
 
@@ -138,7 +156,7 @@ Publish each new report with its measured revision and environment. Keep histori
 
 ### Clarify compatibility and help users choose
 
-- Add a concise KNNImputer comparison covering donor defaults, neighbor defaults, float32 conversion, all-missing columns, and unsupported options such as weights and missing indicators.
+- Keep the KNNImputer comparison current as options ship, covering donor and neighbor defaults, precision, empty columns, missing-value markers, weights, and indicators.
 - Explain that scikit-learn integration does not imply identical constructor options or identical donor choices. The [real-data pilot](docs/benchmarks/real-data-a3bd1ce3.md) already documents substantive per-cell differences despite similar average errors.
 - Keep completed items and remaining evidence gaps in this roadmap current as changes ship.
 
@@ -148,5 +166,5 @@ Publish each new report with its measured revision and environment. Keep histori
 - **Factory support:** define which index factories remain valid when queries have different observed-feature counts. For example, a factory can accept the fitted dimension and reject a projected dimension. Provide clear validation or a documented fallback.
 - **Broader interoperability checks:** add standard scikit-learn estimator checks and address remaining error-message requirements; expand installation/basic-execution coverage to Windows and macOS.
 - **Memory controls:** use current measurements to evaluate a public batch/working-memory setting and donor-block processing. An internal batch budget must not be presented as a total RAM limit.
-- **Additional API features:** consider distance weighting, missing indicators, and empty-feature policies when concrete use cases justify their behavior and maintenance cost.
+- **Additional API features:** continue the compatibility sequence above; distance weighting and missing indicators are released, and empty-feature handling is the current source change.
 - **Approximate search and GPU work:** pursue a specific workload and an acceptable accuracy/performance tradeoff first. Neither changes the priority of consistent results in the existing exact modes.
