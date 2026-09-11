@@ -202,7 +202,7 @@ def test_invalid_indicator_parameter_clears_failed_refit_state(policy, flag):
 
 
 @pytest.mark.parametrize("policy", POLICIES)
-def test_failure_after_indicator_fitting_leaves_model_unfitted(policy):
+def test_failure_after_indicator_fitting_leaves_model_unfitted(policy, monkeypatch):
     train, queries = example_data()
     model = FaissImputer(
         n_neighbors=2, donor_policy=policy, add_indicator=True
@@ -214,13 +214,20 @@ def test_failure_after_indicator_fitting_leaves_model_unfitted(policy):
             [[0, np.nan, 100], [np.nan, 20, 200]], dtype=np.float32
         )
     else:
-        # Available mode rejects an entirely missing training column.
-        invalid_train = np.array(
-            [[0, np.nan, 100], [2, np.nan, 200]], dtype=np.float32
-        )
+        invalid_train = train
 
-    with pytest.raises(ValueError):
-        model.fit(invalid_train)
+    with monkeypatch.context() as patch:
+        if policy == "available":
+            # Empty columns are now supported. A backend failure still
+            # exercises cleanup after fitting the missingness indicator.
+            import faiss_imputer.faiss_imputer as implementation
+
+            def fail_backend(*args, **kwargs):
+                raise ValueError("injected backend failure")
+
+            patch.setattr(implementation, "MatrixNaNIndex", fail_backend)
+        with pytest.raises(ValueError):
+            model.fit(invalid_train)
 
     assert not hasattr(model, "indicator_")
     assert not hasattr(model, "n_features_in_")

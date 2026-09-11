@@ -7,9 +7,14 @@ from sklearn.utils.extmath import row_norms
 
 
 class MatrixNaNIndex:
-    def __init__(self, donors):
+    def __init__(self, donors, *, n_features=None):
         # Own this buffer: caller data and public donors_ retain their NaNs.
         self.donors64 = np.array(donors, dtype=np.float64, copy=True)
+        # Empty fit-time columns can be omitted from storage while distances
+        # retain the original nan-euclidean feature-count normalization.
+        self.n_features = (
+            self.donors64.shape[1] if n_features is None else n_features
+        )
         self.present = ~np.isnan(self.donors64)
         self.donor_counts = self.present.sum(axis=0)
         # Preserve the reduction used by the existing numerical-risk guard.
@@ -39,7 +44,7 @@ class MatrixNaNIndex:
         distances[present_count == 0] = np.nan
         np.maximum(1, present_count, out=present_count)
         distances /= present_count
-        distances *= X.shape[1]
+        distances *= self.n_features
         return distances
 
     def clear_cache(self):
@@ -69,7 +74,7 @@ class MatrixNaNIndex:
         distances = np.full(len(self.donors64), np.inf, dtype=np.float64)
         usable = counts > 0
         distances[usable] = (
-            squared[usable] * self.donors64.shape[1] / counts[usable]
+            squared[usable] * self.n_features / counts[usable]
         )
         return distances
 
@@ -96,7 +101,7 @@ class MatrixNaNIndex:
             distances = self._prepared_distances(query64)
             finite = np.isfinite(distances)
             query_norms = np.nansum(query64 * query64, axis=1)
-            p = self.donors64.shape[1]
+            p = self.n_features
 
             # Conservative suspicion test, not a proven error bound.
             tolerance = (

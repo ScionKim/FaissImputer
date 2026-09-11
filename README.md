@@ -16,15 +16,17 @@ See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version hi
 
 FaissImputer supports scikit-learn pipelines, but its defaults and options
 differ from [KNNImputer](https://scikit-learn.org/stable/modules/generated/sklearn.impute.KNNImputer.html).
-The comparison below describes FaissImputer 0.3.12.
+The comparison below describes the current source version, including the
+unreleased `keep_empty_features` option. PyPI FaissImputer 0.3.12 does not
+include this option.
 
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
-| Donors | Fully observed training rows by default; `donor_policy="available"` permits partially observed donors selected per missing feature. | Donors selected per missing feature; other donor features may be missing. |
+| Donors | Training rows observed in every non-empty feature by default; `donor_policy="available"` permits partially observed donors selected per missing feature. | Donors selected per missing feature; other donor features may be missing. |
 | Neighbors | `n_neighbors=3`; complete mode requires at least that many complete donors. Available mode permits fewer eligible donors. | `n_neighbors=5`; fewer usable neighbors are allowed. |
 | Aggregation | Mean (default) or median via `strategy`, with uniform weights by default. Distance and callable weights require `strategy="mean"` and `metric="l2"`. | Mean with uniform (default), distance, or callable weights; no median strategy. |
 | Numeric precision | Converts inputs and produces imputed values as `float32`. | Supports floating inputs including `float64`, without forcing conversion to `float32`. |
-| All-missing training columns | Fitting fails under either donor policy. | Dropped by default; `keep_empty_features=True` retains them with zero values. |
+| All-missing training columns | Dropped by default; `keep_empty_features=True` retains them with zero values under either donor policy. | Dropped by default; `keep_empty_features=True` retains them with zero values. |
 | Missing-value marker | `NaN`; no configurable `missing_values` parameter. | Configurable `missing_values`, default `np.nan`. |
 | Missing indicators | `add_indicator=True` appends 0/1 columns for features missing during fit; disabled by default. | `add_indicator=True` appends indicators for features missing during fit. |
 
@@ -49,8 +51,9 @@ queries reuse the same missing-feature patterns.
 
 A **donor** is a training row used to supply a missing value.
 
-- **`complete` (default):** Uses only fully observed training rows as donors.
-  Rows containing missing values are excluded from neighbor search.
+- **`complete` (default):** Uses training rows observed in every non-empty
+  feature as donors. Rows missing any of those features are excluded from
+  neighbor search. Columns entirely missing during fit do not disqualify rows.
   Choose this when you have enough complete training rows.
 - **`available`:** Also allows partially observed training rows as donors.
   Donors are selected separately for each missing feature: they must contain
@@ -125,7 +128,8 @@ python -m pip install --upgrade "faiss-imputer>=0.3.12"
 
 ### Complete donors (default)
 
-Training data must contain enough fully observed rows to supply `n_neighbors` donors.
+When at least one training column is non-empty, training data must contain
+enough rows observed in all non-empty columns to supply `n_neighbors` donors.
 
 ```python
 import numpy as np
@@ -232,13 +236,14 @@ For unnamed array inputs, feature names are generated as `x0`, `x1`, and so on.
 
 ## Parameters
 
-- `n_neighbors` (default: `3`): Positive integer specifying the maximum number of donors used for each missing feature. The complete-donor policy requires at least this many complete training rows.
+- `n_neighbors` (default: `3`): Positive integer specifying the maximum number of donors used for each missing feature. When non-empty training columns exist, the complete-donor policy requires at least this many rows observed in all of them.
 - `metric` (default: `"l2"`): Supports `"l2"` and `"ip"`. Raw inner product is not cosine similarity. The available-donor policy requires `"l2"`.
 - `strategy` (default: `"mean"`): Supports `"mean"` and `"median"` for aggregating donor values and calculating fallback column statistics.
 - `index_factory` (default: `"Flat"`): Faiss index description for the complete-donor policy. The available-donor policy accepts only `"Flat"` and uses the distance backend described below.
-- `donor_policy` (default: `"complete"`): Use fully observed training rows with `"complete"`, or allow partially observed training rows with `"available"`.
+- `donor_policy` (default: `"complete"`): Use training rows observed in all non-empty features with `"complete"`, or allow partially observed training rows with `"available"`.
 - `weights` (default: `"uniform"`): `"uniform"` or `None` preserves the existing unweighted aggregation. `"distance"` uses inverse Euclidean distance; a callable supplies custom weights. Distance and callable weights require `strategy="mean"` and `metric="l2"` under either donor policy.
 - `add_indicator` (default: `False`): Append missingness indicators to the imputed output. Indicator columns are selected during `fit()` and remain fixed until refitting.
+- `keep_empty_features` (default: `False`, unreleased): Drop columns that were entirely missing during `fit()`. Set to `True` to retain those columns with zero values. The selection remains fixed until refitting.
 
 With distance weighting, if any selected donor has distance zero, only
 the selected zero-distance donors contribute to that missing feature.
@@ -259,7 +264,7 @@ zero weight sums, or results outside the finite `float32` range raise
 
 - Inputs must be two-dimensional numeric array-like data, with `NaN` marking missing values. Values are converted to `float32`; infinity is not accepted.
 - `transform()` requires the same number of features as `fit()`.
-- An entirely missing query row uses column means or medians learned during `fit()`.
+- An entirely missing query row uses column means or medians learned during `fit()` for non-empty training columns.
 - A failed `fit()`, including a failed refit, clears the fitted state.
 
 With `add_indicator=True`, appended values are `1` for originally missing
@@ -271,10 +276,27 @@ Indicator names use `missingindicator_<feature_name>`, such as
 `missingindicator_age` or `missingindicator_x0`. Both
 `get_feature_names_out()` and pandas output include the added columns.
 
+Columns entirely missing during `fit()` are excluded from donor selection
+and neighbor search. With `keep_empty_features=False`, they are omitted
+from the imputed output. With `True`, they remain in their original positions
+and always contain zero, even if a later query supplies an observed value
+in that column. `transform()` still requires the full original input schema.
+
+If every training column is empty, fitting succeeds without a neighbor
+index. Transform returns no imputed columns by default, or all-zero columns
+with `keep_empty_features=True`; no donor-count minimum applies in this case.
+
+With `add_indicator=True`, indicators still refer to the original input
+columns and query missingness, including dropped or zero-filled columns.
+Output names and pandas columns follow the retained imputed columns first,
+then the indicators in their original feature order. NaN-aware distance
+normalization continues to use the original input feature count, including
+for callable weights.
+
 ### Complete-donor policy
 
-- Only fully observed training rows are used as donors. At least one complete row is required.
-- `n_neighbors` cannot exceed the number of complete donors.
+- Donors must be observed in all non-empty training columns. When any such columns exist, at least one complete donor is required.
+- When non-empty training columns exist, `n_neighbors` cannot exceed the number of complete donors.
 - Neighbor search uses only the originally observed columns of each query row.
 - The default `index_factory="Flat"` performs exact neighbor search.
 
@@ -285,7 +307,7 @@ Indicator names use `missingindicator_<feature_name>`, such as
 - Donors are ranked by squared L2 distance over shared observed features, scaled by the total feature count divided by the shared feature count.
 - Each missing feature uses up to `n_neighbors` eligible donors. Fewer eligible donors are allowed.
 - If no eligible donor exists for a feature, its fitted column mean or median is used.
-- Entirely missing training rows are ignored; entirely missing training columns are rejected.
+- Rows missing all non-empty training features are ignored. Entirely missing training columns follow `keep_empty_features`.
 
 The available-donor policy uses batched NaN-aware distances and Faiss neighbor selection, with float64 safeguards for detected numerical risks. This backend is also used when all training donors are complete.
 

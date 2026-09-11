@@ -19,6 +19,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         donor_policy="complete",
         weights="uniform",
         add_indicator=False,
+        keep_empty_features=False,
     ):
         super().__init__()
         self.n_neighbors = n_neighbors
@@ -28,6 +29,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         self.donor_policy = donor_policy
         self.weights = weights
         self.add_indicator = add_indicator
+        self.keep_empty_features = keep_empty_features
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -162,6 +164,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             "metric_type_",
             "index_",
             "indicator_",
+            "valid_features_",
             "donor_policy_",
             "donor_groups_",
             "available_index_",
@@ -203,6 +206,9 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         if self.strategy not in ('mean', 'median'):
             raise ValueError("strategy must be either 'mean' or 'median'")
 
+        if not isinstance(self.index_factory, str):
+            raise ValueError("index_factory must be a string")
+
         if not (
             self._uses_uniform_weights()
             or callable(self.weights)
@@ -233,6 +239,17 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         if not isinstance(self.add_indicator, (bool, np.bool_)):
             raise ValueError("add_indicator must be a boolean")
 
+        if not isinstance(self.keep_empty_features, (bool, np.bool_)):
+            raise ValueError("keep_empty_features must be a boolean")
+
+        if self.donor_policy == "available" and (
+            self.metric != "l2" or self.index_factory != "Flat"
+        ):
+            raise ValueError(
+                "donor_policy='available' requires "
+                "metric='l2' and index_factory='Flat'"
+            )
+
         # Learn missingness from all training rows before donor filtering.
         self.indicator_ = None
         if self.add_indicator:
@@ -246,6 +263,28 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             ).fit(X)
         
         self.donor_policy_ = self.donor_policy
+        # Fit-time empty columns never participate in donor selection or
+        # imputation. Keep the original schema and indicator above intact.
+        self.valid_features_ = ~np.isnan(X).all(axis=0)
+        if not self.valid_features_.all():
+            X = X[:, self.valid_features_]
+
+        if X.shape[1] == 0:
+            if self.donor_policy_ == "complete" and self.index_factory != "Flat":
+                # Validate a custom factory without training or storing a
+                # donor index. A malformed description must still fail fit.
+                metric_type = (
+                    faiss.METRIC_L2 if self.metric == "l2"
+                    else faiss.METRIC_INNER_PRODUCT
+                )
+                faiss.index_factory(
+                    self.n_features_in_, self.index_factory, metric_type
+                )
+            # There is no value to estimate and no distance index to build.
+            self.statistics_ = np.empty(0, dtype=np.float32)
+            self.donors_ = np.empty((0, 0), dtype=np.float32)
+            return self
+
         if self.donor_policy_ == "available":
             return self._fit_available(X)
 
@@ -288,32 +327,37 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return self
 
     def _fit_available(self, X):
-        if self.metric != "l2" or self.index_factory != "Flat":
-            raise ValueError(
-                "donor_policy='available' requires "
-                "metric='l2' and index_factory='Flat'"
-            )
-
         observed = ~np.isnan(X)
-        if not observed.any(axis=0).all():
-            raise ValueError("X must not contain all-missing columns")
 
         self.statistics_ = self._aggregate(X, axis=0, ignore_nan=True)
 
         nonempty_rows = observed.any(axis=1)
         self.donors_ = X[nonempty_rows].copy()
         self.metric_type_ = faiss.METRIC_L2
-        self.available_index_ = MatrixNaNIndex(self.donors_)
+        self.available_index_ = MatrixNaNIndex(
+            self.donors_, n_features=self.n_features_in_
+        )
 
         return self
 
     def get_feature_names_out(self, input_features=None):
         names = super().get_feature_names_out(input_features)
+        output_names = (
+            names if self.keep_empty_features else names[self.valid_features_]
+        )
         if self.indicator_ is None:
-            return names
+            return output_names
 
         indicator_names = self.indicator_.get_feature_names_out(names)
-        return np.concatenate((names, indicator_names))
+        return np.concatenate((output_names, indicator_names))
+
+    def _format_output(self, imputed, original):
+        """Restore retained empty columns before appending original indicators."""
+        if self.keep_empty_features and not self.valid_features_.all():
+            restored = np.zeros(original.shape, dtype=np.float32)
+            restored[:, self.valid_features_] = imputed
+            imputed = restored
+        return self._append_indicator(imputed, original)
 
     def _append_indicator(self, imputed, original):
         """Append indicators computed from the original query values."""
@@ -349,9 +393,15 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             reset=False,
         )
 
+        original = X
+        if not self.valid_features_.all():
+            X = X[:, self.valid_features_]
+        if X.shape[1] == 0:
+            return self._format_output(X.copy(), original)
+
         if self.donor_policy_ == "available":
             imputed = self._transform_available(X)
-            return self._append_indicator(imputed, X)
+            return self._format_output(imputed, original)
 
         # Copy X to avoid modifying the original data
         X_tmp = X.copy()
@@ -428,7 +478,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
                     # Match the missing-feature scaling used by
                     # nan_euclidean distances, including for callables.
-                    squared *= X.shape[1] / observed_cols.size
+                    squared *= self.n_features_in_ / observed_cols.size
 
                     selected_values = selected_donors[:, missing_cols].T
                     selected_distances = np.broadcast_to(
@@ -479,7 +529,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 ).reshape(len(rows), missing_cols.size)
                 X_tmp[np.ix_(rows, missing_cols)] = aggregates
 
-        return self._append_indicator(X_tmp, X)
+        return self._format_output(X_tmp, original)
 
     def _transform_available(self, X):
         try:

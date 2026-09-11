@@ -113,7 +113,7 @@ def test_failed_refit_discards_prepared_state(previously_fitted):
         )
 
     with pytest.raises(ValueError):
-        model.fit([[np.nan, 0, np.nan]])
+        model.fit([[np.nan, np.inf, np.nan]])
     assert not hasattr(model, "available_index_")
     with pytest.raises(NotFittedError):
         model.transform([[0, np.nan, np.nan]])
