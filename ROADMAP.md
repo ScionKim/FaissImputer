@@ -1,8 +1,8 @@
 # Roadmap
 
-Updated after [0.3.12](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.12) to record distance weighting and missing indicators, and to track the next compatibility options. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated for [0.3.13](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.13) to record empty-feature handling and configurable missing-value markers, and to track the remaining compatibility options. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-The current implementation work adds `keep_empty_features`, followed by configurable `missing_values`. Further numerical and interoperability work remains guided by reproductions. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+FaissImputer 0.3.13 adds `keep_empty_features` and configurable `missing_values`. The first three prioritized compatibility options (missing indicators, empty-feature handling, and missing-value markers) are now implemented. Further numerical and interoperability work remains guided by reproductions. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -125,17 +125,25 @@ This ordinary-scale source-checkout pilot does not establish released-wheel perf
 - Add optional missingness indicators learned from all training rows before donor filtering, including feature names and pandas output.
 - Document the released 0.3.10 KNNImputer comparisons and the differences in supported options and defaults. Historical performance results retain their measured versions.
 
-## Current implementation: empty training columns (unreleased)
+## Completed in 0.3.13
+
+### Handle empty training columns
 
 - Add `keep_empty_features=False`: omit columns entirely missing during fit, or retain them with zero values when enabled.
 - Use non-empty features for donor selection and imputation while preserving the original input schema and distance normalization.
 - Keep indicators based on original query values and align output feature names and pandas columns with the selected policy.
 - Support entirely empty training data, and clear learned feature selection after failed refits.
 
+### Support configurable missing values
+
+- Add `missing_values=np.nan`, with support for finite numeric markers under both donor policies.
+- Detect markers before float32 conversion, preserving the distinction between missing entries and observed values that round to the same float32 value.
+- Use the same missingness decisions for donor preparation, fallback statistics, indicators, and empty-column handling.
+- Preserve input data and clear learned state after failed refits. Reject unexpected NaN entries when a numeric marker is configured.
+
 ## Next API option
 
-- Add configurable `missing_values` to support missing-value markers other than `NaN`.
-- Later compatibility candidates are the `nan_euclidean` metric name and callable metrics, preserving float64 inputs, and a `copy` option. Their implementation cost and performance effects should guide prioritization.
+The remaining compatibility candidates are the `nan_euclidean` metric name and callable metrics, preserving float64 inputs, and a `copy` option. Assess their implementation cost and performance effects before selecting the next feature.
 
 ## Remaining benchmark and documentation work
 
@@ -166,5 +174,5 @@ Publish each new report with its measured revision and environment. Keep histori
 - **Factory support:** define which index factories remain valid when queries have different observed-feature counts. For example, a factory can accept the fitted dimension and reject a projected dimension. Provide clear validation or a documented fallback.
 - **Broader interoperability checks:** add standard scikit-learn estimator checks and address remaining error-message requirements; expand installation/basic-execution coverage to Windows and macOS.
 - **Memory controls:** use current measurements to evaluate a public batch/working-memory setting and donor-block processing. An internal batch budget must not be presented as a total RAM limit.
-- **Additional API features:** continue the compatibility sequence above; distance weighting and missing indicators are released, and empty-feature handling is the current source change.
+- **Additional API features:** continue the compatibility sequence above; distance weighting, missing indicators, empty-feature handling, and configurable missing-value markers are implemented. The remaining candidates are metric compatibility, float64 preservation, and a copy option.
 - **Approximate search and GPU work:** pursue a specific workload and an acceptable accuracy/performance tradeoff first. Neither changes the priority of consistent results in the existing exact modes.

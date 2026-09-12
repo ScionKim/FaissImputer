@@ -20,6 +20,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         weights="uniform",
         add_indicator=False,
         keep_empty_features=False,
+        missing_values=np.nan,
     ):
         super().__init__()
         self.n_neighbors = n_neighbors
@@ -30,12 +31,109 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         self.weights = weights
         self.add_indicator = add_indicator
         self.keep_empty_features = keep_empty_features
+        self.missing_values = missing_values
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
-        tags.input_tags.allow_nan = True
+        tags.input_tags.allow_nan = (
+            isinstance(self.missing_values, (float, np.floating))
+            and bool(np.isnan(self.missing_values))
+        )
         tags.transformer_tags.preserves_dtype = ["float32"]
         return tags
+
+    @staticmethod
+    def _numeric_missing_mask(X, marker):
+        """Compare without rounding the marker to a different observed value."""
+        if X.dtype.kind in "iu":
+            integer_marker = int(marker)
+            bounds = np.iinfo(X.dtype)
+            if (
+                integer_marker.as_integer_ratio() != marker.as_integer_ratio()
+                or not bounds.min <= integer_marker <= bounds.max
+            ):
+                return np.zeros(X.shape, dtype=bool)
+            return X == X.dtype.type(integer_marker)
+
+        if X.dtype.kind in "fb":
+            try:
+                with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+                    converted = X.dtype.type(marker)
+            except OverflowError:
+                return np.zeros(X.shape, dtype=bool)
+            if not np.isfinite(converted) or (
+                converted.item().as_integer_ratio() != marker.as_integer_ratio()
+            ):
+                return np.zeros(X.shape, dtype=bool)
+            return X == converted
+
+        # Object arrays retain the individual numeric values in mixed lists
+        # and DataFrames, including integers too large for exact float64.
+        marker_ratio = marker.as_integer_ratio()
+
+        def matches(value):
+            if isinstance(value, np.generic):
+                value = value.item()
+            if isinstance(value, Integral):
+                return int(value).as_integer_ratio() == marker_ratio
+            if isinstance(value, (float, np.floating)):
+                return np.isfinite(value) and value.as_integer_ratio() == marker_ratio
+            return value == marker
+
+        return np.fromiter(
+            (matches(value) for value in X.flat), dtype=bool, count=X.size,
+        ).reshape(X.shape)
+
+    def _validate_input(self, X, *, reset):
+        marker = self.missing_values
+        if isinstance(marker, (bool, np.bool_)) or not isinstance(
+            marker, (Integral, float, np.floating)
+        ):
+            raise ValueError("missing_values must be np.nan or a finite real number")
+        if isinstance(marker, Integral):
+            marker = int(marker)
+            nan_marker = False
+        else:
+            nan_marker = bool(np.isnan(marker))
+            if not nan_marker and not np.isfinite(marker):
+                raise ValueError(
+                    "missing_values must be np.nan or a finite real number"
+                )
+            # Python comparisons keep integer/float equality exact in object
+            # arrays; NumPy scalar promotion can otherwise round large ints.
+            marker = marker.item() if isinstance(marker, np.generic) else marker
+
+        if nan_marker:
+            return validate_data(
+                self, X, dtype=np.float32,
+                ensure_all_finite="allow-nan", reset=reset,
+            )
+
+        original = X
+        X = validate_data(
+            self, X, dtype=None, ensure_all_finite=True, reset=reset,
+        )
+        if hasattr(original, "iloc") and hasattr(original, "to_numpy"):
+            # pandas __array__ can combine int/float columns before honoring
+            # dtype=object. to_numpy preserves the separate column values.
+            X = original.to_numpy(dtype=object)
+        elif not isinstance(original, np.ndarray):
+            # Array validation may coerce mixed columns to a common dtype.
+            # Preserve their original values when selecting missing cells.
+            X = np.asarray(original, dtype=object)
+        missing = self._numeric_missing_mask(X, marker)
+
+        # Mask before casting, so a marker outside float32's range never
+        # overflows and a distinct observed value cannot become missing.
+        normalized = np.zeros(X.shape, dtype=np.float32)
+        with np.errstate(over="ignore", invalid="ignore"):
+            np.copyto(normalized, X, where=~missing, casting="unsafe")
+        if not np.isfinite(normalized).all():
+            raise ValueError(
+                "Observed values must be finite and representable as float32"
+            )
+        normalized[missing] = np.nan
+        return normalized
 
     def _aggregate(self, values, *, axis, ignore_nan):
         """Reduce a 2-D array, repairing only nonfinite aggregation results."""
@@ -184,13 +282,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         - self: Returns an instance of the fitted FaissImputer.
         """
         # Check input data
-        X = validate_data(
-            self,
-            X,
-            dtype=np.float32,
-            ensure_all_finite='allow-nan',
-            reset=True,
-        )
+        X = self._validate_input(X, reset=True)
 
         # Check parameters
         if (
@@ -385,13 +477,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         # Check if fit is called
         check_is_fitted(self)
 
-        X = validate_data(
-            self,
-            X,
-            dtype=np.float32,
-            ensure_all_finite='allow-nan',
-            reset=False,
-        )
+        X = self._validate_input(X, reset=False)
 
         original = X
         if not self.valid_features_.all():
