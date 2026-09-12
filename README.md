@@ -5,20 +5,18 @@
 > Use version 0.2.0 or newer.
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.12/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.13/LICENSE)
 
 A scikit-learn-compatible missing-value imputer with [Faiss](https://github.com/facebookresearch/faiss)-backed neighbor search.
 
-Current release: [0.3.12](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.12).
+Current release: [0.3.13](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.13).
 See [Releases](https://github.com/ScionKim/FaissImputer/releases) for version history.
 
 ## Comparison with KNNImputer
 
 FaissImputer supports scikit-learn pipelines, but its defaults and options
 differ from [KNNImputer](https://scikit-learn.org/stable/modules/generated/sklearn.impute.KNNImputer.html).
-The comparison below describes the current source version, including the
-unreleased `keep_empty_features` option. PyPI FaissImputer 0.3.12 does not
-include this option.
+The comparison below describes FaissImputer 0.3.13.
 
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
@@ -27,11 +25,11 @@ include this option.
 | Aggregation | Mean (default) or median via `strategy`, with uniform weights by default. Distance and callable weights require `strategy="mean"` and `metric="l2"`. | Mean with uniform (default), distance, or callable weights; no median strategy. |
 | Numeric precision | Converts inputs and produces imputed values as `float32`. | Supports floating inputs including `float64`, without forcing conversion to `float32`. |
 | All-missing training columns | Dropped by default; `keep_empty_features=True` retains them with zero values under either donor policy. | Dropped by default; `keep_empty_features=True` retains them with zero values. |
-| Missing-value marker | `NaN`; no configurable `missing_values` parameter. | Configurable `missing_values`, default `np.nan`. |
+| Missing-value marker | `missing_values=np.nan` by default; also accepts a finite numeric marker, matched before float32 conversion. | Configurable `missing_values`, default `np.nan`. |
 | Missing indicators | `add_indicator=True` appends 0/1 columns for features missing during fit; disabled by default. | `add_indicator=True` appends indicators for features missing during fit. |
 
 For a closer comparison, use `donor_policy="available"` and `strategy="mean"`,
-and match `n_neighbors` and `weights`. Available mode requires `metric="l2"`
+and match `n_neighbors`, `weights`, and `missing_values`. Available mode requires `metric="l2"`
 and `index_factory="Flat"`; compare it with KNNImputer's default
 `metric="nan_euclidean"`.
 
@@ -121,7 +119,7 @@ advantages are not guaranteed on other workloads.
 FaissImputer requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.12"
+python -m pip install --upgrade "faiss-imputer>=0.3.13"
 ```
 
 ## Usage
@@ -243,7 +241,8 @@ For unnamed array inputs, feature names are generated as `x0`, `x1`, and so on.
 - `donor_policy` (default: `"complete"`): Use training rows observed in all non-empty features with `"complete"`, or allow partially observed training rows with `"available"`.
 - `weights` (default: `"uniform"`): `"uniform"` or `None` preserves the existing unweighted aggregation. `"distance"` uses inverse Euclidean distance; a callable supplies custom weights. Distance and callable weights require `strategy="mean"` and `metric="l2"` under either donor policy.
 - `add_indicator` (default: `False`): Append missingness indicators to the imputed output. Indicator columns are selected during `fit()` and remain fixed until refitting.
-- `keep_empty_features` (default: `False`, unreleased): Drop columns that were entirely missing during `fit()`. Set to `True` to retain those columns with zero values. The selection remains fixed until refitting.
+- `keep_empty_features` (default: `False`): Drop columns that were entirely missing during `fit()`. Set to `True` to retain those columns with zero values. The selection remains fixed until refitting.
+- `missing_values` (default: `np.nan`): The missing-value marker used during both `fit()` and `transform()`. Accepts `NaN` or a finite Python/NumPy integer or floating-point scalar, such as `-1` or `9999`. Booleans, strings, `None`, and infinity are not supported as markers.
 
 With distance weighting, if any selected donor has distance zero, only
 the selected zero-distance donors contribute to that missing feature.
@@ -262,10 +261,22 @@ zero weight sums, or results outside the finite `float32` range raise
 
 ### Shared behavior
 
-- Inputs must be two-dimensional numeric array-like data, with `NaN` marking missing values. Values are converted to `float32`; infinity is not accepted.
+- Inputs must be two-dimensional numeric array-like data. `missing_values` identifies missing entries, with `NaN` as the default. Observed values are converted to `float32`; infinity and observed values outside the finite float32 range are not accepted.
 - `transform()` requires the same number of features as `fit()`.
 - An entirely missing query row uses column means or medians learned during `fit()` for non-empty training columns.
 - A failed `fit()`, including a failed refit, clears the fitted state.
+
+A numeric marker is matched by exact equality before float32 conversion.
+Distinct observed values remain observed even if they round to the same
+float32 value as the marker. Use the same marker when preparing training and
+query data; with a numeric marker, actual `NaN` entries are rejected. A marker
+outside the float32 range is allowed because matching entries are removed
+before conversion. Change the marker by refitting the estimator.
+
+For example, `FaissImputer(n_neighbors=1, missing_values=-1)` fitted on
+`[[0, 10], [2, 20]]` transforms `[[2, -1]]` to `[[2, 20]]`.
+Both missing indicators and empty-column handling use the same missingness
+decisions as imputation.
 
 With `add_indicator=True`, appended values are `1` for originally missing
 query entries and `0` otherwise. Indicator features are selected from all
@@ -348,7 +359,7 @@ Contributions are welcome! Please open an [issue](https://github.com/ScionKim/Fa
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.12/LICENSE).
+This project is licensed under the [MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.13/LICENSE).
 
 ### Third-Party Licenses
 
