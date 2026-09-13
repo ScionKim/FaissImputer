@@ -1,8 +1,8 @@
 # Roadmap
 
-Updated for [0.3.15](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.15) to record the `copy` option and reorganized documentation, and track the remaining compatibility work. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated for [0.3.16](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.16) to record float64 preservation and track the remaining compatibility work. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-Missing indicators, empty-feature handling, configurable missing-value markers, the `nan_euclidean` metric alias, and copy control are now implemented. Remaining compatibility work focuses on float64 preservation and callable distance metrics. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+Missing indicators, empty-feature handling, configurable missing-value markers, the `nan_euclidean` metric alias, copy control, and float64 preservation are now implemented. Remaining compatibility work focuses on callable distance metrics. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -167,9 +167,19 @@ This ordinary-scale source-checkout pilot does not establish released-wheel perf
 - Move extended examples to `docs/usage.md`.
 - Preserve historical benchmark versions and results.
 
+## Completed in 0.3.16
+
+### Preserve float64 imputation precision
+
+- Preserve float64 input precision in donor storage, fitted statistics, and aggregation. Output dtype follows the normalized query dtype.
+- Support float64 output with missing indicators, empty-feature handling, pandas output, and copy control.
+- Keep float32 vectors for complete-donor search and document the resulting precision and range restrictions.
+- Recompute selected available-donor distances in float64 when training data or queries use float64. Repair overflowing intermediate calculations and report unrepresentable squared distances explicitly.
+- Add regression coverage and update existing dtype expectations and precision documentation.
+
 ## Next API option
 
-The next compatibility target is preserving float64 inputs and outputs. Define the precision guarantees and assess the required backend changes and performance costs. Callable distance metrics follow as a separate feature.
+The next compatibility target is callable distance metrics. Define the callable interface, missing-value handling, donor-policy restrictions, and error behavior. Assess the effects on search paths and performance before implementation.
 
 ## Remaining benchmark and documentation work
 
