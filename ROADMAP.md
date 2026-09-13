@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated for [0.3.13](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.13) to record empty-feature handling and configurable missing-value markers, and to track the remaining compatibility options. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated for [0.3.14](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.14) to record the `nan_euclidean` metric alias and track the remaining compatibility options. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
 FaissImputer 0.3.13 adds `keep_empty_features` and configurable `missing_values`. The first three prioritized compatibility options (missing indicators, empty-feature handling, and missing-value markers) are now implemented. Further numerical and interoperability work remains guided by reproductions. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
@@ -141,9 +141,19 @@ This ordinary-scale source-checkout pilot does not establish released-wheel perf
 - Use the same missingness decisions for donor preparation, fallback statistics, indicators, and empty-column handling.
 - Preserve input data and clear learned state after failed refits. Reject unexpected NaN entries when a numeric marker is configured.
 
+## Completed in 0.3.14
+
+### Accept the nan_euclidean metric name
+
+- Accept `metric="nan_euclidean"` as an alias for the existing `"l2"` imputation path under both donor policies.
+- Support mean, median, distance weights, and callable weights with the same restrictions as `"l2"`.
+- Preserve the supplied metric parameter for estimator cloning and parameter inspection.
+- Use the L2 metric for non-Flat indexes and factory validation with entirely empty training data.
+- Add regression coverage for L2 equivalence, numeric missing markers, empty features, pandas output, index configuration, and failed-refit cleanup.
+
 ## Next API option
 
-The remaining compatibility candidates are the `nan_euclidean` metric name and callable metrics, preserving float64 inputs, and a `copy` option. Assess their implementation cost and performance effects before selecting the next feature.
+The remaining compatibility candidates are callable distance metrics, preserving float64 inputs, and a `copy` option. Assess their implementation cost and performance effects before selecting the next feature.
 
 ## Remaining benchmark and documentation work
 

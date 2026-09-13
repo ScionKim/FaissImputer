@@ -292,8 +292,12 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         ):
             raise ValueError("n_neighbors must be a positive integer")
 
-        if self.metric not in ('l2', 'ip'):
-            raise ValueError("metric must be either 'l2' or 'ip'")
+        if self.metric not in ("l2", "nan_euclidean", "ip"):
+            raise ValueError(
+                "metric must be 'l2', 'nan_euclidean', or 'ip'"
+            )
+
+        is_l2 = self.metric in ("l2", "nan_euclidean")
 
         if self.strategy not in ('mean', 'median'):
             raise ValueError("strategy must be either 'mean' or 'median'")
@@ -318,9 +322,10 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 raise ValueError(
                     "non-uniform weights require strategy='mean'"
                 )
-            if self.metric != "l2":
+            if not is_l2:
                 raise ValueError(
-                    "non-uniform weights require metric='l2'"
+                    "non-uniform weights require "
+                    "metric='l2' or 'nan_euclidean'"
                 )
 
         if self.donor_policy not in ("complete", "available"):
@@ -335,11 +340,12 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             raise ValueError("keep_empty_features must be a boolean")
 
         if self.donor_policy == "available" and (
-            self.metric != "l2" or self.index_factory != "Flat"
+            not is_l2 or self.index_factory != "Flat"
         ):
             raise ValueError(
                 "donor_policy='available' requires "
-                "metric='l2' and index_factory='Flat'"
+                "metric='l2' or 'nan_euclidean', "
+                "and index_factory='Flat'"
             )
 
         # Learn missingness from all training rows before donor filtering.
@@ -366,7 +372,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 # Validate a custom factory without training or storing a
                 # donor index. A malformed description must still fail fit.
                 metric_type = (
-                    faiss.METRIC_L2 if self.metric == "l2"
+                    faiss.METRIC_L2 if is_l2
                     else faiss.METRIC_INNER_PRODUCT
                 )
                 faiss.index_factory(
@@ -399,7 +405,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         # Build faiss index
         self.metric_type_ = (
             faiss.METRIC_L2
-            if self.metric == 'l2'
+            if is_l2
             else faiss.METRIC_INNER_PRODUCT
         )
         index = faiss.index_factory(
