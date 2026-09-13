@@ -99,7 +99,7 @@ directly in Python, which can be slower than built-in metrics.
 
 </details>
 
-See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/api.md)
+See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/benchmarks/api.md)
 for accepted values, output rules, and edge cases.
 
 ## Important behavior
@@ -155,8 +155,8 @@ for detailed conditions, quality comparisons, and historical experiments.
 
 ## Documentation
 
-- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/api.md)
-- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/usage.md)
+- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/benchmarks/api.md)
+- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/benchmarks/usage.md)
 - [Real-data comparison](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/docs/benchmarks/real-data-a3bd1ce3.md)
 - [Example notebook](https://github.com/ScionKim/FaissImputer/blob/v0.3.0/notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb)
 - [Roadmap](https://github.com/ScionKim/FaissImputer/blob/main/ROADMAP.md)
