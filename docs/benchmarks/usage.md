@@ -1,6 +1,6 @@
 # Usage examples
 
-These examples describe FaissImputer 0.3.16.
+These examples describe FaissImputer 0.3.17.
 
 [README](../README.md) · [API reference](api.md)
 
@@ -104,8 +104,8 @@ missing marker is configured.
 
 ## Distance and callable weights
 
-Distance weighting requires mean aggregation and an L2 metric.
-`"nan_euclidean"` is an alias for the existing `"l2"` path.
+Distance weighting requires mean aggregation and either an L2 metric or a
+callable metric. `"nan_euclidean"` is an alias for the existing `"l2"` path.
 
 ```python
 train = np.array([[0, 10], [2, 20]], dtype=np.float32)
@@ -132,7 +132,56 @@ result = imputer.transform(query)
 ```
 
 Callable weights should operate independently on each row.
-See the [weight rules](api.md#weights) for unavailable neighbors and validation.
+See the [weight rules](api.md#callable-weights) for unavailable neighbors and validation.
+
+## Callable metrics
+
+A custom metric receives the query row first and donor row second.
+Missing entries are normalized to NaN before the callback runs.
+
+This example uses Manhattan distance over shared observed features:
+
+```python
+def nan_manhattan(x, y, *, missing_values=np.nan):
+    shared = ~np.isnan(x) & ~np.isnan(y)
+    if not shared.any():
+        return np.nan
+    return np.abs(
+        x[shared].astype(np.float64)
+        - y[shared].astype(np.float64)
+    ).sum()
+
+
+train = np.array(
+    [[0, 3, 10], [2, 2, 20]],
+    dtype=np.float64,
+)
+query = np.array([[0, 0, np.nan]], dtype=np.float64)
+
+imputer = FaissImputer(
+    n_neighbors=1,
+    metric=nan_manhattan,
+).fit(train)
+
+print(imputer.transform(query))
+# [[ 0.  0. 10.]]
+```
+
+The first donor has Manhattan distance 3; the second has distance 4.
+
+Callable metrics support both donor policies and require
+`index_factory="Flat"`. Return a nonnegative finite distance, or `np.nan`
+to exclude a donor whose distance is undefined.
+
+Distance and callable weights use the returned distances directly,
+without squaring or missing-feature normalization.
+
+Callbacks receive the original feature count and column order.
+Fit-time empty columns are represented by NaN in both rows.
+Direct evaluation of Python callbacks can be slower than built-in metrics.
+
+See the [callable metric rules](api.md#callable-metrics) for validation,
+tie handling, and fallback behavior.
 
 ## Reusing query storage
 
@@ -229,9 +278,12 @@ Writable contiguous float64 arrays are also eligible for reuse with
 `copy=False`. Input conversion and output formatting may still require
 allocation.
 
-Complete-donor search uses float32 vectors even when donor values and
-output are float64. Dtype preservation does not guarantee identical
-neighbor choices to `KNNImputer`.
+With built-in metrics, complete-donor search uses float32 vectors even
+when donor values and output are float64. Callable metrics receive rows
+in their normalized input dtypes and do not use float32 search vectors.
+
+Dtype preservation does not guarantee identical neighbor choices to
+`KNNImputer`.
 
 See [search precision and numeric limits](api.md#search-precision-and-numeric-limits)
 for the supported distance ranges and error behavior.

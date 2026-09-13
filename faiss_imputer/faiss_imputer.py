@@ -196,13 +196,18 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         )
 
     def _weighted_mean(self, values, squared_distances):
-        """Average selected donors using actual, unsquared distances."""
-        valid = ~np.isnan(values) & np.isfinite(squared_distances)
+        """Convert built-in squared distances before weighting."""
         distances = np.sqrt(
             np.maximum(
                 np.asarray(squared_distances, dtype=np.float64), 0.0
             )
         )
+        return self._weighted_mean_from_distances(values, distances)
+
+    def _weighted_mean_from_distances(self, values, distances):
+        """Average selected donors using actual, unsquared distances."""
+        distances = np.array(distances, dtype=np.float64, copy=True)
+        valid = ~np.isnan(values) & np.isfinite(distances)
         distances[~valid] = np.nan
 
         if callable(self.weights):
@@ -231,16 +236,24 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 raise ValueError("weights must be finite")
         else:
             weights = np.zeros_like(distances)
-            np.divide(
-                1.0,
-                distances,
-                out=weights,
-                where=valid & (distances > 0),
-            )
 
             # Exact matches exclude all nonzero-distance neighbors.
             zero_distance = valid & (distances == 0)
             zero_rows = zero_distance.any(axis=1)
+
+            # Proportional to 1 / distance, without reciprocal overflow.
+            positive = valid & (distances > 0)
+            minimum = np.min(
+                np.where(positive, distances, np.inf),
+                axis=1,
+                keepdims=True,
+            )
+            np.divide(
+                minimum,
+                distances,
+                out=weights,
+                where=positive & ~zero_rows[:, None],
+            )
             weights[zero_rows] = zero_distance[zero_rows]
 
         # Scaling avoids overflow from large finite callable weights.
@@ -322,6 +335,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             "statistics_",
             "donors_",
             "metric_type_",
+            "metric_callable_",
             "index_",
             "indicator_",
             "valid_features_",
@@ -354,12 +368,22 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         ):
             raise ValueError("n_neighbors must be a positive integer")
 
-        if self.metric not in ("l2", "nan_euclidean", "ip"):
+        is_callable_metric = callable(self.metric)
+        if not (
+            is_callable_metric
+            or (
+                isinstance(self.metric, str)
+                and self.metric in ("l2", "nan_euclidean", "ip")
+            )
+        ):
             raise ValueError(
-                "metric must be 'l2', 'nan_euclidean', or 'ip'"
+                "metric must be 'l2', 'nan_euclidean', 'ip', or a callable"
             )
 
-        is_l2 = self.metric in ("l2", "nan_euclidean")
+        is_l2 = (
+            not is_callable_metric
+            and self.metric in ("l2", "nan_euclidean")
+        )
 
         if self.strategy not in ('mean', 'median'):
             raise ValueError("strategy must be either 'mean' or 'median'")
@@ -401,14 +425,24 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         if not isinstance(self.keep_empty_features, (bool, np.bool_)):
             raise ValueError("keep_empty_features must be a boolean")
 
+        if is_callable_metric and self.index_factory != "Flat":
+            raise ValueError(
+                "callable metric requires index_factory='Flat'"
+            )
+
         if self.donor_policy == "available" and (
-            not is_l2 or self.index_factory != "Flat"
+            not (is_l2 or is_callable_metric)
+            or self.index_factory != "Flat"
         ):
             raise ValueError(
                 "donor_policy='available' requires "
-                "metric='l2' or 'nan_euclidean', "
+                "metric='l2' or 'nan_euclidean' or a callable, "
                 "and index_factory='Flat'"
             )
+
+        self.metric_callable_ = (
+            self.metric if is_callable_metric else None
+        )
 
         # Learn missingness from all training rows before donor filtering.
         self.indicator_ = None
@@ -464,6 +498,9 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 "n_neighbors cannot exceed the number of complete donors"
             )
 
+        if self.metric_callable_ is not None:
+            return self
+
         # Build faiss index
         self.metric_type_ = (
             faiss.METRIC_L2
@@ -494,6 +531,8 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         nonempty_rows = observed.any(axis=1)
         self.donors_ = X[nonempty_rows].copy()
+        if self.metric_callable_ is not None:
+            return self
         self.metric_type_ = faiss.METRIC_L2
         self.available_index_ = MatrixNaNIndex(
             self.donors_, n_features=self.n_features_in_
@@ -555,9 +594,105 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         return vectors
 
+    def _callable_distances(self, query):
+        """Evaluate the metric on independent rows in the original schema."""
+        full_query = np.full(
+            self.n_features_in_, np.nan, dtype=query.dtype
+        )
+        full_query[self.valid_features_] = query
+        distances = np.empty(len(self.donors_), dtype=np.float64)
+
+        for donor_id, donor in enumerate(self.donors_):
+            full_donor = np.full(
+                self.n_features_in_, np.nan, dtype=donor.dtype
+            )
+            full_donor[self.valid_features_] = donor
+
+            # A callback cannot mutate stored donors or another call's query.
+            value = np.asarray(
+                self.metric_callable_(
+                    full_query.copy(),
+                    full_donor,
+                    missing_values=np.nan,
+                )
+            )
+
+            if value.ndim != 0 or value.dtype.kind not in "iuf":
+                raise ValueError(
+                    "metric callable must return a real numeric scalar"
+                )
+
+            if np.isnan(value):
+                distances[donor_id] = np.nan
+                continue
+
+            if not np.isfinite(value) or value < 0:
+                raise ValueError(
+                    "metric callable must return a nonnegative finite "
+                    "distance or np.nan"
+                )
+
+            distance = float(value)
+            if (
+                not np.isfinite(distance)
+                or (distance == 0.0 and value != 0.0)
+            ):
+                raise ValueError(
+                    "metric distance must be representable as float64"
+                )
+
+            distances[donor_id] = distance
+
+        return distances
+
+    def _transform_callable(self, X):
+        """Select donors by callable distance, with stable ties."""
+        result = self._copy_or_reuse(X)
+        missing = np.isnan(X)
+        k = int(self.n_neighbors)
+
+        for row in np.flatnonzero(missing.any(axis=1)):
+            # Capture the original query before any in-place writes.
+            query = X[row].copy()
+            missing_columns = np.flatnonzero(missing[row])
+            filled = query.copy()
+            filled[missing_columns] = self.statistics_[missing_columns]
+
+            # Preserve the existing fallback for entirely missing queries.
+            if not missing[row].all():
+                distances = self._callable_distances(query)
+                finite_ids = np.flatnonzero(np.isfinite(distances))
+                ordered_ids = finite_ids[
+                    np.argsort(distances[finite_ids], kind="stable")
+                ]
+
+                for column in missing_columns:
+                    eligible = ordered_ids[
+                        ~np.isnan(self.donors_[ordered_ids, column])
+                    ]
+                    selected = eligible[:k]
+                    if selected.size == 0:
+                        continue
+
+                    values = self.donors_[selected, column][None, :]
+                    if self._uses_uniform_weights():
+                        fill = self._aggregate(
+                            values, axis=1, ignore_nan=False
+                        )[0]
+                    else:
+                        fill = self._weighted_mean_from_distances(
+                            values, distances[selected][None, :]
+                        )[0]
+
+                    filled[column] = fill
+
+            result[row] = filled
+
+        return result
+
     def transform(self, X):
         """
-        Impute missing values in the provided data using the fitted Faiss index.
+        Impute missing values using fitted donors and the configured metric.
 
         Parameters:
         - X (array-like): The input data with missing values to be imputed.
@@ -584,6 +719,10 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             return self._format_output(
                 self._copy_or_reuse(X), original, indicators
             )
+
+        if self.metric_callable_ is not None:
+            imputed = self._transform_callable(X)
+            return self._format_output(imputed, original, indicators)
 
         if self.donor_policy_ == "available":
             imputed = self._transform_available(X)
