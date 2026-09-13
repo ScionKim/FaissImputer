@@ -103,34 +103,40 @@ def test_indicators_use_missingness_before_input_is_modified(policy):
 
 
 @pytest.mark.parametrize("policy", ["complete", "available"])
-@pytest.mark.parametrize("kind", ["readonly", "float64", "numeric-marker"])
-def test_copy_false_handles_inputs_requiring_conversion_or_copy(policy, kind):
+@pytest.mark.parametrize("kind", ["readonly", "float64", "numeric_marker"])
+def test_copy_false_handles_input_conversion(policy, kind):
+    dtype = np.float64 if kind == "float64" else np.float32
     query = np.array(
-        [[0.25, np.nan], [1.75, np.nan]], dtype=np.float32
+        [[0.25, np.nan], [1.75, np.nan]],
+        dtype=dtype,
     )
     marker = np.nan
-    if kind == "readonly":
-        query.setflags(write=False)
-    elif kind == "float64":
-        query = query.astype(np.float64)
-    else:
+
+    if kind == "numeric_marker":
         marker = -1
         query[np.isnan(query)] = marker
+    elif kind == "readonly":
+        query.setflags(write=False)
 
     before = query.copy()
+    train = np.array([[0, 10], [2, 20]], dtype=np.float32)
     model = FaissImputer(
         n_neighbors=1,
         donor_policy=policy,
         missing_values=marker,
         copy=False,
-    ).fit([[0, 10], [2, 20]])
+    ).fit(train)
 
     result = model.transform(query)
 
-    assert_array_equal(result, [[0.25, 10], [1.75, 20]])
-    assert result.dtype == np.float32
+    expected = np.array([[0.25, 10], [1.75, 20]], dtype=dtype)
+    assert result.dtype == dtype
     assert result.flags.writeable
-    if kind != "numeric-marker":
+    assert_array_equal(result, expected)
+
+    if kind == "float64":
+        assert result is query
+    elif kind == "readonly":
         assert_array_equal(query, before)
         assert not np.shares_memory(result, query)
 

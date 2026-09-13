@@ -1,12 +1,12 @@
 # FaissImputer
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.15/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/LICENSE)
 
 Nearest-neighbor imputation with Faiss-backed search, scikit-learn pipelines,
 feature names, and optional pandas output.
 
-Current release: [0.3.15](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.15).
+Current release: [0.3.16](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.16).
 
 > FaissImputer 0.1.x has a known neighbor-mapping bug and is incompatible
 > with scikit-learn 1.8+. Use version 0.2.0 or newer.
@@ -16,7 +16,7 @@ Current release: [0.3.15](https://github.com/ScionKim/FaissImputer/releases/tag/
 Requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.15"
+python -m pip install --upgrade "faiss-imputer>=0.3.16"
 ```
 
 ## Quick start
@@ -33,10 +33,11 @@ print(imputer.fit(train).transform(query))
 # [[ 1.8 20. ]]
 ```
 
-By default, inputs are preserved and output is a NumPy `float32` array.
+By default, inputs are preserved and output is a NumPy array.
+Query arrays retain their `float32` or `float64` dtype.
 For partially observed training data, use `donor_policy="available"`.
 
-See [usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.15/docs/usage.md)
+See [usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/usage.md)
 for partial donors, missing indicators, custom markers, and pandas pipelines.
 
 ## Choosing a donor policy
@@ -59,9 +60,9 @@ The comparison below describes FaissImputer 0.3.15.
 | --- | --- | --- |
 | Defaults | 3 neighbors, complete donors | 5 neighbors, donors selected per feature |
 | Aggregation | Mean or median; weights supported with mean and L2 metrics | Weighted mean |
-| Precision | Converts inputs and outputs to `float32` | Supports floating inputs including `float64` |
+| Precision | Preserves `float32` and `float64` donor values and imputation output; complete-donor search uses `float32` vectors. | Supports floating inputs including `float64` |
 | Metrics | `"l2"`, its `"nan_euclidean"` alias, and `"ip"` in complete mode | `"nan_euclidean"` or a callable |
-| Missing markers | `NaN` or a finite numeric marker | Configurable `missing_values` |
+| Missing markers | `NaN` or a finite numeric marker, matched before dtype conversion | Configurable `missing_values` |
 
 Both provide missing indicators, empty-feature retention, and a `copy` option.
 Their detailed input and copying rules can differ.
@@ -69,7 +70,7 @@ Their detailed input and copying rules can differ.
 For a closer comparison, use `donor_policy="available"`,
 `metric="nan_euclidean"`, and matching neighbor counts, weights, and missing
 markers. Matching settings does not guarantee identical donor choices or
-imputed values; float32 conversion, distance calculations, and ties matter.
+imputed values; search precision, distance calculations, and ties matter.
 
 ## Parameters
 
@@ -94,20 +95,23 @@ Distance and callable weights require `strategy="mean"` and either
 
 </details>
 
-See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.15/docs/api.md)
+See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/api.md)
 for accepted values, output rules, and edge cases.
 
 ## Important behavior
 
-- Inputs must be two-dimensional numeric data. Observed values are converted
-  to `float32`; infinity and values outside its finite range are rejected.
+- Inputs must be two-dimensional numeric data. `float32` and `float64`
+  arrays retain their dtype; integer arrays are converted to `float32`.
+  Observed values must be finite. Output dtype follows the query after
+  input conversion.
 - Columns entirely missing during fit are dropped by default.
   `keep_empty_features=True` retains them with zero values, including when
   later queries contain observed values in those columns.
 - `transform()` requires the original input feature count. Indicator columns
   are selected during fit and remain fixed until refitting.
-- `copy=True` preserves inputs. With `copy=False`, eligible inputs may be
-  modified even when added indicators cause a new output array to be returned.
+- `copy=True` preserves inputs. With `copy=False`, writable contiguous
+  `float32` or `float64` input may be modified, even when indicators or
+  output formatting create a new returned object.
 - Entirely missing query rows use fitted column means or medians.
   A failed fit or refit clears the fitted state.
 
@@ -147,8 +151,8 @@ for detailed conditions, quality comparisons, and historical experiments.
 
 ## Documentation
 
-- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.15/docs/api.md)
-- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.15/docs/usage.md)
+- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/api.md)
+- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/usage.md)
 - [Real-data comparison](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/docs/benchmarks/real-data-a3bd1ce3.md)
 - [Example notebook](https://github.com/ScionKim/FaissImputer/blob/v0.3.0/notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb)
 - [Roadmap](https://github.com/ScionKim/FaissImputer/blob/main/ROADMAP.md)
@@ -159,12 +163,12 @@ for detailed conditions, quality comparisons, and historical experiments.
 Bug reports and pull requests are welcome.
 Please use the [issue tracker](https://github.com/ScionKim/FaissImputer/issues).
 
-Author: [Hakkil Kim / ScionKim](https://github.com/ScionKim/).
+Author: [ScionKim](https://github.com/ScionKim).
 
 ## License
 
 This project is licensed under the
-[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.15/LICENSE).
+[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/LICENSE).
 
 Faiss is developed by Meta and distributed under the
 [MIT License](https://github.com/facebookresearch/faiss/blob/main/LICENSE).

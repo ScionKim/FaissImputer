@@ -83,12 +83,14 @@ def test_dataframe_feature_names(imputer):
 def test_output_container_selection(imputer):
     pd = pytest.importorskip("pandas")
     imputer.fit(pd.DataFrame(TRAIN, columns=NAMES))
-    query = pd.DataFrame([[0, np.nan, 100]], columns=NAMES, index=["row"])
+    query = pd.DataFrame(
+        [[0, np.nan, 100]], columns=NAMES, index=["row"]
+    )
     original = query.copy(deep=True)
 
     default_result = imputer.transform(query)
     assert isinstance(default_result, np.ndarray)
-    assert default_result.dtype == np.float32
+    assert default_result.dtype == np.float64
 
     frame_result = imputer.set_output(transform="pandas").transform(query)
     assert isinstance(frame_result, pd.DataFrame)
@@ -98,6 +100,6 @@ def test_output_container_selection(imputer):
 
     array_result = imputer.set_output(transform="default").transform(query)
     assert isinstance(array_result, np.ndarray)
-    assert array_result.dtype == np.float32
+    assert array_result.dtype == np.float64
     np.testing.assert_array_equal(array_result, default_result)
     pd.testing.assert_frame_equal(query, original)

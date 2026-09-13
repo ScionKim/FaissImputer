@@ -1,6 +1,6 @@
 # Usage examples
 
-These examples describe FaissImputer 0.3.15.
+These examples describe FaissImputer 0.3.16.
 
 [README](../README.md) · [API reference](api.md)
 
@@ -199,3 +199,39 @@ For unnamed array inputs, generated feature names are `x0`, `x1`, and so on.
 
 When indicators are enabled, their names follow the retained imputed columns.
 See the [API reference](api.md) for output shapes and empty-feature handling.
+
+## Float64 precision
+
+Float64 training arrays retain their precision in donor values and fitted
+statistics. Output dtype follows the query dtype after input conversion.
+
+```python
+import numpy as np
+from faiss_imputer import FaissImputer
+
+train = np.array(
+    [[0, 16777217], [2, 16777219]],
+    dtype=np.float64,
+)
+query = np.array([[0.25, np.nan]], dtype=np.float64)
+
+imputer = FaissImputer(n_neighbors=1)
+result = imputer.fit(train).transform(query)
+
+print(result.dtype)
+# float64
+
+print(result[0, 1])
+# 16777217.0
+```
+
+Writable contiguous float64 arrays are also eligible for reuse with
+`copy=False`. Input conversion and output formatting may still require
+allocation.
+
+Complete-donor search uses float32 vectors even when donor values and
+output are float64. Dtype preservation does not guarantee identical
+neighbor choices to `KNNImputer`.
+
+See [search precision and numeric limits](api.md#search-precision-and-numeric-limits)
+for the supported distance ranges and error behavior.

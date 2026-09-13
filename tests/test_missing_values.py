@@ -1,4 +1,4 @@
-"""Numeric missing markers must be identified before float32 conversion."""
+"""Numeric missing markers must be identified before dtype conversion."""
 
 import numpy as np
 import pytest
@@ -51,7 +51,7 @@ def test_numeric_marker_matches_nan_baseline_and_preserves_inputs(
 
     actual = model.transform(query)
     assert_allclose(actual, reference.transform(query_nan), rtol=2e-6)
-    assert actual.dtype == np.float32
+    assert actual.dtype == np.float64
     assert not np.shares_memory(actual, query)
     assert_array_equal(model.indicator_.features_, [0, 1, 2])
     assert_array_equal(model.get_feature_names_out(), reference.get_feature_names_out())
@@ -85,7 +85,7 @@ def test_available_numeric_marker_matches_knn(weights):
         (np.uint64, np.uint64(2**64 - 1), 2**64 - 2),
         (np.int64, float(2**53), 2**53 + 1),
     ],
-    ids=["float64-before-float32", "int64-before-float64", "uint64-limit", "float-marker-integer-input"],
+    ids=["float64-input", "int64-before-float64", "uint64-limit", "float-marker-integer-input"],
 )
 def test_marker_equality_precedes_lossy_conversion(policy, dtype, marker, observed):
     train = np.array([[observed, 10], [marker, 20], [observed, 30]], dtype=dtype)
@@ -97,26 +97,43 @@ def test_marker_equality_precedes_lossy_conversion(policy, dtype, marker, observ
 
     assert_array_equal(model.indicator_.features_, [0])
     assert_array_equal(model.valid_features_, [True, True])
+    expected_dtype = np.float64 if dtype == np.float64 else np.float32
+    result = model.transform(query)
+
+    assert result.dtype == expected_dtype
     assert_array_equal(
-        model.transform(query),
-        np.array([[observed, 25, 1], [observed, 20, 0]], dtype=np.float32),
+        result,
+        np.array(
+            [[observed, 25, 1], [observed, 20, 0]],
+            dtype=expected_dtype,
+        ),
     )
 
 
 @pytest.mark.parametrize("policy", POLICIES)
 def test_missing_marker_may_exceed_float32_range(policy):
     model = FaissImputer(
-        n_neighbors=1, donor_policy=policy, missing_values=1e100,
+        n_neighbors=1,
+        donor_policy=policy,
+        missing_values=1e100,
         add_indicator=True,
     ).fit([[2, 10], [4, 1e100], [6, 30]])
 
-    assert_array_equal(model.transform([[2.1, 1e100]]), np.array([[2.1, 10, 1]], dtype=np.float32))
-    with pytest.raises(ValueError):
-        model.transform([[1e101, 10]])
-    with pytest.raises(ValueError):
-        model.fit([[2, 10], [1e101, 20]])
-    with pytest.raises(NotFittedError):
-        check_is_fitted(model)
+    result = model.transform([[2.1, 1e100]])
+
+    assert result.dtype == np.float64
+    assert_array_equal(result, [[2.1, 10, 1]])
+
+    # Fully observed input does not require a neighbor search.
+    observed = np.array([[1e101, 10]], dtype=np.float64)
+    assert_array_equal(model.transform(observed), [[1e101, 10, 0]])
+
+    # Imputed donor values retain their float64 range.
+    model.fit([[2, 1e101], [4, 1e100], [6, 1e101]])
+    result = model.transform([[2.1, 1e100]])
+
+    assert result.dtype == np.float64
+    assert_array_equal(result, [[2.1, 1e101, 1]])
 
 
 @pytest.mark.parametrize("policy", POLICIES)
@@ -218,11 +235,15 @@ def test_numeric_marker_rejects_nan_and_infinity_without_changing_fitted_model(p
 
 
 def test_marker_absent_during_fit_does_not_create_new_indicator():
-    model = FaissImputer(n_neighbors=1, missing_values=-1, add_indicator=True).fit(
-        [[2, 10], [6, 30]]
-    )
+    model = FaissImputer(
+        n_neighbors=1, missing_values=-1, add_indicator=True,
+    ).fit([[2, 10], [6, 30]])
+
+    result = model.transform([[2.1, -1]])
+
     assert_array_equal(model.indicator_.features_, [])
-    assert_array_equal(model.transform([[2.1, -1]]), np.array([[2.1, 10]], dtype=np.float32))
+    assert result.dtype == np.float64
+    assert_array_equal(result, [[2.1, 10]])
     assert_array_equal(model.get_feature_names_out(), ["x0", "x1"])
 
 
@@ -245,9 +266,18 @@ def test_mixed_input_preserves_exact_large_numpy_integer_values(policy, containe
     ).fit(train)
     assert_array_equal(model.valid_features_, [True, True])
     assert_array_equal(model.indicator_.features_, [0])
+    expected_dtype = (
+        np.float32 if container == "object-array" else np.float64
+    )
+    result = model.transform(query)
+
+    assert result.dtype == expected_dtype
     assert_array_equal(
-        model.transform(query),
-        np.array([[observed, 10, 0], [observed, 10, 1]], dtype=np.float32),
+        result,
+        np.array(
+            [[observed, 10, 0], [observed, 10, 1]],
+            dtype=expected_dtype,
+        ),
     )
 
 
@@ -259,4 +289,6 @@ def test_marker_unrepresentable_in_input_dtype_does_not_match_rounded_value(dtyp
     ).fit(train)
     assert_array_equal(model.valid_features_, [True, True])
     assert_array_equal(model.indicator_.features_, [])
-    assert_array_equal(model.transform(train), train.astype(np.float32))
+    result = model.transform(train)
+    assert result.dtype == dtype
+    assert_array_equal(result, train)

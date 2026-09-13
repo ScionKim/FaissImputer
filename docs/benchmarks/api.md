@@ -1,8 +1,9 @@
 # API reference
 
-This document describes FaissImputer 0.3.15.
+This reference describes FaissImputer 0.3.16.
 
-[README](../README.md) · [Usage examples](usage.md)
+See the [README](../README.md) for installation and a quick start, or
+[usage examples](usage.md) for complete examples.
 
 ## Constructor
 
@@ -24,202 +25,268 @@ imputer = FaissImputer(
 )
 ```
 
-| Parameter | Accepted values and behavior |
-| --- | --- |
-| `n_neighbors` | Positive Python or NumPy integer. Booleans are rejected. Complete mode requires enough complete donors when non-empty training columns exist. |
-| `metric` | `"l2"`, `"nan_euclidean"` as an alias for `"l2"`, or `"ip"` in complete mode. Callable metrics are not supported. |
-| `strategy` | `"mean"` or `"median"` for neighbor aggregation and fallback statistics. |
-| `index_factory` | A Faiss index-description string. Default: `"Flat"`. Available mode accepts only `"Flat"`. |
-| `donor_policy` | `"complete"` or `"available"`. See donor selection below. |
-| `weights` | `"uniform"`, `None`, `"distance"`, or a callable. Non-uniform weights require mean aggregation and an L2 metric. |
-| `add_indicator` | Boolean. Append missingness indicators selected during fit. |
-| `keep_empty_features` | Boolean. Retain entirely missing training columns with zero values when enabled. |
-| `missing_values` | `NaN` or a finite Python/NumPy integer or floating-point scalar. Boolean, string, complex, `None`, and infinite markers are rejected. |
-| `copy` | Boolean. Preserve transform inputs by default; permit input reuse when disabled. |
+| Parameter | Default | Accepted values and behavior |
+| --- | --- | --- |
+| `n_neighbors` | `3` | Positive Python or NumPy integer. Boolean values are rejected. |
+| `metric` | `"l2"` | `"l2"`, `"nan_euclidean"`, or `"ip"`. `"nan_euclidean"` is an alias for `"l2"`. |
+| `strategy` | `"mean"` | `"mean"` or `"median"`. |
+| `index_factory` | `"Flat"` | Faiss index-factory string. Available-donor mode requires `"Flat"`. |
+| `donor_policy` | `"complete"` | `"complete"` or `"available"`. |
+| `weights` | `"uniform"` | `"uniform"`, `None`, `"distance"`, or a callable. Non-uniform weights require mean aggregation and an L2 metric. |
+| `add_indicator` | `False` | Append indicators for features that contained missing values during fit. |
+| `keep_empty_features` | `False` | Retain entirely missing training columns as zero-valued output columns. |
+| `missing_values` | `np.nan` | NaN or a finite real numeric marker. |
+| `copy` | `True` | Preserve transform input by default; `False` permits input reuse when possible. |
+
+`add_indicator`, `keep_empty_features`, and `copy` accept Python and NumPy
+boolean values.
 
 ## Methods
 
-### fit(X, y=None)
+- `fit(X, y=None)`: Learn donors, column statistics, feature names, and
+  optional indicator features. Returns the estimator; `y` is ignored.
+- `transform(X)`: Impute using fitted state. Requires the original number
+  of input features, including columns that were empty during fit.
+- `fit_transform(X, y=None)`: Fit and then transform the training input.
+- `get_feature_names_out(input_features=None)`: Return output feature names,
+  accounting for dropped columns and appended indicators.
+- `set_output(transform="pandas")`: Return pandas DataFrames.
+  Use `transform="default"` to return NumPy arrays.
 
-Learn donors, fallback statistics, feature selection, and optional indicators.
-Returns the fitted estimator. `y` is ignored.
+Failed fits and refits clear fitted state. Call `fit()` successfully before
+using `transform()` or `get_feature_names_out()`.
 
-Input must be two-dimensional numeric data with at least one row and column.
-Training columns may be entirely missing.
+## Input and output precision
 
-`fit()` does not modify training data, including with `copy=False`.
-A failed fit or refit clears the fitted state; subsequent transformation
-requires a successful fit.
+Inputs must be two-dimensional numeric data.
 
-### transform(X)
+After array validation:
 
-Impute queries using the fitted donors and statistics.
-Queries must contain the original number of input features, including columns
-that were entirely missing during fit. When fitted feature names are available,
-named inputs must match those names and their order.
+- `float32` arrays retain `float32`.
+- `float64` arrays retain `float64`.
+- Integer arrays and other supported numeric dtypes are converted to
+  `float32`.
+- Lists and pandas inputs use the dtype inferred during validation.
+  Floating-point lists commonly become `float64`.
 
-Output is a NumPy `float32` array by default. Output width can differ from input
-width because of empty-column removal and missing indicators.
+Donor values and fitted statistics retain the normalized training dtype.
+The output dtype follows the normalized query dtype, which may differ
+from the training dtype.
 
-### fit_transform(X, y=None)
+For example, a float64-trained estimator returns float32 output for a
+float32 query. Imputed values may therefore be rounded. A float64 query
+cannot recover precision already lost in float32 training data.
 
-Fit and then transform the same data. With `copy=False`, the transform step
-can modify the supplied training array after fitting.
+Observed values must be finite and representable in the normalized input
+dtype. Results that exceed the output dtype's finite range are rejected.
+Empty-feature restoration and appended indicators retain the output dtype.
 
-### get_feature_names_out(input_features=None)
+### Search precision and numeric limits
 
-Return output names in column order. Named training inputs retain their feature
-names; unnamed inputs use `x0`, `x1`, and so on. Explicit names must match the
-fitted schema.
+Complete-donor mode converts search vectors to float32. Stored donor
+values and imputation output can still be float64.
 
-Dropped empty columns are excluded. Indicator names follow the imputed columns.
-This method requires a successful fit.
+Coordinates required for a complete-donor search must be representable
+as finite float32 values. Non-Flat factories also require this conversion
+when fitting their full donor index. A fully observed query does not
+require a neighbor search.
 
-### set_output(transform="pandas")
+For non-uniform weights, distances to selected complete donors are
+calculated from the original normalized donor and query values in float64.
 
-Return pandas DataFrames, preserving the query index and using
-`get_feature_names_out()` for column names. Pandas is an optional dependency.
+Available-donor mode calculates distances in float64 and uses a float32
+selection cache with precision refinement. With float64 training data or
+queries, selected distances are recomputed in float64 before weighting.
 
-Use `set_output(transform="default")` to return NumPy arrays.
-Output selection also works through scikit-learn pipelines.
+When intermediate squared norms overflow, available mode can recompute
+distances using shared observed features. Required squared distances that
+overflow float64, or positive squared distances that underflow to zero,
+raise `ValueError`.
 
-## Missing values and precision
+Dtype preservation does not guarantee identical neighbor choices or
+results to `KNNImputer`. Search precision, distance calculations, and ties
+can affect results.
 
-With `missing_values=np.nan`, NaN entries are missing. With a numeric marker,
-exact equality determines missingness before float32 conversion. Distinct
-observed values remain observed even if they later round to the same float32
-value as the marker.
+## Missing-value markers
 
-Use the same marker when preparing training and query data. Actual NaN entries
-are rejected when a numeric marker is configured. Refit after changing the
-marker.
+The default marker is `np.nan`. A finite Python or NumPy integer or
+floating-point marker is also accepted.
 
-A numeric marker can exceed the float32 range because matching entries are
-removed before conversion. Observed values must remain finite after conversion;
-infinity and overflowing observations are rejected.
+Boolean, string, complex, array-valued, infinite, and `None` markers are
+rejected.
 
-Imputation outputs remain float32. Internal float64 calculations and numerical
-safeguards do not provide float64 input preservation or guarantee identical
-neighbor ordering to KNNImputer.
+Numeric markers are matched before dtype conversion. Marker matching
+preserves the original numeric values of mixed lists and pandas columns
+so that conversion does not turn a distinct observed value into a missing
+entry.
 
-## Donor selection and fallback
+A numeric marker may exceed the float32 range because matched entries are
+replaced with NaN before observed values are converted.
+
+When a numeric marker is configured, actual NaN values are rejected.
+Use one missing-value representation consistently for fit and transform.
+Observed infinities are always rejected.
+
+## Donor policies and metrics
 
 ### Complete donors
 
-- Use training rows observed in every non-empty training column.
-- Require at least `n_neighbors` such rows when non-empty columns exist.
-- Search only the originally observed, non-empty features of each query.
-- Use fitted column statistics when all usable query features are missing.
+The default policy uses training rows observed in every non-empty
+training feature.
 
-`"Flat"` performs exact search on the computed vectors. Other factories may
-require training and must support the dimensions used during fit and projected
-query searches. Faiss configuration or training errors can propagate.
+When non-empty features exist, fitting requires at least one complete
+donor and at least `n_neighbors` complete donors.
 
-`metric="ip"` selects by raw inner product, not cosine similarity, and supports
-only uniform weighting.
+Search uses only the query's observed, non-empty training features.
+Missing query coordinates do not participate in neighbor selection.
+
+`metric="l2"` and `metric="nan_euclidean"` use the same search path.
+`metric="ip"` uses raw inner-product similarity, without automatic
+normalization, and supports only uniform weights.
+
+Non-Flat factories retain their Faiss training requirements. They must
+also support the projected feature dimensions encountered during
+transform.
 
 ### Available donors
 
-- Require `index_factory="Flat"` and an L2 metric.
-- Permit partially observed training rows.
-- For each target feature, donors must observe that feature and share at least
-  one usable observed feature with the query.
-- Use up to `n_neighbors` eligible donors; fewer are allowed.
-- Fall back to the fitted column statistic if no usable neighbor exists.
-- Ignore training rows missing every non-empty feature.
-
-Distances use squared differences over shared observed features, scaled by the
-original input feature count divided by the shared feature count.
-
-Fallback statistics use all observed training values in each non-empty column.
-They remain unweighted and follow `strategy`, including when neighbor
-aggregation uses distance or callable weights.
-
-## Weights
-
-`"uniform"` and `None` use unweighted mean or median aggregation.
-
-`"distance"` uses inverse Euclidean distance with mean aggregation.
-If selected donors include distance-zero matches, only those selected matches
-contribute to the imputed value.
-
-Callable weights receive a two-dimensional array of unsquared, NaN-aware
-Euclidean distances and must return real weights with the same shape.
-Each row describes neighbors for an imputed value. Functions should operate
-independently on each row, without depending on batch size or neighbor order.
-
-Unavailable neighbors have NaN distances and are excluded regardless of the
-returned weight. Returned NaN weights contribute zero.
-
-Invalid shapes, complex weights, infinite weights for usable donors, zero
-weight sums, or weighted results outside the finite float32 range raise
-`ValueError`.
-
-Distance and callable weights require `strategy="mean"` and either
+`donor_policy="available"` requires `index_factory="Flat"` and either
 `metric="l2"` or `metric="nan_euclidean"`.
 
-## Empty training columns
+Partially observed training rows can donate values. A donor must observe
+the target feature and share at least one observed, non-empty training
+feature with the query.
 
-Columns entirely missing during fit do not participate in donor selection
-or neighbor search.
+Neighbors are selected separately for each missing feature. Fewer than
+`n_neighbors` usable donors are allowed. Fully missing training rows do
+not supply donor values.
 
-- `keep_empty_features=False`: omit those columns from imputed output.
-- `keep_empty_features=True`: retain them in their original positions and
-  always fill them with zero, even if queries provide observed values.
+### Fallback statistics
 
-The input schema remains fixed until refitting. Transform still accepts the
-full original feature set.
+Both policies learn column means or medians from all observed training
+values before donor filtering.
 
-If every training column is empty, fitting succeeds without a neighbor index.
-The imputed portion of the output has zero columns by default, or contains
-zeros when retention is enabled. The donor-count minimum does not apply,
-but ordinary parameter and input validation still applies.
+Rows missing all usable features receive fitted column statistics.
+Available mode also uses these statistics when no usable donor exists
+for a missing feature.
 
-Distance normalization retains the original input feature count, including
-for callable weights.
+Fallback statistics are unweighted, including when distance or callable
+weights are configured.
+
+## Aggregation and weights
+
+`strategy="mean"` is the default. `strategy="median"` is supported with
+uniform weights.
+
+`weights="uniform"` and `weights=None` give every selected donor equal
+weight.
+
+`weights="distance"` uses inverse Euclidean distance. If selected donors
+include exact zero-distance matches, only those matches contribute.
+
+Non-uniform weights require:
+
+- `strategy="mean"`;
+- `metric="l2"` or `metric="nan_euclidean"`.
+
+Distances supplied to weighting are unsquared Euclidean distances.
+Missing-feature normalization uses the original input feature count,
+including columns that were empty during fit.
+
+### Callable weights
+
+A callable receives a two-dimensional distance array. Each row describes
+the selected neighbors for one imputed value.
+
+```python
+def shifted_inverse(distances):
+    return 1.0 / (1.0 + distances)
+```
+
+The callable must return real numeric weights with exactly the same shape.
+Its behavior should be independent across rows because batching may change
+which rows are passed together.
+
+Unavailable distances are represented by NaN. Weights for unavailable
+neighbors and NaN weights are ignored. Contributing weights must be finite,
+and each imputed value must have a nonzero weight sum.
+
+Invalid shapes, complex weights, infinite contributing weights, zero
+weight sums, and unrepresentable weighted results raise `ValueError`.
+
+## Empty training features
+
+A feature entirely missing during fit is excluded from neighbor selection.
+
+With `keep_empty_features=False`, its imputed output column is dropped.
+With `keep_empty_features=True`, its output column is retained and filled
+with zero, including when a later query supplies an observed value there.
+
+Transform input must always include the original feature count.
+
+If every training feature is empty, fitting succeeds without donors or
+a distance index. Ordinary parameter validation still applies.
+Transform returns either zero-valued retained columns or no imputed
+columns, followed by any requested indicators.
 
 ## Missing indicators
 
-`add_indicator=True` appends 1 for originally missing query entries and 0
-otherwise. Features are selected from all training rows before donor filtering,
-in original column order.
+With `add_indicator=True`, indicator features are selected from all
+training rows before donor filtering, in original column order.
 
-A feature first missing only during transform does not gain an indicator.
-Selection remains fixed until refitting.
+Each appended value is:
 
-Names follow `missingindicator_<feature_name>`, such as
-`missingindicator_age` or `missingindicator_x0`. Both output feature names and
-pandas columns include these additions.
+- `1` when the original query entry was missing;
+- `0` otherwise.
 
-Indicators describe original query missingness, including for columns dropped
-or zero-filled by empty-feature handling. Retained imputed columns come first,
-followed by indicator columns.
+Indicator features remain fixed until refitting. A feature first missing
+only during transform does not receive a new indicator column.
 
-## Input copying
+Dropped empty features can still contribute indicators. Indicator values
+are captured before imputation or in-place changes.
 
-`copy=True` preserves inputs during transform.
+Names use `missingindicator_<feature_name>`, such as
+`missingindicator_age` or `missingindicator_x0`.
 
-With `copy=False`, writable C-contiguous or F-contiguous float32 arrays can be
-imputed in place. Read-only or non-contiguous arrays are copied. Data type
-conversion, numeric missing-marker normalization, and empty-column handling
-can also require new arrays.
+Output order is the retained imputed features followed by indicators.
+Both `get_feature_names_out()` and pandas output include the added columns.
 
-Indicators are computed before any input values are modified. Appending them
-creates a new output array, but the input may already have been imputed in
-place. A newly allocated output therefore does not guarantee input preservation.
+## Copy behavior
 
-`fit()` itself preserves training data. `fit_transform()` can modify it during
-the transform step.
+`copy=True` preserves transform input.
+
+With `copy=False`, writable contiguous float32 or float64 arrays can be
+reused. Both C-contiguous and Fortran-contiguous arrays are eligible.
+Read-only and non-contiguous arrays are copied.
+
+Input conversion, numeric-marker normalization, empty-feature handling,
+and output formatting may require additional allocation. Disabling copying
+does not guarantee allocation-free operation.
+
+Input may be modified even when appended indicators or output formatting
+produce a new returned object.
+
+`fit()` preserves training input regardless of `copy`.
+`fit_transform()` includes a transform step and can therefore modify
+eligible training input when `copy=False`.
+
+## Feature names and output containers
+
+String column names from pandas training input are retained.
+NumPy input uses generated names such as `x0`, `x1`, and `x2`.
+
+Explicit names passed to `get_feature_names_out()` must have the original
+input feature count and agree with fitted names when those names exist.
+
+Pandas output uses the transformed feature names and preserves the query
+index. Input feature order must agree with the fitted schema.
 
 ## Memory and threading
 
-Available mode reuses donor-side arrays prepared during fit and processes
-queries in batches. This reduces repeated preparation work while increasing
-retained fitted memory.
+Float64 value arrays require more storage than float32 arrays.
 
-Internal batch-sizing budgets are not total process-memory limits. Donor
-storage, distance calculations, and temporary arrays also consume memory.
-Neither lower peak memory nor faster execution is guaranteed for every workload.
+Available mode retains prepared donor data and processes queries in
+batches. Batch limits do not bound total process memory.
 
-FaissImputer does not set the number of threads. Configure thread limits in
-the application when needed.
+FaissImputer does not set global native-library thread limits.
+Configure threading externally when comparing performance.

@@ -105,7 +105,7 @@ def test_alias_supports_numeric_markers_empty_features_and_pandas(policy, keep):
     assert_array_equal(result.to_numpy(), expected)
     assert result.columns.tolist() == names
     assert result.index.tolist() == ["a", "b"]
-    assert all(dtype == np.float32 for dtype in result.dtypes)
+    assert all(dtype == np.float64 for dtype in result.dtypes)
 
 
 def test_alias_uses_l2_for_nonflat_index_and_quantizer():
