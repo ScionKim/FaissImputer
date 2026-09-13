@@ -24,7 +24,7 @@ def test_available_mode_uses_partially_observed_donors():
 
     result = imputer.transform([[0.1, np.nan, np.nan]])
 
-    assert result.dtype == np.float32
+    assert result.dtype == np.float64
     np.testing.assert_allclose(result, [[0.1, 10.0, 20.0]])
 
 @pytest.mark.parametrize("previously_fitted", [False, True])
@@ -110,7 +110,7 @@ def test_available_mode_neighbor_rules(
     result = imputer.fit(train).transform(query)
     expected = expected_mean if strategy == "mean" else expected_median
 
-    assert result.dtype == np.float32
+    assert result.dtype == np.float64
     np.testing.assert_allclose(result, expected, rtol=1e-6, atol=1e-6)
 
 @pytest.mark.parametrize(
