@@ -2,7 +2,7 @@
 
 These examples describe FaissImputer 0.3.17.
 
-[README](../README.md) · [API reference](api.md)
+[README](../../README.md) · [API reference](api.md)
 
 The examples below use these imports:
 
