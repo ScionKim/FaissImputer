@@ -408,10 +408,10 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 raise ValueError(
                     "non-uniform weights require strategy='mean'"
                 )
-            if not is_l2:
+            if not (is_l2 or is_callable_metric):
                 raise ValueError(
                     "non-uniform weights require "
-                    "metric='l2' or 'nan_euclidean'"
+                    "metric='l2' or 'nan_euclidean' or a callable"
                 )
 
         if self.donor_policy not in ("complete", "available"):
