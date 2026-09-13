@@ -1,8 +1,8 @@
 # Roadmap
 
-Updated for [0.3.14](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.14) to record the `nan_euclidean` metric alias and track the remaining compatibility options. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
+Updated for [0.3.15](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.15) to record the `copy` option and reorganized documentation, and track the remaining compatibility work. The original roadmap was based on a source and regression review of the 0.3.4-era commit [`bc592934`](https://github.com/ScionKim/FaissImputer/tree/bc592934e83d5435672a1be31801613ef7b6c06d).
 
-FaissImputer 0.3.13 adds `keep_empty_features` and configurable `missing_values`. The first three prioritized compatibility options (missing indicators, empty-feature handling, and missing-value markers) are now implemented. Further numerical and interoperability work remains guided by reproductions. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
+Missing indicators, empty-feature handling, configurable missing-value markers, the `nan_euclidean` metric alias, and copy control are now implemented. Remaining compatibility work focuses on float64 preservation and callable distance metrics. These priorities are not release-date commitments or promises of universal speedups or numerical identity with `KNNImputer`.
 
 ## Completed through 0.3.4
 
@@ -151,9 +151,25 @@ This ordinary-scale source-checkout pilot does not establish released-wheel perf
 - Use the L2 metric for non-Flat indexes and factory validation with entirely empty training data.
 - Add regression coverage for L2 equivalence, numeric missing markers, empty features, pandas output, index configuration, and failed-refit cleanup.
 
+## Completed in 0.3.15
+
+### Support copy control
+
+- Add `copy=True` by default to preserve transform input.
+- Allow `copy=False` to reuse writable contiguous float32 input when possible. Conversion, empty-feature handling, and output formatting may still require allocation.
+- Capture missing indicators before filling values and preserve original query values for available-donor batch searches.
+- Add regression coverage for input reuse, copy fallbacks, indicators, empty features, and invalid copy parameters.
+
+### Simplify documentation
+
+- Shorten the README and bring installation and the quick-start example forward.
+- Move detailed parameter and behavior documentation to `docs/api.md`.
+- Move extended examples to `docs/usage.md`.
+- Preserve historical benchmark versions and results.
+
 ## Next API option
 
-The remaining compatibility candidates are callable distance metrics, preserving float64 inputs, and a `copy` option. Assess their implementation cost and performance effects before selecting the next feature.
+The next compatibility target is preserving float64 inputs and outputs. Define the precision guarantees and assess the required backend changes and performance costs. Callable distance metrics follow as a separate feature.
 
 ## Remaining benchmark and documentation work
 
@@ -184,5 +200,5 @@ Publish each new report with its measured revision and environment. Keep histori
 - **Factory support:** define which index factories remain valid when queries have different observed-feature counts. For example, a factory can accept the fitted dimension and reject a projected dimension. Provide clear validation or a documented fallback.
 - **Broader interoperability checks:** add standard scikit-learn estimator checks and address remaining error-message requirements; expand installation/basic-execution coverage to Windows and macOS.
 - **Memory controls:** use current measurements to evaluate a public batch/working-memory setting and donor-block processing. An internal batch budget must not be presented as a total RAM limit.
-- **Additional API features:** continue the compatibility sequence above; distance weighting, missing indicators, empty-feature handling, and configurable missing-value markers are implemented. The remaining candidates are metric compatibility, float64 preservation, and a copy option.
+- **Additional API features:** distance weighting, missing indicators, empty-feature handling, configurable missing-value markers, the `nan_euclidean` metric alias, and copy control are implemented. The remaining candidates are float64 preservation and callable distance metrics.
 - **Approximate search and GPU work:** pursue a specific workload and an acceptable accuracy/performance tradeoff first. Neither changes the priority of consistent results in the existing exact modes.
