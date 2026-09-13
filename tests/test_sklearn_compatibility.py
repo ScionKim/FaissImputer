@@ -18,7 +18,7 @@ def test_nan_support_tag():
 def test_dtype_preservation_tag():
     tags = get_tags(FaissImputer())
     assert tags.transformer_tags is not None
-    assert tags.transformer_tags.preserves_dtype == ["float32"]
+    assert tags.transformer_tags.preserves_dtype == ["float32", "float64"]
 
 
 def test_pipeline_fit_and_transform():
@@ -28,12 +28,13 @@ def test_pipeline_fit_and_transform():
         dtype=np.float64,
     )
 
-    np.testing.assert_array_equal(
-        pipeline.fit_transform(train),
-        train,
-    )
+    fitted_result = pipeline.fit_transform(train)
 
-    result = pipeline.transform([[1.9, np.nan]])
+    assert fitted_result.dtype == np.float64
+    np.testing.assert_array_equal(fitted_result, train)
 
-    assert result.dtype == np.float32
+    query = np.array([[1.9, np.nan]], dtype=np.float64)
+    result = pipeline.transform(query)
+
+    assert result.dtype == np.float64
     np.testing.assert_allclose(result, [[1.9, 20.0]])

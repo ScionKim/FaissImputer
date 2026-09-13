@@ -41,7 +41,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             isinstance(self.missing_values, (float, np.floating))
             and bool(np.isnan(self.missing_values))
         )
-        tags.transformer_tags.preserves_dtype = ["float32"]
+        tags.transformer_tags.preserves_dtype = ["float32", "float64"]
         return tags
 
     @staticmethod
@@ -91,11 +91,13 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             raise ValueError("copy must be a boolean")
 
         marker = self.missing_values
-
         if isinstance(marker, (bool, np.bool_)) or not isinstance(
             marker, (Integral, float, np.floating)
         ):
-            raise ValueError("missing_values must be np.nan or a finite real number")
+            raise ValueError(
+                "missing_values must be np.nan or a finite real number"
+            )
+
         if isinstance(marker, Integral):
             marker = int(marker)
             nan_marker = False
@@ -105,63 +107,86 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 raise ValueError(
                     "missing_values must be np.nan or a finite real number"
                 )
-            # Python comparisons keep integer/float equality exact in object
-            # arrays; NumPy scalar promotion can otherwise round large ints.
             marker = marker.item() if isinstance(marker, np.generic) else marker
-
-        if nan_marker:
-            return validate_data(
-                self, X, dtype=np.float32,
-                ensure_all_finite="allow-nan", reset=reset,
-            )
 
         original = X
         X = validate_data(
-            self, X, dtype=None, ensure_all_finite=True, reset=reset,
+            self,
+            X,
+            dtype=None,
+            ensure_all_finite="allow-nan" if nan_marker else True,
+            reset=reset,
         )
+
+        # Preserve float64, including non-native byte order.
+        # Other input dtypes retain the existing float32 conversion.
+        output_dtype = np.dtype(
+            np.float64
+            if X.dtype.kind == "f" and X.dtype.itemsize == 8
+            else np.float32
+        )
+
+        if nan_marker:
+            with np.errstate(over="ignore", invalid="ignore"):
+                normalized = np.asarray(X, dtype=output_dtype)
+            if np.isinf(normalized).any():
+                raise ValueError(
+                    "Observed values must be finite and representable as "
+                    f"{output_dtype.name}"
+                )
+            return normalized
+
         if hasattr(original, "iloc") and hasattr(original, "to_numpy"):
-            # pandas __array__ can combine int/float columns before honoring
-            # dtype=object. to_numpy preserves the separate column values.
+            # Preserve individual values from mixed pandas columns.
             X = original.to_numpy(dtype=object)
         elif not isinstance(original, np.ndarray):
-            # Array validation may coerce mixed columns to a common dtype.
-            # Preserve their original values when selecting missing cells.
+            # Preserve exact values when matching mixed numeric lists.
             X = np.asarray(original, dtype=object)
+
         missing = self._numeric_missing_mask(X, marker)
 
-        # Mask before casting, so a marker outside float32's range never
-        # overflows and a distinct observed value cannot become missing.
-        normalized = np.zeros(X.shape, dtype=np.float32)
+        # Select missing cells before converting observed values.
+        normalized = np.zeros(X.shape, dtype=output_dtype)
         with np.errstate(over="ignore", invalid="ignore"):
             np.copyto(normalized, X, where=~missing, casting="unsafe")
+
         if not np.isfinite(normalized).all():
             raise ValueError(
-                "Observed values must be finite and representable as float32"
+                "Observed values must be finite and representable as "
+                f"{output_dtype.name}"
             )
+
         normalized[missing] = np.nan
         return normalized
 
     def _aggregate(self, values, *, axis, ignore_nan):
-        """Reduce a 2-D array, repairing only nonfinite aggregation results."""
+        """Reduce in the input dtype, repairing overflowing intermediates."""
         if self.strategy == "mean":
             aggregate = np.nanmean if ignore_nan else np.mean
         else:
             aggregate = np.nanmedian if ignore_nan else np.median
 
-        # Keep the existing float32 reduction for ordinary inputs. Finite
-        # donor values can still overflow its intermediate sum or midpoint.
         with np.errstate(over="ignore", invalid="ignore"):
             result = aggregate(values, axis=axis)
 
         for position in np.flatnonzero(~np.isfinite(result)):
             selected = values[:, position] if axis == 0 else values[position, :]
             if ignore_nan and np.isnan(selected).all():
-                # Preserve the undefined result and original warning for an
-                # all-missing slice instead of reducing it a second time.
                 continue
-            # Recompute one affected slice at a time to bound temporary
-            # float64 storage. Assignment retains the original result dtype.
-            result[position] = aggregate(selected.astype(np.float64))
+
+            selected64 = selected.astype(np.float64)
+            with np.errstate(over="ignore", invalid="ignore"):
+                repaired = aggregate(selected64)
+                if not np.isfinite(repaired):
+                    scale = np.nanmax(np.abs(selected64))
+                    repaired = aggregate(selected64 / scale) * scale
+
+            if not np.isfinite(repaired):
+                raise ValueError(
+                    "Aggregate must be finite and representable as "
+                    f"{values.dtype.name}"
+                )
+            result[position] = repaired
 
         return result
 
@@ -235,12 +260,43 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
             result = np.sum(safe_values * weights, axis=1) / totals
 
+        # Repair overflowing intermediate sums without changing ordinary
+        # reductions. Zero-weight values do not determine the scale.
+        repair_rows = np.flatnonzero(~np.isfinite(result))
+        if repair_rows.size:
+            repair_weights = weights[repair_rows]
+            repair_values = np.where(
+                repair_weights != 0, safe_values[repair_rows], 0.0
+            )
+            scales = np.max(np.abs(repair_values), axis=1)
+            scaled_values = np.divide(
+                repair_values,
+                scales[:, None],
+                out=np.zeros_like(repair_values),
+                where=scales[:, None] != 0,
+            )
+            numerators = np.sum(
+                scaled_values * repair_weights, axis=1
+            )
+
+            # Combine multiplication and division through their exponents
+            # so only an unrepresentable final result overflows.
+            numerator_m, numerator_e = np.frexp(numerators)
+            scale_m, scale_e = np.frexp(scales)
+            total_m, total_e = np.frexp(totals[repair_rows])
+            with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+                result[repair_rows] = np.ldexp(
+                    numerator_m * scale_m / total_m,
+                    numerator_e + scale_e - total_e,
+                )
+
         if (
             not np.isfinite(result).all()
-            or (np.abs(result) > np.finfo(np.float32).max).any()
+            or (np.abs(result) > np.finfo(values.dtype).max).any()
         ):
             raise ValueError(
-                "weighted mean must be finite and representable as float32"
+                "weighted mean must be finite and representable as "
+                f"{values.dtype.name}"
             )
 
         return result
@@ -385,8 +441,8 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     self.n_features_in_, self.index_factory, metric_type
                 )
             # There is no value to estimate and no distance index to build.
-            self.statistics_ = np.empty(0, dtype=np.float32)
-            self.donors_ = np.empty((0, 0), dtype=np.float32)
+            self.statistics_ = np.empty(0, dtype=X.dtype)
+            self.donors_ = np.empty((0, 0), dtype=X.dtype)
             return self
 
         if self.donor_policy_ == "available":
@@ -422,8 +478,9 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         # Flat donor storage is unused: transform builds projected indexes.
         # Other factories retain their training and insertion validation.
         if self.index_factory != "Flat":
-            index.train(self.donors_)
-            index.add(self.donors_)
+            donor_vectors = self._as_faiss_vectors(self.donors_)
+            index.train(donor_vectors)
+            index.add(donor_vectors)
 
         # Store the index as an attribute
         self.index_ = index
@@ -466,9 +523,15 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return X.copy()
 
     def _format_output(self, imputed, original, indicators):
-        """Restore empty columns and append indicators captured before filling."""
+        """Restore empty columns and append previously captured indicators."""
+        if not np.isfinite(imputed).all():
+            raise ValueError(
+                "Imputed values must be finite and representable as "
+                f"{imputed.dtype.name}"
+            )
+
         if self.keep_empty_features and not self.valid_features_.all():
-            restored = np.zeros(original.shape, dtype=np.float32)
+            restored = np.zeros(original.shape, dtype=imputed.dtype)
             restored[:, self.valid_features_] = imputed
             imputed = restored
 
@@ -476,6 +539,21 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             return imputed
 
         return np.concatenate((imputed, indicators), axis=1)
+
+    @staticmethod
+    def _as_faiss_vectors(values):
+        """Prepare search vectors without changing the original values."""
+        with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+            vectors = np.ascontiguousarray(values, dtype=np.float32)
+
+        if values.dtype.itemsize > vectors.dtype.itemsize:
+            if not np.isfinite(vectors).all():
+                raise ValueError(
+                    "FAISS search values must be finite and "
+                    "representable as float32"
+                )
+
+        return vectors
 
     def transform(self, X):
         """
@@ -537,13 +615,11 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 )
                 continue
 
-            donor_vectors = np.ascontiguousarray(
-                self.donors_[:, observed_cols],
-                dtype=np.float32,
+            donor_vectors = self._as_faiss_vectors(
+                self.donors_[:, observed_cols]
             )
-            query_vectors = np.ascontiguousarray(
-                X[np.ix_(sample_indices, observed_cols)],
-                dtype=np.float32,
+            query_vectors = self._as_faiss_vectors(
+                X[np.ix_(sample_indices, observed_cols)]
             )
 
             index = faiss.index_factory(
@@ -578,7 +654,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     delta = selected_donors[:, observed_cols].astype(
                         np.float64
                     )
-                    delta -= query_vectors[query_position]
+                    delta -= X[sample_idx, observed_cols].astype(np.float64)
                     squared = np.einsum("ij,ij->i", delta, delta)
 
                     # Match the missing-feature scaling used by
@@ -594,13 +670,14 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     )
                 continue
 
-            # Limit the gathered float32 values to roughly 8 MiB per chunk,
+            # Limit gathered donor values to roughly 8 MiB per chunk,
             # with a one-query minimum. Median and repair use extra storage.
-            # Keep the FAISS search batch unchanged: only aggregation is split.
+            # Keep the search batch unchanged: only aggregation is split.
             neighbor_count = neighbor_indices.shape[1]
             values_per_query = neighbor_count * missing_cols.size
+            bytes_per_query = self.donors_.dtype.itemsize * values_per_query
             aggregation_rows = max(
-                1, min(256, (8 * 1024 * 1024) // (4 * values_per_query)),
+                1, min(256, (8 * 1024 * 1024) // bytes_per_query),
             )
             for start in range(0, len(sample_indices), aggregation_rows):
                 rows = sample_indices[start:start + aggregation_rows]
@@ -659,7 +736,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             batch_rows = rows[start:start + batch_size]
             batch_missing = missing[batch_rows]
             columns = np.flatnonzero(batch_missing.any(axis=0))
-            queries = np.ascontiguousarray(X[batch_rows], dtype=np.float32)
+            queries = np.ascontiguousarray(X[batch_rows])
             result[batch_rows] = np.where(
                 batch_missing, self.statistics_, queries
             )
@@ -724,7 +801,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                             int(required[col]),
                         )
                         selected_values = np.full(
-                            shape, np.nan, dtype=np.float32
+                            shape, np.nan, dtype=self.donors_.dtype
                         )
                         selected_distances = np.full(
                             shape, np.nan, dtype=np.float64
