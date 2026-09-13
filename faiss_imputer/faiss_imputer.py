@@ -21,6 +21,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         add_indicator=False,
         keep_empty_features=False,
         missing_values=np.nan,
+        copy=True,
     ):
         super().__init__()
         self.n_neighbors = n_neighbors
@@ -32,6 +33,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         self.add_indicator = add_indicator
         self.keep_empty_features = keep_empty_features
         self.missing_values = missing_values
+        self.copy = copy
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -85,7 +87,11 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         ).reshape(X.shape)
 
     def _validate_input(self, X, *, reset):
+        if not isinstance(self.copy, (bool, np.bool_)):
+            raise ValueError("copy must be a boolean")
+
         marker = self.missing_values
+
         if isinstance(marker, (bool, np.bool_)) or not isinstance(
             marker, (Integral, float, np.floating)
         ):
@@ -449,24 +455,26 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         indicator_names = self.indicator_.get_feature_names_out(names)
         return np.concatenate((output_names, indicator_names))
 
-    def _format_output(self, imputed, original):
-        """Restore retained empty columns before appending original indicators."""
+    def _copy_or_reuse(self, X):
+        """Reuse writable contiguous input only when copying is disabled."""
+        if (
+            not self.copy
+            and X.flags.writeable
+            and (X.flags.c_contiguous or X.flags.f_contiguous)
+        ):
+            return X
+        return X.copy()
+
+    def _format_output(self, imputed, original, indicators):
+        """Restore empty columns and append indicators captured before filling."""
         if self.keep_empty_features and not self.valid_features_.all():
             restored = np.zeros(original.shape, dtype=np.float32)
             restored[:, self.valid_features_] = imputed
             imputed = restored
-        return self._append_indicator(imputed, original)
 
-    def _append_indicator(self, imputed, original):
-        """Append indicators computed from the original query values."""
-        if self.indicator_ is None:
+        if indicators is None or indicators.shape[1] == 0:
             return imputed
 
-        indicators = self.indicator_.transform(original)
-        if indicators.shape[1] == 0:
-            return imputed
-
-        # Boolean indicators become 0/1 in the float32 output array.
         return np.concatenate((imputed, indicators), axis=1)
 
     def transform(self, X):
@@ -477,28 +485,33 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         - X (array-like): The input data with missing values to be imputed.
 
         Returns:
-        - X_tmp (array-like): A copy of the input data with imputed missing values.
+        - X_tmp (array-like): Imputed data. May reuse input storage when copy=False.
         """
         
-        # Check if fit is called
         check_is_fitted(self)
 
         X = self._validate_input(X, reset=False)
 
         original = X
+        # Capture missingness before any in-place imputation.
+        indicators = (
+            None
+            if self.indicator_ is None
+            else self.indicator_.transform(original)
+        )
+
         if not self.valid_features_.all():
             X = X[:, self.valid_features_]
         if X.shape[1] == 0:
-            return self._format_output(X.copy(), original)
+            return self._format_output(
+                self._copy_or_reuse(X), original, indicators
+            )
 
         if self.donor_policy_ == "available":
             imputed = self._transform_available(X)
-            return self._format_output(imputed, original)
+            return self._format_output(imputed, original, indicators)
 
-        # Copy X to avoid modifying the original data
-        X_tmp = X.copy()
-
-        # Find the missing values
+        X_tmp = self._copy_or_reuse(X)
         missing_mask = np.isnan(X)
 
         # Group rows that have the same observed columns.
@@ -621,7 +634,7 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 ).reshape(len(rows), missing_cols.size)
                 X_tmp[np.ix_(rows, missing_cols)] = aggregates
 
-        return self._format_output(X_tmp, original)
+        return self._format_output(X_tmp, original, indicators)
 
     def _transform_available(self, X):
         try:
@@ -630,10 +643,11 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             self.available_index_.clear_cache()
 
     def _transform_available_batched(self, X):
-        result = X.copy()
+        result = self._copy_or_reuse(X)
         missing = np.isnan(X)
-        result[missing] = np.broadcast_to(self.statistics_, X.shape)[missing]
-        rows = np.flatnonzero(missing.any(axis=1) & ~missing.all(axis=1))
+        all_missing = missing.all(axis=1)
+        result[all_missing] = self.statistics_
+        rows = np.flatnonzero(missing.any(axis=1) & ~all_missing)
         n_donors = self.donors_.shape[0]
         k = min(int(self.n_neighbors), n_donors)
         required = np.minimum(k, self.available_index_.donor_counts)
@@ -646,6 +660,9 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             batch_missing = missing[batch_rows]
             columns = np.flatnonzero(batch_missing.any(axis=0))
             queries = np.ascontiguousarray(X[batch_rows], dtype=np.float32)
+            result[batch_rows] = np.where(
+                batch_missing, self.statistics_, queries
+            )
             search_k = min(n_donors, max(16, 2 * k))
 
             while True:
