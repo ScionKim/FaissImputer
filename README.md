@@ -1,12 +1,12 @@
 # FaissImputer
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/LICENSE)
 
 Nearest-neighbor imputation with Faiss-backed search, scikit-learn pipelines,
 feature names, and optional pandas output.
 
-Current release: [0.3.16](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.16).
+Current release: [0.3.17](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.17).
 
 > FaissImputer 0.1.x has a known neighbor-mapping bug and is incompatible
 > with scikit-learn 1.8+. Use version 0.2.0 or newer.
@@ -16,7 +16,7 @@ Current release: [0.3.16](https://github.com/ScionKim/FaissImputer/releases/tag/
 Requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.16"
+python -m pip install --upgrade "faiss-imputer>=0.3.17"
 ```
 
 ## Quick start
@@ -37,8 +37,9 @@ By default, inputs are preserved and output is a NumPy array.
 Query arrays retain their `float32` or `float64` dtype.
 For partially observed training data, use `donor_policy="available"`.
 
-See [usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/usage.md)
-for partial donors, missing indicators, custom markers, and pandas pipelines.
+See [usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/usage.md)
+for partial donors, missing indicators, custom markers, callable metrics,
+and pandas pipelines.
 
 ## Choosing a donor policy
 
@@ -47,10 +48,11 @@ for partial donors, missing indicators, custom markers, and pandas pipelines.
 | `"complete"` (default) | Uses rows observed in every non-empty training column. Requires at least `n_neighbors` such rows when non-empty columns exist. |
 | `"available"` | Allows partially observed rows. Selects eligible donors separately for each missing feature and permits fewer than `n_neighbors` usable donors. |
 
-Available mode requires `index_factory="Flat"` and either `metric="l2"`
-or `metric="nan_euclidean"`. A donor must observe the target feature and
-share an observed feature with the query. If no usable neighbor exists,
-the fitted column statistic supplies the value.
+Available mode requires `index_factory="Flat"` and `metric="l2"`,
+`metric="nan_euclidean"`, or a callable. Donors must observe the target
+feature and have a defined distance to the query. Built-in L2 metrics
+require a shared observed feature. If no usable donor exists, the fitted
+column statistic supplies the value.
 
 ## Comparison with KNNImputer
 
@@ -59,9 +61,9 @@ The comparison below describes FaissImputer 0.3.15.
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
 | Defaults | 3 neighbors, complete donors | 5 neighbors, donors selected per feature |
-| Aggregation | Mean or median; weights supported with mean and L2 metrics | Weighted mean |
-| Precision | Preserves `float32` and `float64` donor values and imputation output; complete-donor search uses `float32` vectors. | Supports floating inputs including `float64` |
-| Metrics | `"l2"`, its `"nan_euclidean"` alias, and `"ip"` in complete mode | `"nan_euclidean"` or a callable |
+| Aggregation | Mean or median; non-uniform weights with mean and L2 or callable metrics | Weighted mean |
+| Precision | Preserves `float32` and `float64` values; complete-donor search with built-in metrics uses `float32` vectors | Supports floating inputs including `float64` |
+| Metrics | `"l2"`, its `"nan_euclidean"` alias, `"ip"` in complete mode, and callables under both donor policies | `"nan_euclidean"` or a callable |
 | Missing markers | `NaN` or a finite numeric marker, matched before dtype conversion | Configurable `missing_values` |
 
 Both provide missing indicators, empty-feature retention, and a `copy` option.
@@ -90,12 +92,14 @@ imputed values; search precision, distance calculations, and ties matter.
 | `missing_values` | `np.nan` |
 | `copy` | `True` |
 
-Distance and callable weights require `strategy="mean"` and either
-`metric="l2"` or `metric="nan_euclidean"`.
+Distance and callable weights require `strategy="mean"` and
+`metric="l2"`, `metric="nan_euclidean"`, or a callable metric.
+Callable metrics require `index_factory="Flat"` and evaluate donors
+directly in Python, which can be slower than built-in metrics.
 
 </details>
 
-See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/api.md)
+See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/api.md)
 for accepted values, output rules, and edge cases.
 
 ## Important behavior
@@ -151,8 +155,8 @@ for detailed conditions, quality comparisons, and historical experiments.
 
 ## Documentation
 
-- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/api.md)
-- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/docs/usage.md)
+- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/api.md)
+- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/usage.md)
 - [Real-data comparison](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/docs/benchmarks/real-data-a3bd1ce3.md)
 - [Example notebook](https://github.com/ScionKim/FaissImputer/blob/v0.3.0/notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb)
 - [Roadmap](https://github.com/ScionKim/FaissImputer/blob/main/ROADMAP.md)
@@ -168,7 +172,7 @@ Author: [ScionKim](https://github.com/ScionKim).
 ## License
 
 This project is licensed under the
-[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.16/LICENSE).
+[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/LICENSE).
 
 Faiss is developed by Meta and distributed under the
 [MIT License](https://github.com/facebookresearch/faiss/blob/main/LICENSE).
