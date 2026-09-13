@@ -1,12 +1,12 @@
 # FaissImputer
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.18/LICENSE)
 
 Nearest-neighbor imputation with Faiss-backed search, scikit-learn pipelines,
 feature names, and optional pandas output.
 
-Current release: [0.3.17](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.17).
+Current release: [0.3.18](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.18).
 
 > FaissImputer 0.1.x has a known neighbor-mapping bug and is incompatible
 > with scikit-learn 1.8+. Use version 0.2.0 or newer.
@@ -16,7 +16,7 @@ Current release: [0.3.17](https://github.com/ScionKim/FaissImputer/releases/tag/
 Requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.17"
+python -m pip install --upgrade "faiss-imputer>=0.3.18"
 ```
 
 ## Quick start
@@ -37,7 +37,7 @@ By default, inputs are preserved and output is a NumPy array.
 Query arrays retain their `float32` or `float64` dtype.
 For partially observed training data, use `donor_policy="available"`.
 
-See [usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/usage.md)
+See [usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.18/docs/usage.md)
 for partial donors, missing indicators, custom markers, callable metrics,
 and pandas pipelines.
 
@@ -99,7 +99,7 @@ directly in Python, which can be slower than built-in metrics.
 
 </details>
 
-See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/benchmarks/api.md)
+See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.18/docs/benchmarks/api.md)
 for accepted values, output rules, and edge cases.
 
 ## Important behavior
@@ -155,8 +155,8 @@ for detailed conditions, quality comparisons, and historical experiments.
 
 ## Documentation
 
-- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/benchmarks/api.md)
-- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/docs/benchmarks/usage.md)
+- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.18/docs/benchmarks/api.md)
+- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.18/docs/benchmarks/usage.md)
 - [Real-data comparison](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/docs/benchmarks/real-data-a3bd1ce3.md)
 - [Example notebook](https://github.com/ScionKim/FaissImputer/blob/v0.3.0/notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb)
 - [Roadmap](https://github.com/ScionKim/FaissImputer/blob/main/ROADMAP.md)
@@ -172,7 +172,7 @@ Author: [ScionKim](https://github.com/ScionKim).
 ## License
 
 This project is licensed under the
-[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.17/LICENSE).
+[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.18/LICENSE).
 
 Faiss is developed by Meta and distributed under the
 [MIT License](https://github.com/facebookresearch/faiss/blob/main/LICENSE).
