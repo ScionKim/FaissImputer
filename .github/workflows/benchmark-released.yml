@@ -16,9 +16,6 @@ jobs:
         shell: bash
 
     env:
-      CURRENT_ENV: ${{ runner.temp }}/faiss-current
-      PREVIOUS_ENV: ${{ runner.temp }}/faiss-previous
-      BENCHMARK_DIR: ${{ runner.temp }}/released-benchmark
       PYTHONNOUSERSITE: "1"
       PYTHONHASHSEED: "0"
       PYTHONPATH: ""
@@ -39,7 +36,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
+          
+      - name: Set benchmark paths
+        run: |
+          echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current" >> "$GITHUB_ENV"
+          echo "PREVIOUS_ENV=$RUNNER_TEMP/faiss-previous" >> "$GITHUB_ENV"
+          echo "BENCHMARK_DIR=$RUNNER_TEMP/released-benchmark" >> "$GITHUB_ENV"
+          
       - name: Install releases with matching dependencies
         run: |
           mkdir -p "$GITHUB_WORKSPACE/benchmark_outputs"
