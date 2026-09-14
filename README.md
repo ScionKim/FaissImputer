@@ -120,53 +120,42 @@ for accepted values, output rules, and edge cases.
   A failed fit or refit clears the fitted state.
 
 ## Benchmarks
-### Released-version comparison: 0.3.19
 
-In a single-threaded synthetic benchmark with 20,000 training rows,
-300 queries, and 20 features, FaissImputer 0.3.19 achieved 1.17–1.82×
-KNNImputer's speed for fit plus the first transform across complete and
-available donor policies with float32 and float64 inputs.
+Released **FaissImputer 0.3.19** was compared with **KNNImputer from
+scikit-learn 1.9.1** on an Intel Xeon Platinum 8370C runner using one thread,
+20,000 training rows, 300 queries, 20 features, five neighbors, and
+uniform-weight mean aggregation.
+
+Complete-policy cases used fully observed training data; available-policy
+cases used 10% MCAR training missingness. Queries used random missingness
+patterns.
+
+Times below are **fit plus first-transform medians** across three seeds
+and three fresh workers per seed. Speedup is the ratio of those medians.
+
+| Donor policy | Input dtype | KNNImputer | FaissImputer 0.3.19 | Speedup |
+| --- | --- | ---: | ---: | ---: |
+| complete | float32 | 341.65 ms | 187.46 ms | 1.82× |
+| complete | float64 | 447.28 ms | 256.22 ms | 1.75× |
+| available | float32 | 320.26 ms | 272.82 ms | 1.17× |
+| available | float64 | 415.43 ms | 291.41 ms | 1.43× |
 
 Outputs matched FaissImputer 0.3.16 exactly, and median combined times
 differed by less than 0.5%. Compared with KNNImputer, peak process RSS
 was 36–39% lower in complete mode and 7–23% higher in available mode.
+All 108 workers passed their output checks.
+
+These results describe this synthetic workload and hardware.
+Performance and memory usage vary with data size, missingness, and settings.
 
 [Full report and conditions](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.19.md)
 · [Raw results](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.19.json)
 
-### Historical measurements: 0.3.10
+Historical **0.3.10** measurements:
+[AMD results](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34297607304.json)
+· [Intel training-size sweep](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34310124369.json)
+· [Benchmark reports](https://github.com/ScionKim/FaissImputer/tree/main/docs/benchmarks)
 
-The following historical measurements compare **PyPI FaissImputer 0.3.10**
-with **KNNImputer from scikit-learn 1.9.0**.
-
-The AMD runner used one thread, 20,000 training rows, 300 queries,
-20 features, five neighbors, and uniform-weight mean aggregation.
-Each query had four missing features. Complete-mode training data was
-fully observed; available-mode training data had approximately 10% MCAR
-missingness.
-
-Times are first-transform medians across three seeds and three fresh runs
-per seed, excluding fit time.
-
-| Donor policy | Query missingness | KNNImputer | FaissImputer | Speedup |
-| --- | --- | ---: | ---: | ---: |
-| complete | One shared pattern | 422.4 ms | 22.0 ms | 19.24× |
-| complete | Random patterns | 409.8 ms | 107.2 ms | 3.82× |
-| available | One shared pattern | 391.4 ms | 166.2 ms | 2.35× |
-| available | Random patterns | 385.6 ms | 167.5 ms | 2.30× |
-
-[AMD results and environment](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34297607304.json)
-
-Performance varies with workload. A separate Intel training-size sweep
-included a slower case: complete mode with random query patterns at
-1,000 training rows achieved **0.71×** KNNImputer's speed. Memory advantages
-also varied with data size.
-
-[Intel results and environment](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34310124369.json)
-
-These measurements apply to 0.3.10 and the recorded hardware and workloads.
-See the [benchmark reports](https://github.com/ScionKim/FaissImputer/tree/main/docs/benchmarks)
-for detailed conditions, quality comparisons, and historical experiments.
 
 ## Documentation
 
