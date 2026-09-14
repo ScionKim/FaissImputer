@@ -120,6 +120,21 @@ for accepted values, output rules, and edge cases.
   A failed fit or refit clears the fitted state.
 
 ## Benchmarks
+### Released-version comparison: 0.3.19
+
+In a single-threaded synthetic benchmark with 20,000 training rows,
+300 queries, and 20 features, FaissImputer 0.3.19 achieved 1.17–1.82×
+KNNImputer's speed for fit plus the first transform across complete and
+available donor policies with float32 and float64 inputs.
+
+Outputs matched FaissImputer 0.3.16 exactly, and median combined times
+differed by less than 0.5%. Compared with KNNImputer, peak process RSS
+was 36–39% lower in complete mode and 7–23% higher in available mode.
+
+[Full report and conditions](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.19.md)
+· [Raw results](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.19.json)
+
+### Historical measurements: 0.3.10
 
 The following historical measurements compare **PyPI FaissImputer 0.3.10**
 with **KNNImputer from scikit-learn 1.9.0**.
