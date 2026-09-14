@@ -90,7 +90,7 @@ def test_prepared_distances_match_direct_reference(
 
 
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
-def test_shared_feature_counts_above_255():
+def test_shared_feature_counts_above_255(dtype):
     donors = np.ones((4, 257), dtype=dtype)
     donors[1, -1] = np.nan
     donors[2] = np.nan
