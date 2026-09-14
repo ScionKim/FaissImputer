@@ -31,6 +31,8 @@ CPU: Intel Xeon Platinum 8573C. One thread, three repeats; 12/12 cases succeeded
 Source revision: `ec16e7f72833bcc6806dfa7b3fa3f847b1a7b44c`.
 Output: `available_batches.json`.
 
+[Archived raw results: 500,000 training rows](../../benchmarks/results/available-batches-500k.json).
+
 | Method | Median total (s) | Peak RSS (MiB) | Query rows per batch |
 |---|---:|---:|---:|
 | KNNImputer | 11.595 | 787.7 | N/A |
@@ -48,6 +50,8 @@ This is a single-run pilot, not a repeated timing estimate.
 
 Source revision: `94c152a91e6437f399e46bd9f2a1bfe95386e452`.
 Output: `available_batches.json` from this separate run.
+
+[Archived raw results: 1,000,000 training rows](../../benchmarks/results/available-batches-1m.json).
 
 | Method | Total (s) | Peak RSS (MiB) | Query rows per batch |
 |---|---:|---:|---:|
@@ -67,6 +71,8 @@ CPU: AMD EPYC 7763. Three repeats per method and thread count;
 
 Source revision: `90c8cfb81f1b1771bfdd052e84eafc6ab7b73e90`.
 Output: `available_threads.json`.
+
+[Archived raw results: 500,000-row thread comparison](../../benchmarks/results/available-threads-500k.json).
 
 | Threads | KNN total (s) | 128 MiB total (s) | KNN peak RSS (MiB) | 128 MiB peak RSS (MiB) |
 |---|---:|---:|---:|---:|
