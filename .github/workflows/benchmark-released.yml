@@ -1,0 +1,105 @@
+name: Released version benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      CURRENT_ENV: ${{ runner.temp }}/faiss-current
+      PREVIOUS_ENV: ${{ runner.temp }}/faiss-previous
+      BENCHMARK_DIR: ${{ runner.temp }}/released-benchmark
+      PYTHONNOUSERSITE: "1"
+      PYTHONHASHSEED: "0"
+      PYTHONPATH: ""
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Check out benchmark source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install releases with matching dependencies
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/benchmark_outputs"
+
+          python -m venv "$CURRENT_ENV"
+          python -m venv "$PREVIOUS_ENV"
+
+          "$CURRENT_ENV/bin/python" -m pip install \
+            --only-binary=:all: \
+            "faiss-imputer==0.3.19"
+
+          "$CURRENT_ENV/bin/python" -m pip freeze \
+            --exclude faiss-imputer \
+            > "$GITHUB_WORKSPACE/benchmark_outputs/shared-dependencies.txt"
+
+          "$PREVIOUS_ENV/bin/python" -m pip install \
+            --only-binary=:all: \
+            -r "$GITHUB_WORKSPACE/benchmark_outputs/shared-dependencies.txt"
+
+          "$PREVIOUS_ENV/bin/python" -m pip install \
+            --only-binary=:all: \
+            --no-deps \
+            "faiss-imputer==0.3.16"
+
+          "$CURRENT_ENV/bin/python" -m pip check
+          "$PREVIOUS_ENV/bin/python" -m pip check
+
+          "$CURRENT_ENV/bin/python" -m pip freeze \
+            > "$GITHUB_WORKSPACE/benchmark_outputs/current-environment.txt"
+
+          "$PREVIOUS_ENV/bin/python" -m pip freeze \
+            > "$GITHUB_WORKSPACE/benchmark_outputs/previous-environment.txt"
+
+      - name: Prepare benchmark outside the checkout
+        run: |
+          mkdir -p "$BENCHMARK_DIR"
+          cp -R "$GITHUB_WORKSPACE/benchmarks" "$BENCHMARK_DIR/benchmarks"
+
+      - name: Run sequential release comparison
+        working-directory: ${{ env.BENCHMARK_DIR }}
+        run: |
+          "$CURRENT_ENV/bin/python" -u \
+            -m benchmarks.benchmark_released_versions \
+            --previous-python "$PREVIOUS_ENV/bin/python" \
+            --previous-version 0.3.16 \
+            --current-version 0.3.19 \
+            --train-size 20000 \
+            --queries 300 \
+            --seeds 101 202 303 \
+            --repeats 3 \
+            --repeated-transforms 2 \
+            --timeout-seconds 180 \
+            --budget-seconds 1200 \
+            --output "$GITHUB_WORKSPACE/benchmark_outputs/released_versions.json"
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: released-versions-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmark_outputs/
+          if-no-files-found: warn
+          retention-days: 30
