@@ -59,10 +59,17 @@ def check_released_package(expected_version):
         )
 
 
-def make_data(size, queries, seed, pattern, training_policy="partial"):
-    """Fixed-size blocks and independent streams preserve training prefixes."""
+def make_data(
+    size, queries, seed, pattern,
+    training_policy="partial", dtype="float32",
+):
+    """Fixed-size blocks preserve prefixes; convert only to the target dtype."""
     if training_policy not in ("partial", "complete", "available"):
         raise ValueError(f"Unknown training policy: {training_policy}")
+
+    dtype = np.dtype(dtype)
+    if dtype not in (np.dtype("float32"), np.dtype("float64")):
+        raise ValueError("dtype must be float32 or float64")
 
     loadings = np.random.default_rng([seed, 0]).normal(size=(5, FEATURES))
     scale = np.sqrt(np.sum(loadings * loadings, axis=0) + 0.15 ** 2)
@@ -71,12 +78,14 @@ def make_data(size, queries, seed, pattern, training_policy="partial"):
         latent_rng = np.random.default_rng([seed, latent_tag])
         noise_rng = np.random.default_rng([seed, noise_tag])
         mask_rng = np.random.default_rng([seed, 5])
-        output = np.empty((rows, FEATURES), dtype=np.float32)
+        output = np.empty((rows, FEATURES), dtype=dtype)
         block_size = 16384
         for start in range(0, rows, block_size):
             latent = latent_rng.normal(size=(block_size, 5))
             noise = noise_rng.normal(size=(block_size, FEATURES))
-            block = ((latent @ loadings + 0.15 * noise) / scale).astype(np.float32)
+            block = (
+                (latent @ loadings + 0.15 * noise) / scale
+            ).astype(dtype)
             if missing_rate:
                 block[mask_rng.random(block.shape) < missing_rate] = np.nan
             count = min(block_size, rows - start)
@@ -113,30 +122,46 @@ def peak_rss_mib():
     import resource
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
 
+def current_rss_mib():
+    """Current process RSS on Linux; includes allocator-retained memory."""
+    if sys.platform != "linux":
+        return None
+    try:
+        resident_pages = int(
+            Path("/proc/self/statm").read_text().split()[1]
+        )
+        return resident_pages * os.sysconf("SC_PAGE_SIZE") / (1024 ** 2)
+    except (OSError, ValueError, IndexError):
+        return None
 
 def worker(config):
     check_released_package(config.get("expected_version"))
     train, query, truth, missing = make_data(
         config["size"], config["queries"], config["seed"], config["pattern"],
         config.get("training_policy", "partial"),
+        dtype=config.get("dtype", "float32"),
     )
+    train_hash = digest(train)
     fingerprints = {
+        "train": train_hash,
         "query": digest(query),
         "truth": digest(truth),
         "prefixes": {
             str(size): digest(train[:size])
-            for size in config["prefix_sizes"] if size <= len(train)
+            for size in config.get("prefix_sizes", [len(train)])
+            if size <= len(train)
         },
     }
-    train_hash = digest(train)
     query_before = query.copy()
     complete_donors = int((~np.isnan(train).any(axis=1)).sum())
     details = {
+        "input_dtype": str(query.dtype),
         "complete_donors": complete_donors,
         "train_missing_rate": float(np.isnan(train).mean()),
         "query_missing_rate": float(missing.mean()),
         "query_patterns": int(np.unique(missing, axis=0).shape[0]),
         "fingerprints": fingerprints,
+        "environment": metadata(),
     }
     if config["method"] == "FaissImputer[complete]" and complete_donors < NEIGHBORS:
         return {
@@ -147,13 +172,12 @@ def worker(config):
 
     def check_output(output):
         assert output.shape == query_before.shape
+        assert output.dtype == query_before.dtype
         assert np.isfinite(output).all()
         assert not np.shares_memory(output, query)
         np.testing.assert_array_equal(output[~missing], query_before[~missing])
         np.testing.assert_array_equal(query, query_before)
         assert digest(train) == train_hash
-        if config["method"].startswith("FaissImputer"):
-            assert output.dtype == np.float32
 
     threads = config["threads"]
     faiss.omp_set_num_threads(threads)
@@ -162,7 +186,7 @@ def worker(config):
     ):
         warm_train = np.random.default_rng(7).normal(
             size=(32, FEATURES)
-        ).astype(np.float32)
+        ).astype(train.dtype)
         warm_query = warm_train[:8].copy()
         warm_query[:, :4] = np.nan
         make_model(config["method"]).fit(warm_train).transform(warm_query)
@@ -175,10 +199,17 @@ def worker(config):
         ]
         model = make_model(config["method"])
         gc.collect()
+        rss_before_fit = current_rss_mib()
 
         started = time.perf_counter()
         model.fit(train)
         fitted = time.perf_counter()
+
+        # Memory sampling and collection are outside the timed phases.
+        gc.collect()
+        rss_after_fit = current_rss_mib()
+
+        transform_started = time.perf_counter()
         output = model.transform(query)
         finished = time.perf_counter()
 
@@ -194,17 +225,26 @@ def worker(config):
 
         actual_faiss_threads = int(faiss.omp_get_max_threads())
 
+    fit_seconds = fitted - started
+    transform_seconds = finished - transform_started
     values = first_output[missing].astype(np.float64)
     errors = values - truth[missing].astype(np.float64)
     return {
         "status": "ok",
         **details,
-        "fit_seconds": fitted - started,
-        "transform_seconds": finished - fitted,
-        "total_seconds": finished - started,
+        "fit_seconds": fit_seconds,
+        "transform_seconds": transform_seconds,
+        "total_seconds": fit_seconds + transform_seconds,
         "repeated_transform_seconds": repeated_times,
         "repeated_transform_median_seconds": (
             median(repeated_times) if repeated_times else None
+        ),
+        "rss_before_fit_mib": rss_before_fit,
+        "rss_after_fit_mib": rss_after_fit,
+        "fit_rss_change_mib": (
+            None
+            if rss_before_fit is None or rss_after_fit is None
+            else rss_after_fit - rss_before_fit
         ),
         "worker_peak_rss_mib": peak_rss_mib(),
         "threadpools": pools,
@@ -396,6 +436,10 @@ def main():
             "Memory is full-worker lifetime peak RSS, including imports, inputs, "
             "generation, warmup, validation and repeated transforms.",
             "Worker peak RSS is not retained fitted memory or a phase-specific peak.",
+            "Post-fit RSS change includes allocator effects and is not an exact "
+            "measurement of fitted model storage.",
+            "Fit and transform timings exclude the RSS sampling and garbage "
+            "collection performed between those phases.",
             "sklearn working_memory is a distance-chunk setting, not a process RAM cap.",
             "Timeout includes the entire worker; killed-worker peak memory is unavailable.",
             "Errors, timeouts and unrun cases remain in the results.",
