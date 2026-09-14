@@ -2,7 +2,7 @@
 
 This reference describes FaissImputer 0.3.17.
 
-See the [README](../../README.md) for installation and a quick start, or
+See the [README](../README.md) for installation and a quick start, or
 [usage examples](usage.md) for complete examples.
 
 ## Constructor

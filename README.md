@@ -37,7 +37,7 @@ By default, inputs are preserved and output is a NumPy array.
 Query arrays retain their `float32` or `float64` dtype.
 For partially observed training data, use `donor_policy="available"`.
 
-See [usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.19/docs/usage.md)
+See [usage examples](https://github.com/ScionKim/FaissImputer/blob/main/docs/usage.md)
 for partial donors, missing indicators, custom markers, callable metrics,
 and pandas pipelines.
 
@@ -99,7 +99,7 @@ directly in Python, which can be slower than built-in metrics.
 
 </details>
 
-See the [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.19/docs/benchmarks/api.md)
+See the [API reference](https://github.com/ScionKim/FaissImputer/blob/main/docs/api.md)
 for accepted values, output rules, and edge cases.
 
 ## Important behavior
@@ -152,15 +152,15 @@ Performance and memory usage vary with data size, missingness, and settings.
 · [Raw results](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.19.json)
 
 Historical **0.3.10** measurements:
-[AMD results](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34297607304.json)
-· [Intel training-size sweep](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/scaling-threads-34310124369.json)
-· [Benchmark reports](https://github.com/ScionKim/FaissImputer/tree/main/docs/benchmarks)
+[AMD comparison](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.10.md#amd-runner)
+· [Intel training-size comparison](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.10.md#intel-runner)
+· [All benchmark reports](https://github.com/ScionKim/FaissImputer/tree/main/docs/benchmarks)
 
 
 ## Documentation
 
-- [API reference](https://github.com/ScionKim/FaissImputer/blob/v0.3.19/docs/benchmarks/api.md)
-- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/v0.3.19/docs/benchmarks/usage.md)
+- [API reference](https://github.com/ScionKim/FaissImputer/blob/main/docs/api.md)
+- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/main/docs/usage.md)
 - [Real-data comparison](https://github.com/ScionKim/FaissImputer/blob/v0.3.10/docs/benchmarks/real-data-a3bd1ce3.md)
 - [Example notebook](https://github.com/ScionKim/FaissImputer/blob/v0.3.0/notebooks/Impute_Missing_Values_with_Faiss_Imputer.ipynb)
 - [Roadmap](https://github.com/ScionKim/FaissImputer/blob/main/ROADMAP.md)

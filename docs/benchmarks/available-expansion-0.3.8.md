@@ -10,7 +10,7 @@ and process peak memory.
 - Baseline: v0.3.7, commit `d7d9cd5f98c3154084de8e90cbb1118f309508cd`.
 - Candidate: v0.3.8, commit `099c94107839a4bf6d3811f39541ed609530ed20`.
 - [GitHub Actions run](https://github.com/ScionKim/FaissImputer/actions/runs/34087296146).
-- [Archived raw results](paired-available-expansion-34087296146-1.zip).
+- [Archived raw results](../../benchmarks/results/paired-available-expansion-34087296146-1.zip).
 - [Measured workflow](https://github.com/ScionKim/FaissImputer/blob/723a892d4e1de1f6616781e9ce7cd50aad154f38/.github/workflows/paired-available-expansion.yml).
 
 The archive contains individual measurements and outputs, comparison tables,
