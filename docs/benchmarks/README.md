@@ -55,6 +55,11 @@ change.
 
 ## Unreleased candidate benchmarks
 
+- [Available-donor search memory (`7c62738b`)](available-distance-memory-7c62738b.md):
+  Compared with the earlier candidate `94adbf66`, peak process RSS decreased
+  by approximately 13% and transform time by 13–15% in the measured workload,
+  with identical imputation outputs.
+
 - [Available-donor distance buffers (`94adbf66`)](available-distance-buffers-94adbf66.md):
   Compared with released 0.3.19, available-donor transform time decreased
   by 38–41% in the measured workload, with identical imputation outputs.
