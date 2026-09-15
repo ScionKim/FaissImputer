@@ -1,12 +1,12 @@
 # FaissImputer
 
 [![PyPI Version](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
-[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.19/LICENSE)
+[![License](https://img.shields.io/pypi/l/faiss-imputer.svg)](https://github.com/ScionKim/FaissImputer/blob/v0.3.20/LICENSE)
 
 Nearest-neighbor imputation with Faiss-backed search, scikit-learn pipelines,
 feature names, and optional pandas output.
 
-Current release: [0.3.19](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.19).
+Current release: [0.3.20](https://github.com/ScionKim/FaissImputer/releases/tag/v0.3.20).
 
 > FaissImputer 0.1.x has a known neighbor-mapping bug and is incompatible
 > with scikit-learn 1.8+. Use version 0.2.0 or newer.
@@ -16,7 +16,7 @@ Current release: [0.3.19](https://github.com/ScionKim/FaissImputer/releases/tag/
 Requires Python 3.10 or newer.
 
 ```bash
-python -m pip install --upgrade "faiss-imputer>=0.3.19"
+python -m pip install --upgrade "faiss-imputer>=0.3.20"
 ```
 
 ## Quick start
@@ -56,7 +56,7 @@ column statistic supplies the value.
 
 ## Comparison with KNNImputer
 
-The comparison below describes FaissImputer 0.3.19.
+The comparison below describes FaissImputer 0.3.20.
 
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
@@ -121,12 +121,14 @@ for accepted values, output rules, and edge cases.
 
 ## Benchmarks
 
-### Development candidate — unreleased
+### Optimizations included in 0.3.20
 
 **50–54% less transform time and 13.0–14.5% lower peak memory than PyPI 0.3.19.**
 
-Candidate `b8e5a0f3` combines both available-donor optimizations.
-These improvements are not yet included in the current PyPI release.
+FaissImputer 0.3.20 includes both optimizations for `donor_policy="available"`
+with the built-in metrics `metric="l2"` and `metric="nan_euclidean"`.
+The results below were measured on source candidate `b8e5a0f3`
+before release.
 
 The comparison used an AMD EPYC 9V74 runner, one native thread,
 20,000 training rows, 300 queries, 20 features, five neighbors, and
@@ -186,7 +188,7 @@ Author: [ScionKim](https://github.com/ScionKim).
 ## License
 
 This project is licensed under the
-[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.19/LICENSE).
+[MIT License](https://github.com/ScionKim/FaissImputer/blob/v0.3.20/LICENSE).
 
 Faiss is developed by Meta and distributed under the
 [MIT License](https://github.com/facebookresearch/faiss/blob/main/LICENSE).

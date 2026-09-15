@@ -1,6 +1,6 @@
 # Usage examples
 
-These examples describe FaissImputer 0.3.17.
+These examples describe FaissImputer 0.3.20.
 
 [README](../README.md) · [API reference](api.md)
 

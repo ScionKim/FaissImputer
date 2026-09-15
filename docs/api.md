@@ -1,6 +1,6 @@
 # API reference
 
-This reference describes FaissImputer 0.3.17.
+This reference describes FaissImputer 0.3.20.
 
 See the [README](../README.md) for installation and a quick start, or
 [usage examples](usage.md) for complete examples.
@@ -358,8 +358,14 @@ index. Input feature order must agree with the fitted schema.
 Float64 value arrays require more storage than float32 arrays.
 
 Available mode with built-in L2 metrics retains prepared donor data and
-processes queries in batches. Batch limits do not bound total process
-memory.
+processes queries in batches. Distance corrections and shared-feature
+counts reuse a work buffer. Search-preparation masks and tolerances are
+computed in groups of query rows, and temporary preparation arrays are
+released before precise distance refinement.
+
+Distance matrices, the float32 selection cache, donor data, and cached
+refined distances still contribute to memory use. Internal batch limits
+do not bound total process memory.
 
 Callable metrics process one query at a time, evaluating every retained
 donor and storing a distance vector for that query. They do not allocate

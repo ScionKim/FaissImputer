@@ -53,7 +53,7 @@ definitions before drawing conclusions across reports. Results from
 different environments do not establish a version-to-version performance
 change.
 
-## Unreleased candidate benchmarks
+## Development benchmarks
 
 - [Combined available-donor optimizations (`b8e5a0f3`)](available-optimizations-b8e5a0f3.md):
   Direct comparison with PyPI 0.3.19 showed 50–54% less transform time
