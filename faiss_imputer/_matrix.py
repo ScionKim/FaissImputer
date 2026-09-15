@@ -32,7 +32,7 @@ class MatrixNaNIndex:
         self.clear_cache()
 
     def _prepared_distances(self, queries):
-        X = queries.copy()
+        X = np.array(queries, dtype=np.float64, order="C", copy=True)
         missing_X = np.isnan(X)
         X[missing_X] = 0.0
         norms = self.zero_norms if np.isfinite(self.zero_norms).all() else None
@@ -44,14 +44,26 @@ class MatrixNaNIndex:
                 squared=True,
                 Y_norm_squared=norms,
             )
-            XX = X * X
-            distances -= np.dot(XX, self.missing_donors.T)
-            distances -= np.dot(missing_X, self.squared_donors.T)
+
+            # Reuse one query-by-donor buffer for both corrections
+            # and the shared-feature counts.
+            workspace = np.empty(distances.shape, dtype=np.float64)
+
+            np.dot(X * X, self.missing_donors.T, out=workspace)
+            distances -= workspace
+
+            np.dot(missing_X, self.squared_donors.T, out=workspace)
+            distances -= workspace
             np.clip(distances, 0, None, out=distances)
-            present_count = np.dot(1 - missing_X, self.present.T)
-            distances[present_count == 0] = np.nan
-            np.maximum(1, present_count, out=present_count)
-            distances /= present_count
+
+            # Floating-point matrix multiplication avoids the integer
+            # dot-product path when counting shared observed features.
+            present_X = (~missing_X).astype(np.float64)
+            np.dot(present_X, self.present.T, out=workspace)
+
+            distances[workspace == 0] = np.nan
+            np.maximum(1.0, workspace, out=workspace)
+            distances /= workspace
             distances *= self.n_features
 
         return distances

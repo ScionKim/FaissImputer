@@ -56,7 +56,7 @@ column statistic supplies the value.
 
 ## Comparison with KNNImputer
 
-The comparison below describes FaissImputer 0.3.15.
+The comparison below describes FaissImputer 0.3.19.
 
 | Behavior | FaissImputer | KNNImputer |
 | --- | --- | --- |
@@ -121,40 +121,48 @@ for accepted values, output rules, and edge cases.
 
 ## Benchmarks
 
-Released **FaissImputer 0.3.19** was compared with **KNNImputer from
-scikit-learn 1.9.1** on an Intel Xeon Platinum 8370C runner using one thread,
+### Development candidate — unreleased
+
+The available-donor optimization reduced transform time by **38–41%
+compared with released FaissImputer 0.3.19**. The candidate was also
+**3.90–4.05× as fast as KNNImputer** in the same measured conditions.
+
+These results describe candidate commit `94adbf66`. This optimization
+is not yet included in the current PyPI release.
+
+Measurements used an AMD EPYC 9V74 runner, one native thread,
 20,000 training rows, 300 queries, 20 features, five neighbors, and
-uniform-weight mean aggregation.
+uniform-weight mean aggregation. Available-policy training data had
+10% MCAR missingness; each query had four randomly selected missing features.
 
-Complete-policy cases used fully observed training data; available-policy
-cases used 10% MCAR training missingness. Queries used random missingness
-patterns.
+Times below are **first-transform medians, excluding fit**, across
+three seeds and three fresh workers per seed.
 
-Times below are **fit plus first-transform medians** across three seeds
-and three fresh workers per seed. Speedup is the ratio of those medians.
+| Available-donor dtype | KNNImputer 1.9.1 | FaissImputer 0.3.19 | Candidate | Time reduction vs 0.3.19 |
+| --- | ---: | ---: | ---: | ---: |
+| float32 | 387.73 ms | 167.95 ms | **99.39 ms** | **40.8%** |
+| float64 | 449.20 ms | 180.13 ms | **110.95 ms** | **38.4%** |
 
-| Donor policy | Input dtype | KNNImputer | FaissImputer 0.3.19 | Speedup |
-| --- | --- | ---: | ---: | ---: |
-| complete | float32 | 341.65 ms | 187.46 ms | 1.82× |
-| complete | float64 | 447.28 ms | 256.22 ms | 1.75× |
-| available | float32 | 320.26 ms | 272.82 ms | 1.17× |
-| available | float64 | 415.43 ms | 291.41 ms | 1.43× |
+All 108 benchmark workers passed their checks. Candidate imputation
+outputs matched 0.3.19 exactly in every measured case. Including fit,
+available-policy total time decreased by **36.6–39.0%**.
+Complete-policy total time differed by less than 0.2%.
 
-Outputs matched FaissImputer 0.3.16 exactly, and median combined times
-differed by less than 0.5%. Compared with KNNImputer, peak process RSS
-was 36–39% lower in complete mode and 7–23% higher in available mode.
-All 108 workers passed their output checks.
+Peak process RSS decreased from 292.9 to 287.9 MiB for available float32
+and was essentially unchanged for available float64.
 
-These results describe this synthetic workload and hardware.
-Performance and memory usage vary with data size, missingness, and settings.
+These measurements describe this workload and runner; performance
+depends on data, settings, and hardware.
 
-[Full report and conditions](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.19.md)
-· [Raw results](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.19.json)
+[Full benchmark report, conditions, and raw results](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-distance-buffers-94adbf66.md)
 
-Historical **0.3.10** measurements:
-[AMD comparison](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.10.md#amd-runner)
-· [Intel training-size comparison](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.10.md#intel-runner)
-· [All benchmark reports](https://github.com/ScionKim/FaissImputer/tree/main/docs/benchmarks)
+### Published and historical measurements
+
+- [Released 0.3.19 versus 0.3.16 and KNNImputer](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.19.md)
+  — Intel runner; includes fit time, memory, and output comparisons.
+- [Historical 0.3.10 measurements](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.10.md)
+  — AMD comparison and Intel training-size sweep.
+- [All benchmark reports](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/README.md)
 
 
 ## Documentation

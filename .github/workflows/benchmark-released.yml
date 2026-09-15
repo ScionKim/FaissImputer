@@ -1,7 +1,16 @@
-name: Released version benchmark
+name: Version comparison benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Compare branch candidate or published releases
+        type: choice
+        required: false
+        default: candidate
+        options:
+          - candidate
+          - released
 
 permissions:
   contents: read
@@ -16,6 +25,7 @@ jobs:
         shell: bash
 
     env:
+      REQUESTED_MODE: ${{ inputs.mode }}
       PYTHONNOUSERSITE: "1"
       PYTHONHASHSEED: "0"
       PYTHONPATH: ""
@@ -36,23 +46,123 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          
-      - name: Set benchmark paths
+
+      - name: Set comparison mode and paths
         run: |
-          echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current" >> "$GITHUB_ENV"
-          echo "PREVIOUS_ENV=$RUNNER_TEMP/faiss-previous" >> "$GITHUB_ENV"
-          echo "BENCHMARK_DIR=$RUNNER_TEMP/released-benchmark" >> "$GITHUB_ENV"
-          
-      - name: Install releases with matching dependencies
-        run: |
+          comparison_mode="${REQUESTED_MODE:-candidate}"
+
+          case "$comparison_mode" in
+            candidate) previous_version="0.3.19" ;;
+            released) previous_version="0.3.16" ;;
+            *)
+              echo "Unknown comparison mode: $comparison_mode" >&2
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "COMPARISON_MODE=$comparison_mode"
+            echo "PREVIOUS_VERSION=$previous_version"
+            echo "CURRENT_VERSION=0.3.19"
+            echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current"
+            echo "PREVIOUS_ENV=$RUNNER_TEMP/faiss-previous"
+            echo "BUILD_ENV=$RUNNER_TEMP/faiss-build"
+            echo "BUILD_DIR=$RUNNER_TEMP/faiss-candidate-source"
+            echo "WHEEL_DIR=$RUNNER_TEMP/faiss-candidate-wheels"
+            echo "BENCHMARK_DIR=$RUNNER_TEMP/version-benchmark"
+          } >> "$GITHUB_ENV"
+
           mkdir -p "$GITHUB_WORKSPACE/benchmark_outputs"
 
+      - name: Build candidate wheel
+        if: env.COMPARISON_MODE == 'candidate'
+        run: |
+          python -m venv "$BUILD_ENV"
+          "$BUILD_ENV/bin/python" -m pip install "build>=1.2"
+
+          mkdir -p "$BUILD_DIR" "$WHEEL_DIR"
+          git archive HEAD | tar -x -C "$BUILD_DIR"
+
+          "$BUILD_ENV/bin/python" - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import tomllib
+          from pathlib import Path
+
+          from packaging.version import Version
+
+          project_path = Path(os.environ["BUILD_DIR"]) / "pyproject.toml"
+          source = project_path.read_text(encoding="utf-8")
+          declared_version = tomllib.loads(source)["project"]["version"]
+          source_sha = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], text=True
+          ).strip()
+          candidate_version = (
+              f"{Version(declared_version).public}+bench.{source_sha[:12]}"
+          )
+
+          lines = source.splitlines(keepends=True)
+          in_project = False
+          replacements = 0
+
+          for position, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("["):
+                  section = stripped.split("#", 1)[0].strip()
+                  in_project = section == "[project]"
+              elif in_project and re.match(r"^\s*version\s*=", line):
+                  lines[position] = f'version = "{candidate_version}"\n'
+                  replacements += 1
+
+          if replacements != 1:
+              raise RuntimeError(
+                  "Expected exactly one static version in [project]"
+              )
+
+          project_path.write_text("".join(lines), encoding="utf-8")
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"CURRENT_VERSION={candidate_version}\n")
+
+          provenance = {
+              "comparison_mode": "candidate",
+              "source_commit": source_sha,
+              "declared_version": declared_version,
+              "candidate_wheel_version": candidate_version,
+          }
+          destination = (
+              Path(os.environ["GITHUB_WORKSPACE"])
+              / "benchmark_outputs"
+              / "candidate-build.json"
+          )
+          destination.write_text(
+              json.dumps(provenance, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(f"Candidate wheel version: {candidate_version}")
+          PY
+
+          "$BUILD_ENV/bin/python" -m build \
+            --wheel \
+            --outdir "$WHEEL_DIR" \
+            "$BUILD_DIR"
+
+      - name: Install packages with matching dependencies
+        run: |
           python -m venv "$CURRENT_ENV"
           python -m venv "$PREVIOUS_ENV"
 
-          "$CURRENT_ENV/bin/python" -m pip install \
-            --only-binary=:all: \
-            "faiss-imputer==0.3.19"
+          if [[ "$COMPARISON_MODE" == "candidate" ]]; then
+            "$CURRENT_ENV/bin/python" -m pip install \
+              --only-binary=:all: \
+              "$WHEEL_DIR"/*.whl
+          else
+            "$CURRENT_ENV/bin/python" -m pip install \
+              --only-binary=:all: \
+              "faiss-imputer==$CURRENT_VERSION"
+          fi
 
           "$CURRENT_ENV/bin/python" -m pip freeze \
             --exclude faiss-imputer \
@@ -65,7 +175,7 @@ jobs:
           "$PREVIOUS_ENV/bin/python" -m pip install \
             --only-binary=:all: \
             --no-deps \
-            "faiss-imputer==0.3.16"
+            "faiss-imputer==$PREVIOUS_VERSION"
 
           "$CURRENT_ENV/bin/python" -m pip check
           "$PREVIOUS_ENV/bin/python" -m pip check
@@ -81,14 +191,14 @@ jobs:
           mkdir -p "$BENCHMARK_DIR"
           cp -R "$GITHUB_WORKSPACE/benchmarks" "$BENCHMARK_DIR/benchmarks"
 
-      - name: Run sequential release comparison
+      - name: Run sequential comparison
         working-directory: ${{ env.BENCHMARK_DIR }}
         run: |
           "$CURRENT_ENV/bin/python" -u \
             -m benchmarks.benchmark_released_versions \
             --previous-python "$PREVIOUS_ENV/bin/python" \
-            --previous-version 0.3.16 \
-            --current-version 0.3.19 \
+            --previous-version "$PREVIOUS_VERSION" \
+            --current-version "$CURRENT_VERSION" \
             --train-size 20000 \
             --queries 300 \
             --seeds 101 202 303 \
@@ -96,13 +206,13 @@ jobs:
             --repeated-transforms 2 \
             --timeout-seconds 180 \
             --budget-seconds 1200 \
-            --output "$GITHUB_WORKSPACE/benchmark_outputs/released_versions.json"
+            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison.json"
 
       - name: Upload benchmark results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: released-versions-${{ github.run_id }}-${{ github.run_attempt }}
+          name: version-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
           path: benchmark_outputs/
           if-no-files-found: warn
           retention-days: 30
