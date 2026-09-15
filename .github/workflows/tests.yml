@@ -39,5 +39,11 @@ jobs:
           .wheel-test/bin/python -m pip install dist/*.whl
           .wheel-test/bin/python -I scripts/smoke_test_installed_package.py
 
+      - name: Smoke test built sdist
+        run: |
+          python -m venv .sdist-test
+          .sdist-test/bin/python -m pip install dist/*.tar.gz
+          .sdist-test/bin/python -I scripts/smoke_test_installed_package.py
+
       - name: Run tests
         run: python -m pytest -q
