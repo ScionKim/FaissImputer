@@ -1,0 +1,71 @@
+name: Platform installation
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: ${{ matrix.os }} / Python 3.12
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: python -m pip install "build>=1.2"
+
+      - name: Build wheel
+        run: python -m build --wheel
+
+      - name: Smoke test installed wheel
+        shell: python {0}
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import venv
+
+          wheels = list(Path("dist").glob("*.whl"))
+          if len(wheels) != 1:
+              raise RuntimeError(f"Expected one wheel, found {len(wheels)}")
+
+          environment = Path(os.environ["RUNNER_TEMP"]) / "faiss-wheel-smoke"
+          venv.create(environment, with_pip=True)
+
+          executable = (
+              "Scripts/python.exe" if os.name == "nt" else "bin/python"
+          )
+          smoke_python = environment / executable
+
+          subprocess.run(
+              [
+                  str(smoke_python),
+                  "-m",
+                  "pip",
+                  "install",
+                  str(wheels[0].resolve()),
+              ],
+              check=True,
+          )
+          subprocess.run(
+              [
+                  str(smoke_python),
+                  "-I",
+                  str(Path("scripts/smoke_test_installed_package.py").resolve()),
+              ],
+              check=True,
+          )
