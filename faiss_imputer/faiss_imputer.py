@@ -594,6 +594,107 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         return vectors
 
+    def _repair_complete_l2_neighbors(
+        self, X, sample_indices, observed_cols,
+        distances, neighbors, donor_bounds,
+    ):
+        """Repair Flat L2 searches at unsafe float32 distance scales."""
+        queries = X[np.ix_(sample_indices, observed_cols)]
+        n_donors = len(self.donors_)
+        n_features = observed_cols.size
+        limits = np.finfo(np.float32)
+
+        repair = np.any(
+            (neighbors < 0)
+            | (neighbors >= n_donors)
+            | ~np.isfinite(distances)
+            | (distances < 0)
+            | ((distances > 0) & (distances < limits.tiny)),
+            axis=1,
+        )
+
+        # Leave room for squared norms, dot products, and subtraction.
+        scale_limit = np.sqrt(float(limits.max) / (8.0 * n_features))
+        if np.any(donor_bounds[observed_cols] > scale_limit):
+            repair[:] = True
+        else:
+            query_bounds = np.maximum(
+                np.abs(queries.min(axis=1)),
+                np.abs(queries.max(axis=1)),
+            )
+            repair |= query_bounds > scale_limit
+
+        # Bound donor-coordinate chunks, not total process memory.
+        chunk_size = max(
+            1, min(65536, (8 * 1024 * 1024) // (8 * n_features))
+        )
+
+        # A zero distance is safe only when the original coordinates match.
+        zero_rows = np.flatnonzero(
+            np.any(distances == 0, axis=1) & ~repair
+        )
+        for row in zero_rows:
+            zero_ids = neighbors[row, distances[row] == 0]
+            for start in range(0, len(zero_ids), chunk_size):
+                ids = zero_ids[start:start + chunk_size]
+                selected = self.donors_[np.ix_(ids, observed_cols)]
+                if np.any(selected != queries[row]):
+                    repair[row] = True
+                    break
+
+        if not repair.any():
+            return neighbors
+
+        repaired = neighbors.copy()
+        k = neighbors.shape[1]
+
+        for row in np.flatnonzero(repair):
+            query = queries[row].astype(np.float64)
+            best_ids = np.empty(0, dtype=np.int64)
+            best_distances = np.empty(0, dtype=np.float64)
+
+            for start in range(0, n_donors, chunk_size):
+                stop = min(start + chunk_size, n_donors)
+                delta = self.donors_[
+                    start:stop, observed_cols
+                ].astype(np.float64)
+
+                with np.errstate(
+                    over="ignore", under="ignore", invalid="ignore"
+                ):
+                    delta -= query
+                    squared = np.einsum("ij,ij->i", delta, delta)
+
+                lost_distance = (
+                    (squared == 0) & np.any(delta != 0, axis=1)
+                )
+                if not np.isfinite(squared).all() or lost_distance.any():
+                    raise ValueError(
+                        "Squared distances are outside the supported "
+                        "float64 range"
+                    )
+
+                candidate_ids = np.concatenate(
+                    (
+                        best_ids,
+                        np.arange(start, stop, dtype=np.int64),
+                    )
+                )
+                candidate_distances = np.concatenate(
+                    (best_distances, squared)
+                )
+
+                # Resolve equal distances in original training-row order.
+                order = np.lexsort(
+                    (candidate_ids, candidate_distances)
+                )[:k]
+                best_ids = candidate_ids[order]
+                best_distances = candidate_distances[order]
+
+            repaired[row] = best_ids
+
+        return repaired
+
     def _callable_distances(self, query):
         """Evaluate the metric on independent rows in the original schema."""
         full_query = np.full(
@@ -742,6 +843,8 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             pattern = tuple(observed_mask.tolist())
             pattern_groups.setdefault(pattern, []).append(sample_idx)
 
+        donor_bounds = None
+
         for pattern, sample_indices in pattern_groups.items():
             observed_mask = np.asarray(pattern, dtype=bool)
             observed_cols = np.flatnonzero(observed_mask)
@@ -769,10 +872,30 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             index.train(donor_vectors)
             index.add(donor_vectors)
 
-            _, neighbor_indices = index.search(
+            squared_distances, neighbor_indices = index.search(
                 query_vectors,
                 min(int(self.n_neighbors), self.donors_.shape[0]),
             )
+
+            if (
+                self.index_factory == "Flat"
+                and isinstance(index, faiss.IndexFlat)
+                and index.metric_type == faiss.METRIC_L2
+            ):
+                if donor_bounds is None:
+                    donor_bounds = np.maximum(
+                        np.abs(self.donors_.min(axis=0)),
+                        np.abs(self.donors_.max(axis=0)),
+                    )
+
+                neighbor_indices = self._repair_complete_l2_neighbors(
+                    X,
+                    sample_indices,
+                    observed_cols,
+                    squared_distances,
+                    neighbor_indices,
+                    donor_bounds,
+                )
 
             if not self._uses_uniform_weights():
                 for query_position, sample_idx in enumerate(sample_indices):
@@ -788,8 +911,8 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
                     selected_donors = self.donors_[valid_neighbors]
 
-                    # Keep FAISS neighbor selection. Compute weighting
-                    # distances directly for those selected donors only.
+                    # Compute weighting distances directly for the
+                    # selected donors, including any repaired neighbors.
                     delta = selected_donors[:, observed_cols].astype(
                         np.float64
                     )
