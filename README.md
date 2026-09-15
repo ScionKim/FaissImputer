@@ -123,37 +123,39 @@ for accepted values, output rules, and edge cases.
 
 ### Development candidate — unreleased
 
-**About 13% lower peak memory, with a further 13–15% reduction in transform time.**
+**50–54% less transform time and 13.0–14.5% lower peak memory than PyPI 0.3.19.**
 
-Candidate `7c62738b` improves available-donor search compared with
-candidate `94adbf66`, which already included the earlier speed improvement.
-These optimizations are not yet included in PyPI FaissImputer 0.3.19.
+Candidate `b8e5a0f3` combines both available-donor optimizations.
+These improvements are not yet included in the current PyPI release.
 
-Measurements used an AMD EPYC 7763 runner, one native thread,
+The comparison used an AMD EPYC 9V74 runner, one native thread,
 20,000 training rows, 300 queries, 20 features, five neighbors, and
 uniform-weight mean aggregation. Training data had 10% MCAR missingness;
 each query had four randomly selected missing features.
 
-Values below are medians of nine workers per condition.
-Transform times exclude fit; peak RSS covers the entire worker process.
+Times below are **first-transform medians, excluding fit**, across
+three seeds and three fresh workers per seed in the same workflow run.
 
-| Available-donor dtype | Baseline peak RSS | Latest peak RSS | Baseline transform | Latest transform |
+| Available-donor dtype | KNNImputer 1.9.1 | FaissImputer 0.3.19 | Candidate | Time reduction vs 0.3.19 |
 | --- | ---: | ---: | ---: | ---: |
-| float32 | 285.61 MiB | **248.32 MiB** | 115.56 ms | **98.68 ms** |
-| float64 | 289.03 MiB | **251.46 MiB** | 135.18 ms | **117.57 ms** |
+| float32 | 286.12 ms | 204.17 ms | **93.23 ms** | **54.3%** |
+| float64 | 339.00 ms | 216.84 ms | **108.31 ms** | **50.1%** |
 
-All 108 workers passed their checks. Imputation outputs matched the
-baseline exactly in every measured case. Complete-policy total time
-differed by less than 0.2%.
+The candidate was **3.07–3.13× as fast as KNNImputer** for transform.
+Including fit, it took **47–51% less total time than 0.3.19** and was
+**2.74–2.83× as fast as KNNImputer**.
 
-[Memory benchmark report, conditions, and raw results](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-distance-memory-7c62738b.md)
+Peak process RSS decreased from **290.51 to 248.27 MiB** for float32
+and from **288.95 to 251.48 MiB** for float64 versus 0.3.19.
 
-The earlier distance-buffer optimization reduced available-donor transform
-time by **38–41% versus PyPI 0.3.19** on an AMD EPYC 9V74 runner.
-That comparison used different hardware; the percentages from these two
-benchmarks should not be combined into a cumulative improvement claim.
+All 108 workers passed their checks. Candidate imputation outputs matched
+0.3.19 exactly in every measured case. Complete-policy total time differed
+by less than 0.3%.
 
-[Earlier speed benchmark report](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-distance-buffers-94adbf66.md)
+These results describe this workload and runner; performance depends on
+data, settings, and hardware.
+
+[Full benchmark report, conditions, and raw results](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-optimizations-b8e5a0f3.md)
 
 
 ### Published and historical measurements

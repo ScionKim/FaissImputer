@@ -55,6 +55,11 @@ change.
 
 ## Unreleased candidate benchmarks
 
+- [Combined available-donor optimizations (`b8e5a0f3`)](available-optimizations-b8e5a0f3.md):
+  Direct comparison with PyPI 0.3.19 showed 50–54% less transform time
+  and 13.0–14.5% lower peak process RSS in the measured workload,
+  with identical imputation outputs.
+
 - [Available-donor search memory (`7c62738b`)](available-distance-memory-7c62738b.md):
   Compared with the earlier candidate `94adbf66`, peak process RSS decreased
   by approximately 13% and transform time by 13–15% in the measured workload,
