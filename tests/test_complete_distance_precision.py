@@ -65,7 +65,7 @@ def test_complete_flat_l2_selects_nearest_across_scales(
     assert_array_equal(train, train_before)
     assert_array_equal(query, query_before)
 
-    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
 @pytest.mark.parametrize("scale", [1e-23, 1e20])
 @pytest.mark.parametrize("metric", ["l2", "nan_euclidean"])
 @pytest.mark.parametrize(
