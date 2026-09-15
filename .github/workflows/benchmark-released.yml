@@ -58,7 +58,7 @@ jobs:
 
           case "$comparison_mode" in
             candidate) previous_version="0.3.19" ;;
-            released) previous_version="0.3.16" ;;
+            released) previous_version="0.3.19" ;;
             *)
               echo "Unknown comparison mode: $comparison_mode" >&2
               exit 1
@@ -68,7 +68,7 @@ jobs:
           {
             echo "COMPARISON_MODE=$comparison_mode"
             echo "PREVIOUS_VERSION=$previous_version"
-            echo "CURRENT_VERSION=0.3.19"
+            echo "CURRENT_VERSION=0.3.20"
             echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current"
             echo "PREVIOUS_ENV=$RUNNER_TEMP/faiss-previous"
             echo "BUILD_ENV=$RUNNER_TEMP/faiss-build"

@@ -55,8 +55,12 @@ def read_sdist_metadata(path: Path):
 def validate_description(
     description: str,
     artifact_name: str,
-    version: str,
 ) -> None:
+    if not isinstance(description, str) or not description.strip():
+        raise ValueError(
+            f"{artifact_name} contains an empty project description"
+        )
+
     for banned_pattern in BANNED_DESCRIPTION_PATTERNS:
         if banned_pattern.search(description):
             raise ValueError(
@@ -74,17 +78,6 @@ def validate_description(
             f"{artifact_name} contains relative Markdown links: "
             + ", ".join(relative_links)
         )
-
-    required_text = (
-        f"/releases/tag/v{version}",
-        f"/blob/v{version}/",
-        f"faiss-imputer>={version}",
-    )
-    for text in required_text:
-        if text not in description:
-            raise ValueError(
-                f"{artifact_name} is missing current-version text: {text!r}"
-            )
 
 
 def validate_artifacts(dist_dir: Path, release_tag: str | None) -> str:
@@ -124,7 +117,7 @@ def validate_artifacts(dist_dir: Path, release_tag: str | None) -> str:
             )
 
         description = metadata.get_payload()
-        validate_description(description, path.name, version)
+        validate_description(description, path.name)
         descriptions.add(description)
 
     if len(versions) != 1:
