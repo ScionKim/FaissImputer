@@ -1,42 +1,54 @@
 # Roadmap
 
-This roadmap tracks development toward 0.3.17 and the priorities that follow.
+This roadmap covers the 0.3.20 release and the priorities that follow.
 Supported API options do not imply numerical identity with KNNImputer.
 
-## Current work: 0.3.17
+## 0.3.20: available-donor performance
 
-Support callable distance metrics:
+Improve available-donor search with built-in L2 metrics,
+`metric="l2"` and `metric="nan_euclidean"`:
 
-- Accept a callable under both donor policies with `index_factory="Flat"`.
-- Pass NaN-normalized query and donor rows in the original feature order.
-- Validate returned distances, exclude undefined distances, and resolve ties
-  in training-row order.
-- Support existing aggregation, weights, indicators, empty features,
-  output dtypes, pandas output, and copy behavior.
-- Add regression coverage and document callback rules and performance costs.
+- Reuse work buffers for distance corrections and shared-feature counts.
+- Use floating-point matrix multiplication to count shared observed features.
+- Compute search-preparation masks and tolerances in groups of query rows.
+- Release temporary preparation arrays before precise distance refinement.
+- Add regression coverage for precision, chunk boundaries, cache reuse,
+  input preservation, and temporary-array lifetime.
 
-GitHub Tests and Compatibility must pass before merging and releasing.
+A [direct comparison with PyPI 0.3.19](docs/benchmarks/available-optimizations-b8e5a0f3.md)
+measured 50–54% less available-donor transform time and 13.0–14.5% lower
+peak process RSS. All 108 workers passed their checks, with identical
+imputation outputs versus 0.3.19 in every measured case.
 
-## Next priority: released-package benchmarks
+These measurements used pre-release source candidate `b8e5a0f3`.
+The report identifies the workload, hardware, versions, and raw results.
+Callable-metric performance was not measured in this comparison.
 
-Start with a small reproducible comparison of the new released package,
-KNNImputer, and an appropriate previous FaissImputer release.
+## Next priority: broader benchmark coverage
 
-- Compare both donor policies and float32/float64 inputs on matching
-  hardware and data. Measure callable metrics separately from built-in metrics.
-- Report fit, first transform, repeated transforms, and `fit_transform()`
-  separately, using feasible training and query sizes.
-- Measure retained fitted memory separately from process peak memory.
-- Report imputation quality against hidden ground truth separately from
-  agreement with another imputer.
-- Record package versions, hardware, thread limits, seeds, repetitions,
-  timing variation, reproduction commands, and raw results.
-- Run performance measurements through manually triggered GitHub Actions.
-  Keep routine CI focused on correctness rather than timing thresholds.
+Initial released-package and optimization comparisons are available.
+Extend them to workloads that the existing measurements do not cover:
 
-Expand workloads and datasets after the initial comparison identifies
-useful questions. Historical million-row training measurements do not
-establish performance for one million queries.
+- Vary training size, query count, feature count, missingness patterns,
+  and neighbor counts independently.
+- Measure same-data `fit_transform()` at feasible sizes alongside fit,
+  first transform, and repeated transforms.
+- Measure callable metrics separately from built-in metrics.
+- Distinguish retained fitted memory and phase-specific peaks from
+  whole-process peak RSS.
+- Extend real-data coverage, retaining simple baselines and reporting
+  quality against hidden ground truth separately from output agreement.
+- Use published wheels when reporting released-package performance;
+  identify source-candidate measurements by their actual commit and version.
+
+Continue recording matching inputs, hardware, thread limits, seeds,
+repetitions, timing variation, reproduction instructions, and raw results.
+
+Run performance measurements through manually triggered GitHub Actions.
+Keep routine CI focused on correctness rather than timing thresholds.
+
+Historical million-row training measurements do not establish performance
+for one million queries.
 
 ## Later work, guided by evidence
 
@@ -48,27 +60,29 @@ establish performance for one million queries.
   installation/basic-execution coverage on Windows and macOS.
 - **Memory controls:** evaluate working-memory settings and donor-block
   processing using measurements. Internal batch budgets are not total RAM limits.
-- **Real-data coverage:** extend the current pilot to additional datasets,
-  retaining simple baselines and separate quality measurements.
 - **Approximate search and GPU:** pursue a concrete workload with an explicit
   accuracy/performance tradeoff.
 
-## Implemented through 0.3.16
+## Implemented capabilities
 
 - Complete and available donor policies, mean/median aggregation, and
   uniform, distance, and callable weights.
+- Callable distance metrics under both donor policies, including callback
+  validation, undefined-distance handling, and deterministic tie handling.
 - Missing indicators, empty-feature handling, configurable numeric missing
   markers, and the `nan_euclidean` metric alias.
 - Copy control and float32/float64 value preservation.
 - Pipelines, feature names, and optional pandas output.
 - Search and aggregation batching, numerical safeguards, and failed-fit cleanup.
 - Dependency compatibility CI, wheel checks, and automated PyPI publishing.
+- Released-package and source-candidate benchmarks with archived results.
 
 ## History and supporting evidence
 
 - [Release history](https://github.com/ScionKim/FaissImputer/releases)
 - [API reference](docs/api.md) and [usage examples](docs/usage.md)
-- [Benchmark reports](docs/benchmarks)
+- [Benchmark index](docs/benchmarks/README.md)
+- [Released 0.3.19 comparison](docs/benchmarks/released_versions_0.3.19.md)
 - [Available-donor expansion: 0.3.7 versus 0.3.8](docs/benchmarks/available-expansion-0.3.8.md)
 - [Historical complete-aggregation recovery pilot](docs/benchmarks/complete-aggregation-e5ef482.md)
 - [Historical real-data comparison](docs/benchmarks/real-data-a3bd1ce3.md)
