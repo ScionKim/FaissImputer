@@ -145,50 +145,82 @@ class MatrixNaNIndex:
         values = distances[ids]
         return values, np.where(np.isfinite(values), ids, -1)
 
-    def search(self, queries, k):
-        if queries is not self.query_ref:
-            self.clear_cache()
-            query64 = np.asarray(queries, dtype=np.float64)
-            distances = self._prepared_distances(query64)
-            finite = np.isfinite(distances)
-            with np.errstate(over="ignore", invalid="ignore", under="ignore"):
-                query_norms = np.nansum(query64 * query64, axis=1)
-            p = self.n_features
+    def _prepare_search_matrix(self, query64):
+        distances = self._prepared_distances(query64)
+        matrix32 = np.empty(distances.shape, dtype=np.float32)
+        query_missing = np.isnan(query64)
+        suspect = np.zeros(query64.shape[0], dtype=bool)
+        p = self.n_features
+
+        with np.errstate(over="ignore", invalid="ignore", under="ignore"):
+            query_norms = np.nansum(query64 * query64, axis=1)
+            tolerance_scale = 64 * np.finfo(np.float64).eps * p * p
+
+        # Limit temporary pairwise arrays to a group of query rows.
+        pair_budget = 256 * 1024
+        rows_per_chunk = max(
+            1, pair_budget // max(distances.shape[1], 1)
+        )
+        donor_chunk_size = max(
+            1, min(4096, (1024 * 1024) // max(p, 1))
+        )
+        maximum32 = np.finfo(np.float32).max
+
+        for row_start in range(0, len(query64), rows_per_chunk):
+            row_stop = min(row_start + rows_per_chunk, len(query64))
+            block = distances[row_start:row_stop]
+            finite = np.isfinite(block)
 
             # Conservative suspicion test, not a proven error bound.
             with np.errstate(over="ignore", invalid="ignore", under="ignore"):
                 tolerance = (
-                    64 * np.finfo(np.float64).eps * p * p
-                    * (query_norms[:, None] + self.norms[None, :])
+                    query_norms[row_start:row_stop, None]
+                    + self.norms[None, :]
                 )
-            suspect_pairs = ~finite | (distances <= tolerance)
-            distances[~finite] = np.inf
+                tolerance *= tolerance_scale
 
+            suspect_pairs = ~finite
+            suspect_pairs |= block <= tolerance
+            block[~finite] = np.inf
+
+            matrix_block = matrix32[row_start:row_stop]
             with np.errstate(over="ignore", under="ignore"):
-                matrix32 = distances.astype(np.float32)
+                matrix_block[:] = block
+
             suspect_pairs |= finite & (
-                (matrix32 >= np.finfo(np.float32).max)
-                | ((distances > 0) & (matrix32 == 0))
+                (matrix_block >= maximum32)
+                | ((block > 0) & (matrix_block == 0))
             )
 
-            query_missing = np.isnan(query64)
-            suspect = np.zeros(query64.shape[0], dtype=bool)
-            chunk_size = max(1, min(4096, (1024 * 1024) // max(p, 1)))
-            for row in np.flatnonzero(suspect_pairs.any(axis=1)):
-                candidates = np.flatnonzero(suspect_pairs[row])
-                for start in range(0, candidates.size, chunk_size):
-                    donor_rows = candidates[start:start + chunk_size]
+            for local_row in np.flatnonzero(suspect_pairs.any(axis=1)):
+                row = row_start + int(local_row)
+                candidates = np.flatnonzero(suspect_pairs[local_row])
+
+                for start in range(0, candidates.size, donor_chunk_size):
+                    donor_rows = candidates[start:start + donor_chunk_size]
                     can_fill = self.present[donor_rows] & query_missing[row]
                     has_shared = (
                         self.present[donor_rows] & ~query_missing[row]
                     ).any(axis=1)
+
                     if np.any(can_fill.any(axis=1) & has_shared):
                         suspect[row] = True
                         break
 
-            self.matrix = matrix32
+        # The float64 distance matrix and temporary masks are released
+        # when this method returns, before precise rows are recomputed.
+        return matrix32, suspect
+
+    def search(self, queries, k):
+        if queries is not self.query_ref:
+            self.clear_cache()
+            query64 = np.asarray(queries, dtype=np.float64)
+            self.matrix, suspect = self._prepare_search_matrix(query64)
+
             for row in np.flatnonzero(suspect):
-                self.precise_rows[int(row)] = self._direct_distances(query64[row])
+                self.precise_rows[int(row)] = self._direct_distances(
+                    query64[row]
+                )
             self.query_ref = queries
 
         k = min(int(k), self.matrix.shape[1])
