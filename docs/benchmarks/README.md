@@ -1,33 +1,40 @@
 # Benchmark reports
 
-[Project README](../../README.md#benchmarks)
+[Project README](../../README.md#performance)
 · [API reference](../api.md)
 · [Usage examples](../usage.md)
 
 ## Latest release comparison
 
-### FaissImputer 0.3.19
+### FaissImputer 0.3.20
 
-Comparison of released FaissImputer 0.3.19, FaissImputer 0.3.16,
+Comparison of published FaissImputer 0.3.20, FaissImputer 0.3.19,
 and KNNImputer with complete and available donor policies and
 float32/float64 inputs.
 
-The report covers fit time, first and repeated transforms, process memory,
-output agreement, and error against synthetic ground truth.
+On the measured available-donor workload, 0.3.20 achieved a
+2.71–2.73× first-transform speedup over KNNImputer.
+Fit itself was slower; fit plus first transform was 2.44–2.49× as fast.
 
-[Read the report](released_versions_0.3.19.md)
-· [Raw measurements](../../benchmarks/results/released_versions_0.3.19.json)
+The report covers fit time, first and repeated transforms, timing
+variation, process memory, output agreement, error against synthetic
+ground truth, and reproduction instructions.
+
+[Read the report](released_versions_0.3.20.md)
+· [Raw measurements](../../benchmarks/results/released_versions_0.3.20.json)
 
 ## Historical version comparisons
 
 | Report | Coverage |
 | --- | --- |
+| [FaissImputer 0.3.19](released_versions_0.3.19.md) | Comparison with released 0.3.16 and KNNImputer under both donor policies and input dtypes, including timing, process memory, output agreement, and synthetic-data quality. |
 | [FaissImputer 0.3.10](released_versions_0.3.10.md) | Released-package comparisons with KNNImputer: an AMD 20,000-row run and an Intel training-size sweep. Includes tables, conditions, output agreement, and memory observations. |
 | [FaissImputer 0.2.0](v0.2.0.md) | Historical measurements of the earlier complete-donor-only implementation. |
 
-The 0.3.19 report presents fit-plus-first-transform totals as well as
-individual timings. The 0.3.10 speedup tables measure the first transform
-only. Their headline speedups use different timing definitions.
+Speedup figures depend on whether fit is included. The 0.3.20 and
+0.3.19 reports provide both first-transform and fit-plus-first-transform
+timings. The historical 0.3.10 speedup tables measure the first transform
+only.
 
 ## Workload and implementation experiments
 
