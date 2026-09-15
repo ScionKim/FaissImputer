@@ -52,3 +52,9 @@ Compare hardware, dependencies, inputs, donor policies, and timing
 definitions before drawing conclusions across reports. Results from
 different environments do not establish a version-to-version performance
 change.
+
+## Unreleased candidate benchmarks
+
+- [Available-donor distance buffers (`94adbf66`)](available-distance-buffers-94adbf66.md):
+  Compared with released 0.3.19, available-donor transform time decreased
+  by 38–41% in the measured workload, with identical imputation outputs.
