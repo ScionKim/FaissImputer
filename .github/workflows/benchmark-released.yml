@@ -11,6 +11,11 @@ on:
         options:
           - candidate
           - released
+      baseline_commit:
+        description: Optional baseline commit for candidate mode; blank uses PyPI 0.3.19
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -149,6 +154,94 @@ jobs:
             --outdir "$WHEEL_DIR" \
             "$BUILD_DIR"
 
+      - name: Check out comparison baseline
+        if: env.COMPARISON_MODE == 'candidate' && inputs.baseline_commit != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baseline_commit }}
+          path: benchmark-baseline-source
+          persist-credentials: false
+
+      - name: Build baseline wheel
+        if: env.COMPARISON_MODE == 'candidate' && inputs.baseline_commit != ''
+        run: |
+          mkdir -p \
+            "$RUNNER_TEMP/faiss-baseline-source" \
+            "$RUNNER_TEMP/faiss-baseline-wheels"
+
+          git -C "$GITHUB_WORKSPACE/benchmark-baseline-source" archive HEAD \
+            | tar -x -C "$RUNNER_TEMP/faiss-baseline-source"
+
+          "$BUILD_ENV/bin/python" - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import tomllib
+          from pathlib import Path
+
+          from packaging.version import Version
+
+          temporary = Path(os.environ["RUNNER_TEMP"])
+          workspace = Path(os.environ["GITHUB_WORKSPACE"])
+          checkout = workspace / "benchmark-baseline-source"
+          project_path = temporary / "faiss-baseline-source" / "pyproject.toml"
+
+          source = project_path.read_text(encoding="utf-8")
+          declared_version = tomllib.loads(source)["project"]["version"]
+          source_sha = subprocess.check_output(
+              ["git", "-C", str(checkout), "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          baseline_version = (
+              f"{Version(declared_version).public}+bench.{source_sha[:12]}"
+          )
+
+          lines = source.splitlines(keepends=True)
+          in_project = False
+          replacements = 0
+
+          for position, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("["):
+                  section = stripped.split("#", 1)[0].strip()
+                  in_project = section == "[project]"
+              elif in_project and re.match(r"^\s*version\s*=", line):
+                  lines[position] = f'version = "{baseline_version}"\n'
+                  replacements += 1
+
+          if replacements != 1:
+              raise RuntimeError(
+                  "Expected exactly one static version in [project]"
+              )
+
+          project_path.write_text("".join(lines), encoding="utf-8")
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"PREVIOUS_VERSION={baseline_version}\n")
+              stream.write(
+                  f"BASELINE_WHEEL_DIR={temporary / 'faiss-baseline-wheels'}\n"
+              )
+
+          provenance = {
+              "comparison_role": "baseline",
+              "source_commit": source_sha,
+              "declared_version": declared_version,
+              "baseline_wheel_version": baseline_version,
+          }
+          destination = workspace / "benchmark_outputs" / "baseline-build.json"
+          destination.write_text(
+              json.dumps(provenance, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(f"Baseline wheel version: {baseline_version}")
+          PY
+
+          "$BUILD_ENV/bin/python" -m build \
+            --wheel \
+            --outdir "$RUNNER_TEMP/faiss-baseline-wheels" \
+            "$RUNNER_TEMP/faiss-baseline-source"
+
       - name: Install packages with matching dependencies
         run: |
           python -m venv "$CURRENT_ENV"
@@ -172,10 +265,17 @@ jobs:
             --only-binary=:all: \
             -r "$GITHUB_WORKSPACE/benchmark_outputs/shared-dependencies.txt"
 
-          "$PREVIOUS_ENV/bin/python" -m pip install \
-            --only-binary=:all: \
-            --no-deps \
-            "faiss-imputer==$PREVIOUS_VERSION"
+          if [[ -n "${BASELINE_WHEEL_DIR:-}" ]]; then
+            "$PREVIOUS_ENV/bin/python" -m pip install \
+              --only-binary=:all: \
+              --no-deps \
+              "$BASELINE_WHEEL_DIR"/*.whl
+          else
+            "$PREVIOUS_ENV/bin/python" -m pip install \
+              --only-binary=:all: \
+              --no-deps \
+              "faiss-imputer==$PREVIOUS_VERSION"
+          fi
 
           "$CURRENT_ENV/bin/python" -m pip check
           "$PREVIOUS_ENV/bin/python" -m pip check
