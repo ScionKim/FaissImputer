@@ -1,6 +1,6 @@
 # API reference
 
-This reference describes FaissImputer 0.3.20.
+This reference describes the current source version.
 
 See the [README](../README.md) for installation and a quick start, or
 [usage examples](usage.md) for complete examples.
@@ -89,6 +89,18 @@ float32. Stored donor values and imputation output can still be float64.
 Coordinates required for these searches must be representable as finite
 float32 values. Non-Flat factories also require this conversion when
 fitting their full donor index.
+
+**Unreleased correction:** Complete-donor mode with `index_factory="Flat"`
+and built-in L2 metrics (`"l2"` or `"nan_euclidean"`) selectively recomputes
+neighbors in float64 to repair detected underflow, overflow, and invalid
+search results. Refinement uses the original normalized coordinates,
+processes donors in chunks, and resolves equal recomputed distances in
+training-row order.
+
+If refinement produces nonfinite squared distances, or zero squared
+distances from nonzero coordinate differences, it raises `ValueError`.
+This correction does not apply to inner-product or non-Flat searches.
+It does not guarantee float64 neighbor ordering for every input.
 
 For non-uniform weights with built-in L2 metrics, distances to selected
 complete donors are calculated from the original normalized donor and
