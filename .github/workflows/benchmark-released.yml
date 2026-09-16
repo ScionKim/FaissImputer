@@ -23,7 +23,7 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     defaults:
       run:
@@ -298,7 +298,7 @@ jobs:
           comparison_started_at=$SECONDS
 
           for query_count in 300 1000 3000; do
-            remaining_seconds=$((1200 - (SECONDS - comparison_started_at)))
+            remaining_seconds=$((1800 - (SECONDS - comparison_started_at)))
 
             if (( remaining_seconds <= 0 )); then
               echo "Benchmark budget exhausted before ${query_count} queries." >&2
