@@ -76,14 +76,19 @@ change.
   Compared with released 0.3.19, available-donor transform time decreased
   by 38–41% in the measured workload, with identical imputation outputs.
 
-## Query-count sweep: unreleased candidate
+## Unreleased candidate benchmarks
 
-[Report and conditions](query-count-sweep-0772effd.md)
+These studies cover 20,000 training rows and 300, 1,000, and 3,000 queries,
+using both donor policies and float32/float64 inputs.
 
-Candidate `0772effd` versus published 0.3.20 and KNNImputer, using
-20,000 training rows and 300, 1,000, and 3,000 queries on one runner.
+- [Query-count sweep: 0772effd versus 0.3.20](query-count-sweep-0772effd.md).
+  Complete-donor first-transform time increased by 10.0–13.0%;
+  available-donor time changed by less than 0.5%.
 
-All 324 workers passed output and input-preservation checks. Candidate
-outputs matched 0.3.20. Complete-donor first-transform time increased
-by 10.0–13.0%; available-donor time changed by less than 0.5%.
-The report includes timings, memory observations, limitations, and raw results.
+- [Distance-check optimization: fde59b1d versus 0772effd](complete-distance-checks-fde59b1d.md).
+  The follow-up optimization reduced complete-donor first-transform time
+  by 7.6–9.1%; available-donor time changed by less than 0.7%.
+
+Each study completed 324 workers with output and input-preservation checks.
+Candidate outputs matched their respective FaissImputer baselines.
+Reports include conditions, limitations, and raw results.
