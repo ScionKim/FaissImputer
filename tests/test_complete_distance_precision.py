@@ -183,3 +183,120 @@ def test_repaired_distance_ties_follow_training_row_order():
 
     # The first two tied donors in training order contain 10 and 20.
     assert_array_equal(result, np.array([[0, 15]], dtype=np.float32))
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("copy", [True, False])
+@pytest.mark.parametrize("scale", [1e-23, 1e20])
+def test_complete_l2_mixed_masks_keep_precision_with_copy_control(
+    dtype, copy, scale
+):
+    train = np.array(
+        [
+            [4 * scale, 0, 400],
+            [2 * scale, 1, 20],
+            [3 * scale, 2, 90],
+            [scale, 3, 10],
+        ],
+        dtype=dtype,
+    )
+    query = np.array(
+        [
+            [np.nan, np.nan, np.nan],
+            [0, np.nan, np.nan],
+            [np.nan, 1.1, np.nan],
+            [2 * scale, np.nan, np.nan],
+        ],
+        dtype=dtype,
+    )
+    train_before = train.copy()
+    query_before = query.copy()
+    observed_mask = ~np.isnan(query_before)
+    expected = query_before.copy()
+
+    # Independent reference using the stored input coordinates.
+    for row_index, row in enumerate(query_before):
+        missing = np.isnan(row)
+        observed = np.flatnonzero(~missing)
+
+        if observed.size == 0:
+            expected[row_index] = [
+                math.fsum(float(value) for value in train[:, column])
+                / len(train)
+                for column in range(train.shape[1])
+            ]
+            continue
+
+        distances = [
+            math.fsum(
+                (float(donor[column]) - float(row[column])) ** 2
+                for column in observed
+            )
+            for donor in train
+        ]
+        nearest = min(
+            range(len(train)),
+            key=lambda index: (distances[index], index),
+        )
+        expected[row_index, missing] = train[nearest, missing]
+
+    with threadpool_limits(limits=1):
+        result = FaissImputer(
+            n_neighbors=1,
+            donor_policy="complete",
+            metric="l2",
+            index_factory="Flat",
+            copy=copy,
+        ).fit(train).transform(query)
+
+    assert result.dtype == np.dtype(dtype)
+    np.testing.assert_allclose(
+        result,
+        expected,
+        rtol=5 * np.finfo(dtype).eps,
+        atol=0,
+    )
+    np.testing.assert_array_equal(
+        result[observed_mask], query_before[observed_mask]
+    )
+    np.testing.assert_array_equal(train, train_before)
+
+    if copy:
+        np.testing.assert_array_equal(query, query_before)
+    else:
+        assert np.shares_memory(result, query)
+        np.testing.assert_array_equal(query, result)
+
+
+@pytest.mark.parametrize("copy", [True, False])
+def test_complete_l2_refines_zero_distances_from_float64_rounding(copy):
+    train = np.array(
+        [
+            [1.0 + 2.0**-30, 10.0],
+            [1.0 + 2.0**-31, 20.0],
+        ],
+        dtype=np.float64,
+    )
+    query = np.array([[1.0, np.nan]], dtype=np.float64)
+    train_before = train.copy()
+    query_before = query.copy()
+
+    # Both donor coordinates round to 1.0 in the Faiss search vectors.
+    # Their original float64 distances still distinguish the nearer row.
+    with threadpool_limits(limits=1):
+        result = FaissImputer(
+            n_neighbors=1,
+            donor_policy="complete",
+            metric="l2",
+            index_factory="Flat",
+            copy=copy,
+        ).fit(train).transform(query)
+
+    assert result.dtype == np.float64
+    np.testing.assert_array_equal(result, [[1.0, 20.0]])
+    np.testing.assert_array_equal(train, train_before)
+
+    if copy:
+        np.testing.assert_array_equal(query, query_before)
+    else:
+        assert np.shares_memory(result, query)
+        np.testing.assert_array_equal(query, result)
