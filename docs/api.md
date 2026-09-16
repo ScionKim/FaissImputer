@@ -166,9 +166,23 @@ neighbor selection.
 `metric="ip"` uses raw inner-product similarity, without automatic
 normalization, and supports only uniform weights.
 
-Non-Flat factories retain their Faiss training requirements. They must
-also support the projected feature dimensions encountered during
-transform.
+During complete-donor neighbor search, each missingness pattern uses
+a separate Faiss index built on that pattern's observed columns.
+Non-Flat factories retain their Faiss training requirements and must
+support every projected dimension used for search. A successful `fit()`
+does not guarantee support for every later query mask.
+
+**Unreleased error reporting:** If Faiss raises `RuntimeError` while
+creating, training, populating, or searching a non-Flat projected index,
+`transform()` adds the factory name, observed-feature count, and donor
+count to the error. The original Faiss exception is preserved as its cause.
+
+Choose a factory compatible with your query masks, or use
+`index_factory="Flat"` for the default search. No automatic fallback
+changes the selected factory.
+
+With `copy=False`, some query rows may already have been imputed in place
+when a later search fails.
 
 Callable metrics use the same complete-donor filtering, but determine
 distances through the callback described below.
