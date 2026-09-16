@@ -75,3 +75,15 @@ change.
 - [Available-donor distance buffers (`94adbf66`)](available-distance-buffers-94adbf66.md):
   Compared with released 0.3.19, available-donor transform time decreased
   by 38–41% in the measured workload, with identical imputation outputs.
+
+## Query-count sweep: unreleased candidate
+
+[Report and conditions](query-count-sweep-0772effd.md)
+
+Candidate `0772effd` versus published 0.3.20 and KNNImputer, using
+20,000 training rows and 300, 1,000, and 3,000 queries on one runner.
+
+All 324 workers passed output and input-preservation checks. Candidate
+outputs matched 0.3.20. Complete-donor first-transform time increased
+by 10.0–13.0%; available-donor time changed by less than 0.5%.
+The report includes timings, memory observations, limitations, and raw results.
