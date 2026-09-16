@@ -892,18 +892,32 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 X[np.ix_(sample_indices, observed_cols)]
             )
 
-            index = faiss.index_factory(
-                donor_vectors.shape[1],
-                self.index_factory,
-                self.metric_type_,
-            )
-            index.train(donor_vectors)
-            index.add(donor_vectors)
+            try:
+                index = faiss.index_factory(
+                    donor_vectors.shape[1],
+                    self.index_factory,
+                    self.metric_type_,
+                )
+                index.train(donor_vectors)
+                index.add(donor_vectors)
 
-            squared_distances, neighbor_indices = index.search(
-                query_vectors,
-                min(int(self.n_neighbors), self.donors_.shape[0]),
-            )
+                squared_distances, neighbor_indices = index.search(
+                    query_vectors,
+                    min(int(self.n_neighbors), self.donors_.shape[0]),
+                )
+            except RuntimeError as error:
+                if self.index_factory == "Flat":
+                    raise
+
+                raise RuntimeError(
+                    f"Faiss index_factory={self.index_factory!r} failed "
+                    "during complete-donor transform with "
+                    f"{observed_cols.size} observed features and "
+                    f"{self.donors_.shape[0]} donors. "
+                    "Check the factory's dimension and training "
+                    "requirements for each missingness pattern, "
+                    "or use index_factory='Flat'."
+                ) from error
 
             if (
                 self.index_factory == "Flat"
