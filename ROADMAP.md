@@ -30,6 +30,9 @@ These results do not establish performance on other workloads.
 - **Package checks:** wheel and source-distribution installation checks,
   release-metadata regression tests, and Windows/macOS wheel-installation
   smoke checks using Python 3.12.
+- **Projected-index errors:** non-Flat failures report the factory,
+  observed-feature count, and donor count while preserving the original
+  Faiss exception. See [index factory requirements](docs/api.md#complete-donors).
 
 The complete-donor correction is not included in the published 0.3.20
 package. It does not guarantee float64 neighbor ordering for every input.
@@ -62,8 +65,6 @@ for one million queries.
 - **Distance precision:** investigate remaining cancellation and ordering
   errors against an independent reference, beyond the cases covered by
   the merged Flat L2 correction.
-- **Index factories:** clarify behavior when query masks change the
-  projected feature dimension, with useful errors or documented fallbacks.
 - **Memory controls:** evaluate configurable working-memory budgets and
   donor-block processing using measurements. Internal batch budgets are
   not total RAM limits.
