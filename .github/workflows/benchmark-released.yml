@@ -12,7 +12,7 @@ on:
           - candidate
           - released
       baseline_commit:
-        description: Optional baseline commit for candidate mode; blank uses PyPI 0.3.19
+        description: Optional baseline commit for candidate mode; blank uses PyPI 0.3.20
         type: string
         required: false
         default: ""
@@ -57,7 +57,7 @@ jobs:
           comparison_mode="${REQUESTED_MODE:-candidate}"
 
           case "$comparison_mode" in
-            candidate) previous_version="0.3.19" ;;
+            candidate) previous_version="0.3.20" ;;
             released) previous_version="0.3.19" ;;
             *)
               echo "Unknown comparison mode: $comparison_mode" >&2
@@ -291,22 +291,36 @@ jobs:
           mkdir -p "$BENCHMARK_DIR"
           cp -R "$GITHUB_WORKSPACE/benchmarks" "$BENCHMARK_DIR/benchmarks"
 
-      - name: Run sequential comparison
+      - name: Run sequential query-count comparison
         working-directory: ${{ env.BENCHMARK_DIR }}
         run: |
-          "$CURRENT_ENV/bin/python" -u \
-            -m benchmarks.benchmark_released_versions \
-            --previous-python "$PREVIOUS_ENV/bin/python" \
-            --previous-version "$PREVIOUS_VERSION" \
-            --current-version "$CURRENT_VERSION" \
-            --train-size 20000 \
-            --queries 300 \
-            --seeds 101 202 303 \
-            --repeats 3 \
-            --repeated-transforms 2 \
-            --timeout-seconds 180 \
-            --budget-seconds 1200 \
-            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison.json"
+          set -euo pipefail
+          comparison_started_at=$SECONDS
+
+          for query_count in 300 1000 3000; do
+            remaining_seconds=$((1200 - (SECONDS - comparison_started_at)))
+
+            if (( remaining_seconds <= 0 )); then
+              echo "Benchmark budget exhausted before ${query_count} queries." >&2
+              exit 1
+            fi
+
+            echo "Comparing ${query_count} queries; ${remaining_seconds}s remaining."
+
+            "$CURRENT_ENV/bin/python" -u \
+              -m benchmarks.benchmark_released_versions \
+              --previous-python "$PREVIOUS_ENV/bin/python" \
+              --previous-version "$PREVIOUS_VERSION" \
+              --current-version "$CURRENT_VERSION" \
+              --train-size 20000 \
+              --queries "$query_count" \
+              --seeds 101 202 303 \
+              --repeats 3 \
+              --repeated-transforms 2 \
+              --timeout-seconds 180 \
+              --budget-seconds "$remaining_seconds" \
+              --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_q${query_count}.json"
+          done
 
       - name: Upload benchmark results
         if: always()
