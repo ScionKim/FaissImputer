@@ -844,6 +844,34 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             pattern_groups.setdefault(pattern, []).append(sample_idx)
 
         donor_bounds = None
+        complete_l2_safe_scale = False
+        l2_limits = np.finfo(np.float32)
+
+        if (
+            pattern_groups
+            and self.index_factory == "Flat"
+            and self.metric_type_ == faiss.METRIC_L2
+        ):
+            donor_bounds = np.maximum(
+                np.abs(self.donors_.min(axis=0)),
+                np.abs(self.donors_.max(axis=0)),
+            )
+            scale_limit = np.sqrt(
+                float(l2_limits.max) / (8.0 * X.shape[1])
+            )
+
+            # Inspect original coordinates before any in-place imputation.
+            # fmin/fmax ignore NaNs; initial=0 handles all-missing inputs.
+            query_min = float(
+                np.fmin.reduce(X, axis=None, initial=0)
+            )
+            query_max = float(
+                np.fmax.reduce(X, axis=None, initial=0)
+            )
+            complete_l2_safe_scale = (
+                float(donor_bounds.max()) <= scale_limit
+                and max(abs(query_min), abs(query_max)) <= scale_limit
+            )
 
         for pattern, sample_indices in pattern_groups.items():
             observed_mask = np.asarray(pattern, dtype=bool)
@@ -882,20 +910,31 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                 and isinstance(index, faiss.IndexFlat)
                 and index.metric_type == faiss.METRIC_L2
             ):
-                if donor_bounds is None:
-                    donor_bounds = np.maximum(
-                        np.abs(self.donors_.min(axis=0)),
-                        np.abs(self.donors_.max(axis=0)),
-                    )
-
-                neighbor_indices = self._repair_complete_l2_neighbors(
-                    X,
-                    sample_indices,
-                    observed_cols,
-                    squared_distances,
-                    neighbor_indices,
-                    donor_bounds,
+                # Avoid per-pattern coordinate copies and rowwise checks
+                # when both coordinate scale and search results are safe.
+                safe_search = (
+                    complete_l2_safe_scale
+                    and squared_distances.min() > l2_limits.tiny
+                    and squared_distances.max() <= l2_limits.max
+                    and neighbor_indices.min() >= 0
+                    and neighbor_indices.max() < len(self.donors_)
                 )
+
+                if not safe_search:
+                    if donor_bounds is None:
+                        donor_bounds = np.maximum(
+                            np.abs(self.donors_.min(axis=0)),
+                            np.abs(self.donors_.max(axis=0)),
+                        )
+
+                    neighbor_indices = self._repair_complete_l2_neighbors(
+                        X,
+                        sample_indices,
+                        observed_cols,
+                        squared_distances,
+                        neighbor_indices,
+                        donor_bounds,
+                    )
 
             if not self._uses_uniform_weights():
                 for query_position, sample_idx in enumerate(sample_indices):
