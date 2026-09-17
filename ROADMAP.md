@@ -39,12 +39,23 @@ package. It does not guarantee float64 neighbor ordering for every input.
 
 ## Next priority: broader benchmark coverage
 
-Extend measurements beyond the initial released-package workload:
+The [query-count studies](docs/benchmarks/README.md#query-count-studies)
+and [same-data API comparison](docs/benchmarks/fit-transform-110e37bf.md)
+are complete.
 
-- Vary training size, query count, feature count, missingness patterns,
-  and neighbor counts independently.
-- Measure same-data `fit_transform()` alongside fit, first transform,
-  and repeated transforms. Measure callable metrics separately.
+The same-data study compares `fit_transform(X)` with `fit(X)` followed
+by `transform(X)`. Its primary conclusions use 10,000 and 20,000 rows.
+The 3,000-row case covers the crossover region; 1,000 rows are retained
+only for small-data regression tracking.
+
+Reports under `docs/benchmarks/` document validation checks and
+reproduction instructions, with links to archived raw results.
+
+Remaining coverage:
+
+- Vary training size, feature count, missingness patterns, and neighbor
+  counts independently.
+- Measure callable metrics separately.
 - Distinguish retained fitted memory and phase-specific peaks from
   whole-process peak RSS.
 - Extend real-data coverage with simple baselines. Report quality against
