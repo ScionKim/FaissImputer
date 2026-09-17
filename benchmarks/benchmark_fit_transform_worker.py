@@ -168,7 +168,7 @@ def worker(config):
             "scored_cells": int(missing.sum()),
             "rmse": float(np.sqrt(np.mean(errors * errors))),
             "mae": float(np.mean(np.abs(errors))),
-            "output_sha256": digest(output),
+            "output_sha256": digest(np.ascontiguousarray(output)),
             "checks_passed": True,
             "_values": values.tolist(),
         }
