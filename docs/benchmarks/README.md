@@ -78,6 +78,11 @@ change.
 
 ## Unreleased candidate benchmarks
 
+These reports identify development builds by source commit.
+Published-package comparisons are listed separately.
+
+### Query-count studies
+
 These studies cover 20,000 training rows and 300, 1,000, and 3,000 queries,
 using both donor policies and float32/float64 inputs.
 
@@ -89,6 +94,31 @@ using both donor policies and float32/float64 inputs.
   The follow-up optimization reduced complete-donor first-transform time
   by 7.6–9.1%; available-donor time changed by less than 0.7%.
 
-Each study completed 324 workers with output and input-preservation checks.
-Candidate outputs matched their respective FaissImputer baselines.
-Reports include conditions, limitations, and raw results.
+Each query-count study completed 324 workers with output and
+input-preservation checks. Candidate outputs matched the corresponding
+FaissImputer baseline outputs.
+
+### Same-data fit_transform
+
+[Same-data comparison: source 110e37bf](fit-transform-110e37bf.md)
+compares `fit_transform(X)` with `fit(X)` followed by `transform(X)`
+for both donor policies and KNNImputer.
+
+Primary conclusions use **10,000 and 20,000 rows**:
+
+- Available mode completed `fit_transform()` 1.72–2.18× as fast as
+  KNNImputer, with closely matching aggregate reconstruction errors.
+- Available-mode process peak RSS medians were 55.4–71.8% lower.
+  These measurements are not retained-model memory.
+- Complete mode was faster than available mode but used only about 12% of rows
+as donors and had 38.2–41.7% higher median reconstruction RMSE.
+
+The 3,000-row case shows the crossover region. The 1,000-row case is
+retained only for small-data regression tracking.
+
+All 432 runs passed output and input-preservation checks. Within each
+method, both APIs produced identical outputs, with primary-workload
+total-time medians differing by less than 1%.
+
+The report includes conditions, observed timing ranges, quality and
+memory measurements, limitations, reproduction instructions, and raw results.

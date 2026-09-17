@@ -9,7 +9,7 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 105
 
     defaults:
       run:
@@ -183,11 +183,11 @@ jobs:
             -m benchmarks.benchmark_fit_transform \
             --expected-version "$CANDIDATE_VERSION" \
             --provenance "$OUTPUT_DIR/candidate-build.json" \
-            --sizes 1000 3000 \
+            --sizes 1000 3000 10000 20000 \
             --seeds 101 202 303 \
             --repeats 3 \
-            --timeout-seconds 180 \
-            --budget-seconds 1800 \
+            --timeout-seconds 300 \
+            --budget-seconds 5400 \
             --output "$OUTPUT_DIR/fit_transform.json"
 
       - name: Upload benchmark results
