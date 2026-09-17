@@ -1,0 +1,200 @@
+name: Same-data fit-transform benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      PYTHONNOUSERSITE: "1"
+      PYTHONHASHSEED: "0"
+      PYTHONPATH: ""
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Check out benchmark source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Initialize paths
+        run: |
+          {
+            echo "BUILD_ENV=$RUNNER_TEMP/fit-transform-build-env"
+            echo "BUILD_DIR=$RUNNER_TEMP/fit-transform-source"
+            echo "BENCHMARK_ENV=$RUNNER_TEMP/fit-transform-runtime"
+            echo "BENCHMARK_DIR=$RUNNER_TEMP/fit-transform-benchmark"
+            echo "OUTPUT_DIR=$GITHUB_WORKSPACE/benchmark_outputs"
+          } >> "$GITHUB_ENV"
+
+          mkdir -p "$GITHUB_WORKSPACE/benchmark_outputs/wheels"
+
+      - name: Build candidate wheel and record provenance
+        run: |
+          python -m venv "$BUILD_ENV"
+          "$BUILD_ENV/bin/python" -m pip install \
+            "build>=1.2" "packaging>=24"
+
+          mkdir -p "$BUILD_DIR"
+          git archive HEAD | tar -x -C "$BUILD_DIR"
+
+          "$BUILD_ENV/bin/python" - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          from packaging.version import Version
+
+          workspace = Path(os.environ["GITHUB_WORKSPACE"])
+          build_dir = Path(os.environ["BUILD_DIR"])
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          wheel_dir = output_dir / "wheels"
+
+          source_commit = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              cwd=workspace,
+              text=True,
+          ).strip()
+
+          if source_commit != os.environ["GITHUB_SHA"]:
+              raise RuntimeError("Checkout commit differs from GITHUB_SHA")
+
+          project_path = build_dir / "pyproject.toml"
+          source = project_path.read_text(encoding="utf-8")
+          declared_version = tomllib.loads(source)["project"]["version"]
+          candidate_version = (
+              f"{Version(declared_version).public}"
+              f"+bench.{source_commit[:12]}"
+          )
+
+          lines = source.splitlines(keepends=True)
+          in_project = False
+          replacements = 0
+
+          for position, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("["):
+                  section = stripped.split("#", 1)[0].strip()
+                  in_project = section == "[project]"
+              elif in_project and re.match(r"^\s*version\s*=", line):
+                  lines[position] = f'version = "{candidate_version}"\n'
+                  replacements += 1
+
+          if replacements != 1:
+              raise RuntimeError(
+                  "Expected exactly one static version in [project]"
+              )
+
+          project_path.write_text("".join(lines), encoding="utf-8")
+
+          subprocess.run(
+              [
+                  sys.executable,
+                  "-m",
+                  "build",
+                  "--wheel",
+                  "--outdir",
+                  str(wheel_dir),
+                  str(build_dir),
+              ],
+              check=True,
+          )
+
+          wheels = list(wheel_dir.glob("*.whl"))
+          if len(wheels) != 1:
+              raise RuntimeError("Expected exactly one candidate wheel")
+
+          wheel = wheels[0]
+          provenance = {
+              "version": candidate_version,
+              "declared_version": declared_version,
+              "source_commit": source_commit,
+              "wheel_filename": wheel.name,
+              "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+          }
+
+          (output_dir / "candidate-build.json").write_text(
+              json.dumps(provenance, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"CANDIDATE_VERSION={candidate_version}\n")
+              stream.write(f"CANDIDATE_WHEEL={wheel}\n")
+
+          print(f"Candidate: {candidate_version}")
+          print(f"Source commit: {source_commit}")
+          print(f"Wheel SHA256: {provenance['wheel_sha256']}")
+          PY
+
+      - name: Install candidate in an isolated environment
+        run: |
+          python -m venv "$BENCHMARK_ENV"
+
+          "$BENCHMARK_ENV/bin/python" -m pip install \
+            --only-binary=:all: \
+            --report "$OUTPUT_DIR/install-report.json" \
+            "$CANDIDATE_WHEEL"
+
+          "$BENCHMARK_ENV/bin/python" -m pip freeze \
+            > "$OUTPUT_DIR/runtime-requirements.txt"
+
+          "$BUILD_ENV/bin/python" -m pip freeze \
+            > "$OUTPUT_DIR/build-requirements.txt"
+
+      - name: Copy benchmark code outside the checkout
+        run: |
+          mkdir -p "$BENCHMARK_DIR"
+          cp -R "$GITHUB_WORKSPACE/benchmarks" "$BENCHMARK_DIR/benchmarks"
+
+      - name: Run same-data comparison
+        run: |
+          unset PYTHONPATH
+          cd "$BENCHMARK_DIR"
+
+          "$BENCHMARK_ENV/bin/python" -u \
+            -m benchmarks.benchmark_fit_transform \
+            --expected-version "$CANDIDATE_VERSION" \
+            --provenance "$OUTPUT_DIR/candidate-build.json" \
+            --sizes 1000 3000 \
+            --seeds 101 202 303 \
+            --repeats 3 \
+            --timeout-seconds 180 \
+            --budget-seconds 1800 \
+            --output "$OUTPUT_DIR/fit_transform.json"
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fit-transform-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmark_outputs/
+          if-no-files-found: warn
+          retention-days: 30
