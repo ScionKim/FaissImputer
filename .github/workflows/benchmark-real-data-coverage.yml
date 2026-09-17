@@ -1,0 +1,245 @@
+name: Real-data coverage benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      PYTHONNOUSERSITE: "1"
+      PYTHONHASHSEED: "0"
+      PYTHONPATH: ""
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Check out benchmark source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Initialize paths
+        run: |
+          {
+            echo "BENCH_BUILD_ENV=$RUNNER_TEMP/real-data-build-env"
+            echo "BENCH_RUN_ENV=$RUNNER_TEMP/real-data-run-env"
+            echo "BENCH_BUILD_DIR=$RUNNER_TEMP/real-data-build-source"
+            echo "BENCH_RUN_DIR=$RUNNER_TEMP/real-data-benchmark"
+            echo "BENCH_DATA_HOME=$RUNNER_TEMP/real-data-cache"
+            echo "BENCH_OUTPUT_DIR=$GITHUB_WORKSPACE/benchmark_outputs"
+          } >> "$GITHUB_ENV"
+
+          mkdir -p "$GITHUB_WORKSPACE/benchmark_outputs/wheels"
+
+      - name: Prepare candidate source
+        run: |
+          python -m venv "$BENCH_BUILD_ENV"
+          "$BENCH_BUILD_ENV/bin/python" -m pip install \
+            "build>=1.2" packaging
+
+          mkdir -p "$BENCH_BUILD_DIR"
+          git archive HEAD | tar -x -C "$BENCH_BUILD_DIR"
+
+          "$BENCH_BUILD_ENV/bin/python" - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import tomllib
+
+          from packaging.version import Version
+
+          source_commit = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], text=True
+          ).strip()
+          if source_commit != os.environ["GITHUB_SHA"]:
+              raise RuntimeError("Checkout differs from the workflow commit")
+
+          project_path = Path(os.environ["BENCH_BUILD_DIR"]) / "pyproject.toml"
+          source = project_path.read_text(encoding="utf-8")
+          declared_version = tomllib.loads(source)["project"]["version"]
+          candidate_version = (
+              f"{Version(declared_version).public}"
+              f"+bench.{source_commit[:12]}"
+          )
+
+          lines = source.splitlines(keepends=True)
+          in_project = False
+          replacements = 0
+
+          for position, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("["):
+                  section = stripped.split("#", 1)[0].strip()
+                  in_project = section == "[project]"
+              elif in_project and re.match(r"^\s*version\s*=", line):
+                  lines[position] = f'version = "{candidate_version}"\n'
+                  replacements += 1
+
+          if replacements != 1:
+              raise RuntimeError(
+                  "Expected exactly one static version in [project]"
+              )
+
+          updated = "".join(lines)
+          if tomllib.loads(updated)["project"]["version"] != candidate_version:
+              raise RuntimeError("Candidate version replacement failed")
+          project_path.write_text(updated, encoding="utf-8")
+
+          provenance = {
+              "version": candidate_version,
+              "declared_version": declared_version,
+              "source_commit": source_commit,
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+          }
+          destination = (
+              Path(os.environ["BENCH_OUTPUT_DIR"]) / "candidate-build.json"
+          )
+          destination.write_text(
+              json.dumps(provenance, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"BENCH_EXPECTED_VERSION={candidate_version}\n")
+
+          print(f"Candidate version: {candidate_version}")
+          print(f"Source commit: {source_commit}")
+          PY
+
+      - name: Build and fingerprint candidate wheel
+        run: |
+          "$BENCH_BUILD_ENV/bin/python" -m build \
+            --wheel \
+            --outdir "$BENCH_OUTPUT_DIR/wheels" \
+            "$BENCH_BUILD_DIR"
+
+          "$BENCH_BUILD_ENV/bin/python" - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          output = Path(os.environ["BENCH_OUTPUT_DIR"])
+          wheels = list((output / "wheels").glob("*.whl"))
+          if len(wheels) != 1:
+              raise RuntimeError("Expected exactly one candidate wheel")
+
+          wheel = wheels[0]
+          provenance_path = output / "candidate-build.json"
+          provenance = json.loads(
+              provenance_path.read_text(encoding="utf-8")
+          )
+          provenance["wheel_filename"] = wheel.name
+          provenance["wheel_sha256"] = hashlib.sha256(
+              wheel.read_bytes()
+          ).hexdigest()
+
+          provenance_path.write_text(
+              json.dumps(provenance, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(f"Wheel: {wheel.name}")
+          print(f"SHA256: {provenance['wheel_sha256']}")
+          PY
+
+      - name: Install candidate in an isolated environment
+        run: |
+          python -m venv "$BENCH_RUN_ENV"
+
+          "$BENCH_RUN_ENV/bin/python" -m pip install \
+            --only-binary=:all: \
+            --report "$BENCH_OUTPUT_DIR/install-report.json" \
+            "$BENCH_OUTPUT_DIR"/wheels/*.whl
+
+          "$BENCH_RUN_ENV/bin/python" -m pip check
+
+          "$BENCH_RUN_ENV/bin/python" -m pip freeze \
+            --exclude faiss-imputer \
+            > "$BENCH_OUTPUT_DIR/dependencies.txt"
+
+          "$BENCH_RUN_ENV/bin/python" -m pip list --format=json \
+            > "$BENCH_OUTPUT_DIR/environment.json"
+
+      - name: Prepare benchmark outside the checkout
+        run: |
+          mkdir -p "$BENCH_RUN_DIR" "$BENCH_DATA_HOME"
+          cp -R "$GITHUB_WORKSPACE/benchmarks" "$BENCH_RUN_DIR/benchmarks"
+
+      - name: Download and fingerprint the dataset once
+        timeout-minutes: 5
+        working-directory: ${{ env.BENCH_RUN_DIR }}
+        run: |
+          "$BENCH_RUN_ENV/bin/python" - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from benchmarks.benchmark_real_data_cases import load_dataset
+          from benchmarks.benchmark_scaling_threads import check_released_package
+
+          check_released_package(os.environ["BENCH_EXPECTED_VERSION"])
+          data, names, dataset = load_dataset(
+              os.environ["BENCH_DATA_HOME"],
+              download_if_missing=True,
+          )
+
+          destination = (
+              Path(os.environ["BENCH_OUTPUT_DIR"]) / "dataset.json"
+          )
+          destination.write_text(
+              json.dumps(dataset, indent=2, allow_nan=False) + "\n",
+              encoding="utf-8",
+          )
+
+          print(f"Dataset shape: {data.shape}")
+          print(f"Features: {names}")
+          print(f"SHA256: {dataset['dataset_sha256']}")
+          PY
+
+      - name: Run 360 isolated benchmark workers
+        timeout-minutes: 95
+        working-directory: ${{ env.BENCH_RUN_DIR }}
+        run: |
+          "$BENCH_RUN_ENV/bin/python" -u \
+            -m benchmarks.benchmark_real_data_coverage \
+            --expected-version "$BENCH_EXPECTED_VERSION" \
+            --provenance "$BENCH_OUTPUT_DIR/candidate-build.json" \
+            --data-home "$BENCH_DATA_HOME" \
+            --train-sizes 10000 15000 \
+            --query-size 3000 \
+            --seeds 101 202 303 \
+            --repeats 3 \
+            --timeout-seconds 300 \
+            --budget-seconds 5400 \
+            --output "$BENCH_OUTPUT_DIR/real_data_coverage.json"
+
+      - name: Upload results and reproduction metadata
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-data-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmark_outputs/
+          if-no-files-found: warn
+          retention-days: 30
