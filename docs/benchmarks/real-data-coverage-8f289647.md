@@ -259,9 +259,30 @@ For float32 available mode, the maximum difference was at most
 The difference recurred in all three repetitions. Aggregate RMSE differed
 by approximately `0.000118700`, and MAE by `0.000201161`.
 
-The underlying cause has not been established by this benchmark.
-The aggregate errors are close, but this case prevents a claim of
-uniformly matching individual outputs.
+A follow-up diagnostic reproduced the original float32 outputs.
+Only four missing cells across two query rows differed by more than
+`1e-5` between the implementations.
+
+To isolate numerical precision, the diagnostic promoted the same
+prepared float32 inputs to float64 without changing their values.
+With these float64 inputs, both implementations produced identical
+outputs.
+
+| Implementation | Maximum output change from float32 to float64 input |
+| --- | --- |
+| FaissImputer, available mode | 1.61e-7 |
+| KNNImputer | 0.6125 |
+
+An independent check calculated missing-aware distances directly in
+float64 and matched FaissImputer's neighbor selection. For the affected
+rows, KNNImputer's float32 distance calculations changed the neighbor
+ordering. Different donors therefore contributed to the averages,
+explaining the output differences.
+
+In this benchmark case, FaissImputer's float32 results stayed consistent
+with the higher-precision reference within small rounding differences.
+The discrepancy reflects a change in neighbor selection, rather than
+a comparably large rounding difference in the final average.
 
 Complete mode uses a different donor population and is not expected to
 match KNNImputer outputs.
@@ -384,6 +405,11 @@ It does not evaluate naturally missing data, downstream prediction,
 other datasets, callable metrics, approximate indexes, GPU execution,
 or larger query workloads.
 
-The available-mode float32 discrepancy remains an open investigation.
+The float32 diagnosis is limited to this reproduced case and software
+environment. It does not establish that FaissImputer is always more
+accurate or that KNNImputer is generally incorrect. Agreement with a
+higher-precision distance reference is separate from reconstruction
+quality: KNNImputer had slightly lower aggregate reconstruction errors
+in this case, as reported above.
 Published-package performance claims require measurements of the
 corresponding published wheel.
