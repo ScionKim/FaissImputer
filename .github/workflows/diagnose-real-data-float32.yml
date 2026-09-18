@@ -1,0 +1,240 @@
+name: Real-data float32 diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      PYTHONNOUSERSITE: "1"
+      PYTHONHASHSEED: "0"
+      PYTHONPATH: ""
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Check out diagnostic source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up the recorded Python version
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12.14"
+
+      - name: Initialize paths
+        run: |
+          {
+            echo "DIAG_BUILD_ENV=$RUNNER_TEMP/diagnostic-build-env"
+            echo "DIAG_RUN_ENV=$RUNNER_TEMP/diagnostic-run-env"
+            echo "DIAG_BUILD_DIR=$RUNNER_TEMP/diagnostic-build-source"
+            echo "DIAG_RUN_DIR=$RUNNER_TEMP/real-data-diagnostic"
+            echo "DIAG_DATA_HOME=$RUNNER_TEMP/diagnostic-data-cache"
+            echo "DIAG_OUTPUT_DIR=$GITHUB_WORKSPACE/diagnostic_outputs"
+          } >> "$GITHUB_ENV"
+
+          mkdir -p "$GITHUB_WORKSPACE/diagnostic_outputs/wheels"
+
+      - name: Build and fingerprint the candidate wheel
+        run: |
+          python -m venv "$DIAG_BUILD_ENV"
+          "$DIAG_BUILD_ENV/bin/python" -m pip install \
+            "build>=1.2" packaging
+
+          mkdir -p "$DIAG_BUILD_DIR"
+          git archive HEAD | tar -x -C "$DIAG_BUILD_DIR"
+
+          "$DIAG_BUILD_ENV/bin/python" - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+          import tomllib
+
+          from packaging.version import Version
+
+          source_commit = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], text=True
+          ).strip()
+          if source_commit != os.environ["GITHUB_SHA"]:
+              raise RuntimeError("Checkout differs from the workflow commit")
+
+          build_directory = Path(os.environ["DIAG_BUILD_DIR"])
+          output_directory = Path(os.environ["DIAG_OUTPUT_DIR"])
+          project_path = build_directory / "pyproject.toml"
+
+          source = project_path.read_text(encoding="utf-8")
+          declared_version = tomllib.loads(source)["project"]["version"]
+          candidate_version = (
+              f"{Version(declared_version).public}"
+              f"+bench.{source_commit[:12]}"
+          )
+
+          lines = source.splitlines(keepends=True)
+          in_project = False
+          replacements = 0
+
+          for position, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("["):
+                  section = stripped.split("#", 1)[0].strip()
+                  in_project = section == "[project]"
+              elif in_project and re.match(r"^\s*version\s*=", line):
+                  lines[position] = f'version = "{candidate_version}"\n'
+                  replacements += 1
+
+          if replacements != 1:
+              raise RuntimeError(
+                  "Expected exactly one static version in [project]"
+              )
+
+          updated = "".join(lines)
+          if tomllib.loads(updated)["project"]["version"] != candidate_version:
+              raise RuntimeError("Candidate version replacement failed")
+          project_path.write_text(updated, encoding="utf-8")
+
+          wheel_directory = output_directory / "wheels"
+          subprocess.run(
+              [
+                  sys.executable,
+                  "-m",
+                  "build",
+                  "--wheel",
+                  "--outdir",
+                  str(wheel_directory),
+                  str(build_directory),
+              ],
+              check=True,
+          )
+
+          wheels = list(wheel_directory.glob("*.whl"))
+          if len(wheels) != 1:
+              raise RuntimeError("Expected exactly one candidate wheel")
+          wheel = wheels[0]
+
+          provenance = {
+              "version": candidate_version,
+              "declared_version": declared_version,
+              "source_commit": source_commit,
+              "wheel_filename": wheel.name,
+              "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+          }
+          (output_directory / "candidate-build.json").write_text(
+              json.dumps(provenance, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"DIAG_EXPECTED_VERSION={candidate_version}\n")
+
+          print(f"Candidate version: {candidate_version}")
+          print(f"Source commit: {source_commit}")
+          print(f"Wheel SHA256: {provenance['wheel_sha256']}")
+          PY
+
+      - name: Install the recorded numerical library versions
+        run: |
+          python -m venv "$DIAG_RUN_ENV"
+
+          "$DIAG_RUN_ENV/bin/python" -m pip install \
+            --only-binary=:all: \
+            --report "$DIAG_OUTPUT_DIR/install-report.json" \
+            "numpy==2.5.3" \
+            "scikit-learn==1.9.1" \
+            "faiss-cpu==1.15.1" \
+            "$DIAG_OUTPUT_DIR"/wheels/*.whl
+
+          "$DIAG_RUN_ENV/bin/python" -m pip check
+
+          "$DIAG_RUN_ENV/bin/python" -m pip freeze \
+            --exclude faiss-imputer \
+            > "$DIAG_OUTPUT_DIR/dependencies.txt"
+
+          "$DIAG_RUN_ENV/bin/python" -m pip list --format=json \
+            > "$DIAG_OUTPUT_DIR/environment.json"
+
+      - name: Prepare scripts and reference results
+        run: |
+          mkdir -p "$DIAG_RUN_DIR" "$DIAG_DATA_HOME"
+
+          cp -R \
+            "$GITHUB_WORKSPACE/benchmarks" \
+            "$DIAG_RUN_DIR/benchmarks"
+
+          cp \
+            "$GITHUB_WORKSPACE/benchmarks/results/real-data-coverage-8f289647.json" \
+            "$DIAG_OUTPUT_DIR/reference-benchmark.json"
+
+      - name: Download and fingerprint the dataset once
+        timeout-minutes: 5
+        working-directory: ${{ env.DIAG_RUN_DIR }}
+        run: |
+          "$DIAG_RUN_ENV/bin/python" - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from benchmarks.benchmark_real_data_cases import load_dataset
+          from benchmarks.benchmark_scaling_threads import check_released_package
+
+          check_released_package(os.environ["DIAG_EXPECTED_VERSION"])
+          data, names, dataset = load_dataset(
+              os.environ["DIAG_DATA_HOME"],
+              download_if_missing=True,
+          )
+
+          destination = (
+              Path(os.environ["DIAG_OUTPUT_DIR"]) / "dataset.json"
+          )
+          destination.write_text(
+              json.dumps(dataset, indent=2, allow_nan=False) + "\n",
+              encoding="utf-8",
+          )
+
+          print(f"Dataset shape: {data.shape}")
+          print(f"Features: {names}")
+          print(f"SHA256: {dataset['dataset_sha256']}")
+          PY
+
+      - name: Diagnose the single float32 case
+        timeout-minutes: 10
+        working-directory: ${{ env.DIAG_RUN_DIR }}
+        run: |
+          "$DIAG_RUN_ENV/bin/python" -u \
+            -m benchmarks.diagnose_real_data_float32 \
+            --expected-version "$DIAG_EXPECTED_VERSION" \
+            --provenance "$DIAG_OUTPUT_DIR/candidate-build.json" \
+            --data-home "$DIAG_DATA_HOME" \
+            --baseline "$DIAG_OUTPUT_DIR/reference-benchmark.json" \
+            --threshold 1e-5 \
+            --max-rows 20 \
+            --output "$DIAG_OUTPUT_DIR/real_data_float32_diagnostic.json"
+
+      - name: Upload diagnostic results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-data-float32-${{ github.run_id }}-${{ github.run_attempt }}
+          path: diagnostic_outputs/
+          if-no-files-found: warn
+          retention-days: 30
