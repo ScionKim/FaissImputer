@@ -122,3 +122,27 @@ total-time medians differing by less than 1%.
 
 The report includes conditions, observed timing ranges, quality and
 memory measurements, limitations, reproduction instructions, and raw results.
+
+### Held-out real-data imputation
+
+[California Housing comparison: source 8f289647](real-data-coverage-8f289647.md)
+covers 10,000 and 15,000 training rows with 3,000 held-out queries,
+MCAR/MAR missingness, and float32/float64 inputs. Methods include
+mean and median baselines, KNNImputer, and both FaissImputer donor policies.
+
+Compared with KNNImputer, using condition-level medians:
+
+- Available mode completed fit plus first transform 1.37–1.82× as fast,
+  with 47.7–63.0% lower process peak RSS.
+- Complete mode completed fit plus first transform 7.36–10.46× as fast,
+  with 15.9–27.5% lower reconstruction RMSE on this dataset.
+  Complete donors represented 42.59–47.60% of training rows.
+
+All 360 runs passed output and input-preservation checks.
+
+One available-mode float32 case had a maximum individual-output
+difference of 0.6125 standardized units from KNNImputer, despite close
+aggregate reconstruction errors. Its cause remains undetermined.
+
+The report includes timing variation, simple-baseline quality,
+memory measurements, reproduction instructions, and raw results.
