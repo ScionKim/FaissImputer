@@ -48,18 +48,29 @@ by `transform(X)`. Its primary conclusions use 10,000 and 20,000 rows.
 The 3,000-row case covers the crossover region; 1,000 rows are retained
 only for small-data regression tracking.
 
+The [held-out real-data comparison](docs/benchmarks/real-data-coverage-8f289647.md)
+is also complete. It covers California Housing with 10,000 and 15,000
+training rows, 3,000 held-out queries, MCAR/MAR missingness, and
+float32/float64 inputs. Methods include mean and median baselines,
+KNNImputer, and both FaissImputer donor policies.
+
 Reports under `docs/benchmarks/` document validation checks and
 reproduction instructions, with links to archived raw results.
 
-Remaining coverage:
+Remaining work:
 
+- Investigate the available-mode float32 output difference in the
+  15,000-row MAR case with seed 303. The maximum difference from
+  KNNImputer was 0.6125 standardized units despite close aggregate
+  reconstruction errors. The cause remains undetermined.
 - Vary training size, feature count, missingness patterns, and neighbor
   counts independently.
 - Measure callable metrics separately.
 - Distinguish retained fitted memory and phase-specific peaks from
   whole-process peak RSS.
-- Extend real-data coverage with simple baselines. Report quality against
-  hidden ground truth separately from agreement with another imputer.
+- Extend held-out measurements to additional real datasets, retaining
+  simple baselines. Report quality against hidden ground truth
+  separately from agreement with another imputer.
 
 Use published wheels for released-package claims and identify development
 measurements by source commit. Record matching inputs, hardware, thread
