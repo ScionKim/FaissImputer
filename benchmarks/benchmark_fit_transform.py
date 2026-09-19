@@ -45,10 +45,18 @@ MEASURES = (
     "transform_seconds",
     "fit_transform_seconds",
     "worker_peak_rss_mib",
+    "fit_phase_peak_rss_mib",
+    "transform_phase_peak_rss_mib",
+    "rss_before_fit_mib",
+    "rss_after_fit_mib",
+    "fit_retained_rss_mib",
     "rmse",
     "mae",
 )
 
+# Signed deltas validated for finiteness only; allocator behavior can
+# in principle make a retained-memory delta negative.
+SIGNED_MEASURES = ("fit_retained_rss_mib",)
 
 def run_worker(config, timeout):
     env = os.environ.copy()
@@ -138,7 +146,11 @@ def validate_record(record, values, environment, inputs, outputs):
 
     for measure in MEASURES:
         value = record.get(measure)
-        if value is not None and (not np.isfinite(value) or value < 0):
+        if value is None:
+            continue
+        if not np.isfinite(value):
+            raise ValueError(f"Invalid measurement: {measure}")
+        if measure not in SIGNED_MEASURES and value < 0:
             raise ValueError(f"Invalid measurement: {measure}")
 
     case = (record["size"], record["dtype"], record["seed"])
@@ -217,6 +229,15 @@ def main():
         "--seeds", type=int, nargs="+", default=[101, 202, 303]
     )
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument(
+        "--phase-memory",
+        action="store_true",
+        help=(
+            "Measure phase-separated memory (retained fitted memory "
+            "and fit/transform peak RSS) in each worker. Off by default "
+            "so timing runs keep the original benchmark conditions."
+        ),
+    )
     parser.add_argument("--timeout-seconds", type=int, default=180)
     parser.add_argument("--budget-seconds", type=int, default=1800)
     parser.add_argument(
@@ -271,6 +292,7 @@ def main():
                             "seed": seed,
                             "repeat": repeat + 1,
                             "expected_version": args.expected_version,
+                            "measure_phase_memory": args.phase_memory,
                         })
 
     results = {
@@ -289,6 +311,7 @@ def main():
             "target_missing_rate": TARGET_MISSING_RATE,
             "guaranteed_complete_rows": NEIGHBORS,
             "threads": 1,
+            "phase_memory_measured": args.phase_memory,
             "sklearn_working_memory_mib": WORKING_MEMORY_MIB,
             "worker_timeout_seconds": args.timeout_seconds,
             "run_budget_seconds": args.budget_seconds,
@@ -301,13 +324,30 @@ def main():
             "The first five rows are kept complete; actual missingness is recorded.",
             "Float64 data is generated without a float32 round trip.",
             "Both APIs use a fresh estimator after a small untimed warmup.",
-            "Split fit and transform are timed consecutively without "
+            "By default, split fit and transform are timed consecutively without "
             "explicit GC or memory sampling between them.",
+            "Phase-separated memory measurement is opt-in via "
+            "--phase-memory. In that mode, sampler setup/teardown, "
+            "garbage collection, and RSS snapshots sit outside the "
+            "timed intervals: fit_seconds covers only model.fit() and "
+            "transform_seconds only model.transform(). Timings from "
+            "--phase-memory runs are for reference only; the sampler "
+            "thread adds observer overhead, so they are not canonical "
+            "performance comparisons. Default runs preserve the "
+            "original benchmark conditions and leave the phase-memory "
+            "fields null.",
             "Output equality is required across APIs and repetitions "
             "of the same method, not across different methods.",
             "RMSE and MAE describe reconstruction of masked training entries.",
             "Peak RSS includes preparation and validation and is sampled "
             "before JSON serialization; it is not fitted-model memory.",
+            "Retained fitted memory is the current-RSS change across fit, "
+            "with a garbage-collection pause before each snapshot. "
+            "Allocator-retained memory can exceed live model objects.",
+            "Phase peaks are background-sampled current-RSS maxima during "
+            "each phase: lower bounds on the true phase peaks that include "
+            "baseline process memory. They are null for the fit_transform "
+            "API, which cannot attribute memory to separate phases.",
             "Summary statistics include successful workers only; "
             "any failed or unrun worker makes the command fail.",
         ],
