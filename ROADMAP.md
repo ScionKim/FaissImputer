@@ -59,10 +59,16 @@ reproduction instructions, with links to archived raw results.
 
 Remaining work:
 
-- Investigate the available-mode float32 output difference in the
-  15,000-row MAR case with seed 303. The maximum difference from
-  KNNImputer was 0.6125 standardized units despite close aggregate
-  reconstruction errors. The cause remains undetermined.
+The [float32 investigation](docs/benchmarks/real-data-coverage-8f289647.md#agreement-with-knnimputer)
+is complete for the 15,000-row MAR case with seed 303.
+
+FaissImputer's float32 results remained consistent with the independent
+float64 direct-distance reference, while KNNImputer's float32 distance
+calculations changed neighbor ordering in the affected rows. Both
+implementations agreed when the same prepared inputs were promoted
+to float64. This conclusion is limited to the reproduced case.
+
+Remaining work:
 - Vary training size, feature count, missingness patterns, and neighbor
   counts independently.
 - Measure callable metrics separately.
