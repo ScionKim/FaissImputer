@@ -2,6 +2,11 @@ name: Same-data fit-transform benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      phase_memory:
+        description: "Measure phase-separated memory (retained fitted memory and fit/transform peak RSS); timings from this run are for reference only"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -179,6 +184,11 @@ jobs:
           unset PYTHONPATH
           cd "$BENCHMARK_DIR"
 
+          PHASE_MEMORY_FLAG=()
+          if [ "${{ inputs.phase_memory }}" = "true" ]; then
+            PHASE_MEMORY_FLAG=(--phase-memory)
+          fi
+
           "$BENCHMARK_ENV/bin/python" -u \
             -m benchmarks.benchmark_fit_transform \
             --expected-version "$CANDIDATE_VERSION" \
@@ -188,7 +198,9 @@ jobs:
             --repeats 3 \
             --timeout-seconds 300 \
             --budget-seconds 5400 \
+            "${PHASE_MEMORY_FLAG[@]}" \
             --output "$OUTPUT_DIR/fit_transform.json"
+
 
       - name: Upload benchmark results
         if: always()
