@@ -140,9 +140,17 @@ Compared with KNNImputer, using condition-level medians:
 
 All 360 runs passed output and input-preservation checks.
 
-One available-mode float32 case had a maximum individual-output
-difference of 0.6125 standardized units from KNNImputer, despite close
-aggregate reconstruction errors. Its cause remains undetermined.
+A follow-up diagnostic reproduced the float32 discrepancy: four missing
+cells across two rows differed by more than `1e-5`, with a maximum
+difference of 0.6125 standardized units.
+
+In this case, FaissImputer's float32 results stayed consistent with an
+independent float64 direct-distance reference, while KNNImputer's float32
+distance calculations changed the neighbor ordering. Both implementations
+agreed when the same inputs were promoted to float64.
+
+This diagnosis is specific to the reproduced case and does not establish
+a general advantage in reconstruction accuracy.
 
 The report includes timing variation, simple-baseline quality,
 memory measurements, reproduction instructions, and raw results.
