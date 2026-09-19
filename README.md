@@ -14,12 +14,22 @@ constraints explicitly, including when the training data is itself incomplete.
 
 ## Why FaissImputer?
 
-- **Use incomplete training rows.** Available-donor mode lets partially
-  observed training rows contribute to imputation.
-- **Select donors for each missing feature.** Choose usable neighbors
-  separately for each value you need to fill.
-- **Reduce neighbor-search cost.** Faiss-backed search and batched
-  missing-aware distance calculations help reduce the cost of finding donors.
+- **Choose your donor policy.** Like sklearn's `KNNImputer`,
+  `donor_policy="available"` can use partially observed training rows,
+  selecting donors that observe each target feature and computing
+  distances from co-observed features. FaissImputer additionally provides
+  `donor_policy="complete"`, which restricts donors to fully observed
+  training rows — a policy with no equivalent `KNNImputer` option. The
+  main difference is computational: FaissImputer uses
+  missingness-pattern-grouped Faiss search for complete donors and
+  optimized batched matrix distances for available donors, rather than
+  sklearn's chunked all-pairs distance computation.
+- **Search with Faiss.** Native inner-product search and
+  trainable/approximate Faiss index factories are capabilities that
+  sklearn's `KNNImputer` does not expose.
+- **Prioritize numerical reliability.** FaissImputer includes targeted
+  precision and overflow safeguards for distance search and aggregation,
+  with regression tests covering numerical edge cases.
 - **Keep familiar workflows.** Use fit/transform, scikit-learn pipelines,
   feature names, missing indicators, and optional pandas output.
 
