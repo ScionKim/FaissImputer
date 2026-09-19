@@ -15,8 +15,10 @@ from benchmarks.benchmark_scaling_threads import (
     FEATURES,
     METHODS,
     NEIGHBORS,
+    PhasePeakSampler,
     WORKING_MEMORY_MIB,
     check_released_package,
+    current_rss_mib,
     digest,
     make_model,
     metadata,
@@ -114,22 +116,91 @@ def worker(config):
         model = make_model(method)
         gc.collect()
 
-        started = time.perf_counter()
+        measure_phase_memory = bool(config.get("measure_phase_memory", False))
+
         if api == "fit_transform":
+            # A single call cannot attribute memory to separate phases.
+            phase_memory = {
+                "rss_before_fit_mib": None,
+                "rss_after_fit_mib": None,
+                "fit_retained_rss_mib": None,
+                "fit_phase_peak_rss_mib": None,
+                "transform_phase_peak_rss_mib": None,
+            }
+
+            started = time.perf_counter()
             output = model.fit_transform(data)
             finished = time.perf_counter()
+
             fit_seconds = None
             transform_seconds = None
-        else:
+            total_seconds = finished - started
+
+        elif not measure_phase_memory:
+            # Canonical timing path: identical to the original benchmark,
+            # with no sampler thread and no GC between the phases.
+            phase_memory = {
+                "rss_before_fit_mib": None,
+                "rss_after_fit_mib": None,
+                "fit_retained_rss_mib": None,
+                "fit_phase_peak_rss_mib": None,
+                "transform_phase_peak_rss_mib": None,
+            }
+
+            started = time.perf_counter()
             model.fit(data)
             fitted = time.perf_counter()
             output = model.transform(data)
             finished = time.perf_counter()
+
             fit_seconds = fitted - started
             transform_seconds = finished - fitted
+            total_seconds = finished - started
 
-        # No explicit GC or memory sampling separates fit and transform.
-        total_seconds = finished - started
+        else:
+            # Phase-memory path: sampler setup/teardown, GC, and RSS
+            # snapshots all sit outside the timed intervals, so
+            # fit_seconds covers only model.fit() and transform_seconds
+            # only model.transform().
+            gc.collect()
+            rss_before_fit = current_rss_mib()
+
+            fit_sampler = PhasePeakSampler()
+            fit_sampler.start()
+
+            fit_started = time.perf_counter()
+            model.fit(data)
+            fit_finished = time.perf_counter()
+
+            fit_phase_peak = fit_sampler.stop()
+
+            gc.collect()
+            rss_after_fit = current_rss_mib()
+
+            transform_sampler = PhasePeakSampler()
+            transform_sampler.start()
+
+            transform_started = time.perf_counter()
+            output = model.transform(data)
+            transform_finished = time.perf_counter()
+
+            transform_phase_peak = transform_sampler.stop()
+
+            fit_seconds = fit_finished - fit_started
+            transform_seconds = transform_finished - transform_started
+            total_seconds = fit_seconds + transform_seconds
+
+            phase_memory = {
+                "rss_before_fit_mib": rss_before_fit,
+                "rss_after_fit_mib": rss_after_fit,
+                "fit_retained_rss_mib": (
+                    None
+                    if rss_before_fit is None or rss_after_fit is None
+                    else rss_after_fit - rss_before_fit
+                ),
+                "fit_phase_peak_rss_mib": fit_phase_peak,
+                "transform_phase_peak_rss_mib": transform_phase_peak,
+            }
 
         assert output.shape == before.shape
         assert output.dtype == before.dtype
@@ -173,8 +244,11 @@ def worker(config):
             "_values": values.tolist(),
         }
 
-        # Includes preparation and validation, but precedes serialization.
+        # Whole-process peak RSS, kept for comparison with the new
+        # phase-separated measurements. Includes preparation and
+        # validation, but precedes serialization.
         result["worker_peak_rss_mib"] = peak_rss_mib()
+        result.update(phase_memory)
 
     return result
 

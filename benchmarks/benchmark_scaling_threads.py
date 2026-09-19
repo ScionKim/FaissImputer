@@ -10,6 +10,7 @@ import subprocess
 import sys
 import sysconfig
 import time
+import threading
 from datetime import datetime, timezone
 from importlib.metadata import version
 from pathlib import Path
@@ -133,6 +134,62 @@ def current_rss_mib():
         return resident_pages * os.sysconf("SC_PAGE_SIZE") / (1024 ** 2)
     except (OSError, ValueError, IndexError):
         return None
+
+class PhasePeakSampler:
+    """Record the maximum sampled RSS observed during one benchmark phase.
+
+    The kernel's ``ru_maxrss`` only grows for the lifetime of the process,
+    so it cannot attribute a peak to a single phase such as fit or
+    transform. This sampler polls current RSS from a background thread
+    and records the maximum. The result is a *sampled lower bound* on the
+    true phase peak: spikes between polls are missed, and the value
+    includes baseline process memory (interpreter, input data, and any
+    previously retained state), not just the phase's own allocations.
+
+    The sampling thread only reads ``/proc/self/statm`` and sleeps
+    otherwise; it does not perform numerical work or alter the benchmark's
+    pinned native thread-pool settings. Returns ``None`` throughout on
+    non-Linux platforms, matching ``current_rss_mib``.
+    """
+
+    def __init__(self, interval_seconds=0.005):
+        self._interval = interval_seconds
+        self._peak_mib = None
+        self._stop = threading.Event()
+        self._thread = None
+
+    def start(self):
+        """Begin sampling; safe to call when sampling is unsupported."""
+        baseline = current_rss_mib()
+        if baseline is None:
+            return
+        self._peak_mib = baseline
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._sample, name="rss-phase-sampler", daemon=True
+        )
+        self._thread.start()
+
+    def _sample(self):
+        while not self._stop.wait(self._interval):
+            value = current_rss_mib()
+            if value is not None and value > self._peak_mib:
+                self._peak_mib = value
+
+    def stop(self):
+        """Stop sampling and return the maximum observed RSS in MiB."""
+        if self._thread is None:
+            return None
+        self._stop.set()
+        self._thread.join()
+        self._thread = None
+
+        # Catch a peak that landed after the final poll.
+        value = current_rss_mib()
+        if value is not None and value > self._peak_mib:
+            self._peak_mib = value
+
+        return self._peak_mib
 
 def worker(config):
     check_released_package(config.get("expected_version"))
