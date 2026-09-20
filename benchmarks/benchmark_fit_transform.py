@@ -250,8 +250,14 @@ def main():
     )
     args = parser.parse_args()
 
-    if min(args.sizes) <= NEIGHBORS:
-        parser.error(f"sizes must exceed {NEIGHBORS}")
+    if min(args.sizes) <= args.neighbors:
+        parser.error(f"sizes must exceed {args.neighbors}")
+    if args.features <= 0:
+        parser.error("features must be positive")
+    if args.neighbors <= 0:
+        parser.error("neighbors must be positive")
+    if not 0.0 < args.missing_rate < 1.0:
+        parser.error("missing-rate must be between 0 and 1")
     if len(set(args.sizes)) != len(args.sizes):
         parser.error("sizes must be unique")
     if min(args.seeds) < 0 or len(set(args.seeds)) != len(args.seeds):
@@ -296,6 +302,9 @@ def main():
                             "repeat": repeat + 1,
                             "expected_version": args.expected_version,
                             "measure_phase_memory": args.phase_memory,
+                            "features": args.features,
+                            "n_neighbors": args.neighbors,
+                            "target_missing_rate": args.missing_rate,
                         })
 
     results = {
@@ -309,10 +318,10 @@ def main():
             "apis": list(APIS),
             "seeds": args.seeds,
             "repeats": args.repeats,
-            "features": FEATURES,
-            "n_neighbors": NEIGHBORS,
-            "target_missing_rate": TARGET_MISSING_RATE,
-            "guaranteed_complete_rows": NEIGHBORS,
+            "features": args.features,
+            "n_neighbors": args.neighbors,
+            "target_missing_rate": args.missing_rate,
+            "guaranteed_complete_rows": args.neighbors,
             "threads": 1,
             "phase_memory_measured": args.phase_memory,
             "sklearn_working_memory_mib": WORKING_MEMORY_MIB,

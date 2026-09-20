@@ -105,15 +105,20 @@ def make_data(
     return train, query, truth, missing
 
 
-def make_model(method):
+def make_model(method, n_neighbors=None):
+    if n_neighbors is None:
+        n_neighbors = NEIGHBORS
     if method == "KNNImputer":
-        return KNNImputer(n_neighbors=NEIGHBORS, weights="uniform")
+        return KNNImputer(n_neighbors=n_neighbors, weights="uniform")
     if method not in METHODS:
         raise ValueError(f"Unknown method: {method}")
     policy = "complete" if method == "FaissImputer[complete]" else "available"
     return FaissImputer(
-        n_neighbors=NEIGHBORS, metric="l2", strategy="mean",
-        index_factory="Flat", donor_policy=policy,
+        n_neighbors=n_neighbors,
+        metric="l2",
+        strategy="mean",
+        index_factory="Flat",
+        donor_policy=policy,
     )
 
 
