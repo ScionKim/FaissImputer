@@ -107,8 +107,9 @@ def worker(config):
         }
 
         # Warm the selected API on a separate, small dataset.
+        warm_size = max(32, n_neighbors + 1)
         warm_data, _, _ = make_training_data(
-            32,
+            warm_size,
             7,
             config["dtype"],
             features,
