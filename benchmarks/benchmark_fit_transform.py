@@ -233,6 +233,11 @@ def main():
     parser.add_argument("--neighbors", type=int, default=5)
     parser.add_argument("--missing-rate", type=float, default=0.10)
     parser.add_argument(
+        "--missing-pattern",
+        choices=("mcar", "mar"),
+        default="mcar",
+    )
+    parser.add_argument(
         "--phase-memory",
         action="store_true",
         help=(
@@ -258,6 +263,16 @@ def main():
         parser.error("neighbors must be positive")
     if not 0.0 < args.missing_rate < 1.0:
         parser.error("missing-rate must be between 0 and 1")
+    if args.missing_pattern == "mar":
+        if args.features < 2:
+            parser.error("MAR missingness needs at least 2 features")
+        base_rate = args.missing_rate * args.features / (args.features - 1)
+        if base_rate >= 1.0:
+            parser.error(
+                "missing-rate is too high for MAR: feature 0 stays "
+                "observed and the remaining features need room for MAR "
+                "probability contrast"
+            )
     if len(set(args.sizes)) != len(args.sizes):
         parser.error("sizes must be unique")
     if min(args.seeds) < 0 or len(set(args.seeds)) != len(args.seeds):
@@ -305,6 +320,7 @@ def main():
                             "features": args.features,
                             "n_neighbors": args.neighbors,
                             "target_missing_rate": args.missing_rate,
+                            "missing_pattern": args.missing_pattern,
                         })
 
     results = {
@@ -321,6 +337,7 @@ def main():
             "features": args.features,
             "n_neighbors": args.neighbors,
             "target_missing_rate": args.missing_rate,
+            "missing_pattern": args.missing_pattern,
             "guaranteed_complete_rows": args.neighbors,
             "threads": 1,
             "phase_memory_measured": args.phase_memory,

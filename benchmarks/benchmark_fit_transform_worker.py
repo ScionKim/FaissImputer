@@ -37,6 +37,7 @@ def make_training_data(
     features=FEATURES,
     n_neighbors=NEIGHBORS,
     target_missing_rate=TARGET_MISSING_RATE,
+    missing_pattern="mcar",
 ):
     """Generate incomplete training data and its hidden ground truth."""
     dtype = np.dtype(dtype)
@@ -55,10 +56,43 @@ def make_training_data(
     scale = np.sqrt(np.sum(loadings * loadings, axis=0) + 0.15**2)
     truth = ((latent @ loadings + 0.15 * noise) / scale).astype(dtype)
 
-    missing = (
-        np.random.default_rng([seed, 5]).random(truth.shape)
-        < target_missing_rate
-    )
+    if missing_pattern == "mcar":
+        missing = (
+            np.random.default_rng([seed, 5]).random(truth.shape)
+            < target_missing_rate
+        )
+    elif missing_pattern == "mar":
+        if features < 2:
+            raise ValueError("MAR missingness needs at least 2 features")
+
+        # Feature 0 stays fully observed and drives missingness in the
+        # other features. The remaining features carry a rescaled
+        # probability to target the requested overall matrix rate in
+        # expectation; rows above the driver median get the higher
+        # probability.
+        base_rate = target_missing_rate * features / (features - 1)
+        if base_rate >= 1.0:
+            raise ValueError(
+                f"target_missing_rate {target_missing_rate} is too high "
+                f"for MAR with {features} features"
+            )
+
+        shift = min(base_rate / 2, 1.0 - base_rate)
+        rng = np.random.default_rng([seed, 6])
+        missing = np.zeros(truth.shape, dtype=bool)
+        driver = truth[:, 0]
+        above = driver > np.median(driver)
+
+        missing[above, 1:] = (
+            rng.random((int(above.sum()), features - 1))
+            < base_rate + shift
+        )
+        missing[~above, 1:] = (
+            rng.random((int((~above).sum()), features - 1))
+            < base_rate - shift
+        )
+    else:
+        raise ValueError(f"unknown missing pattern: {missing_pattern}")
     # Guarantee enough complete donors and at least one observed value
     # in every feature. Record the resulting actual missingness rate.
     missing[:n_neighbors] = False
@@ -90,6 +124,7 @@ def worker(config):
         target_missing_rate = config.get(
             "target_missing_rate", TARGET_MISSING_RATE
         )
+        missing_pattern = config.get("missing_pattern", "mcar")
 
         data, truth, missing = make_training_data(
             config["size"],
@@ -98,6 +133,7 @@ def worker(config):
             features,
             n_neighbors,
             target_missing_rate,
+            missing_pattern,
         )
         before = data.copy()
         fingerprints = {
@@ -115,6 +151,7 @@ def worker(config):
             features,
             n_neighbors,
             target_missing_rate,
+            missing_pattern,
         )
         warm_model = make_model(method, n_neighbors)
         if api == "fit_transform":
@@ -247,6 +284,7 @@ def worker(config):
             "features": features,
             "n_neighbors": n_neighbors,
             "target_missing_rate": target_missing_rate,
+            "missing_pattern": missing_pattern,
             "actual_missing_rate": float(missing.mean()),
             "guaranteed_complete_rows": n_neighbors,
             "complete_donors": int((~missing.any(axis=1)).sum()),
