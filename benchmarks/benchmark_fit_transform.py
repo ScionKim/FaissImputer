@@ -229,6 +229,9 @@ def main():
         "--seeds", type=int, nargs="+", default=[101, 202, 303]
     )
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--features", type=int, default=20)
+    parser.add_argument("--neighbors", type=int, default=5)
+    parser.add_argument("--missing-rate", type=float, default=0.10)
     parser.add_argument(
         "--phase-memory",
         action="store_true",
