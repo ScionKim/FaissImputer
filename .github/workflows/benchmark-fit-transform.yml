@@ -4,36 +4,36 @@ on:
   workflow_dispatch:
     inputs:
       phase_memory:
-      description: "Measure phase-separated memory (retained fitted memory and fit/transform peak RSS); timings from this run are for reference only"
-      type: boolean
-      default: false
-    sizes:
-      description: "Training sizes, space-separated (e.g. '1000 3000 10000')"
-      type: string
-      default: "1000 3000 10000 20000"
-    features:
-      description: "Feature count"
-      type: number
-      default: 20
-    neighbors:
-      description: "Neighbor count"
-      type: number
-      default: 5
-    missing_rate:
-      description: "Target missing rate between 0 and 1"
-      type: number
-      default: 0.10
-    missing_pattern:
-      description: "Missingness pattern"
-      type: choice
-      options:
-        - mcar
-        - mar
-      default: mcar
-    repeats:
-      description: "Repeats per case"
-      type: number
-      default: 3
+        description: "Measure phase-separated memory (retained fitted memory and fit/transform peak RSS); timings from this run are for reference only"
+        type: boolean
+        default: false
+      sizes:
+        description: "Training sizes, space-separated (e.g. '1000 3000 10000')"
+        type: string
+        default: "1000 3000 10000 20000"
+      features:
+        description: "Feature count"
+        type: number
+        default: 20
+      neighbors:
+        description: "Neighbor count"
+        type: number
+        default: 5
+      missing_rate:
+        description: "Target missing rate between 0 and 1"
+        type: number
+        default: 0.10
+      missing_pattern:
+        description: "Missingness pattern"
+        type: choice
+        options:
+          - mcar
+          - mar
+        default: mcar
+      repeats:
+        description: "Repeats per case"
+        type: number
+        default: 3
 
 permissions:
   contents: read
