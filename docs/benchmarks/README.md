@@ -116,6 +116,12 @@ as donors and had 38.2–41.7% higher median reconstruction RMSE.
 The 3,000-row case shows the crossover region. The 1,000-row case is
 retained only for small-data regression tracking.
 
+[Phase-separated memory: source ac84bfa1abec](fit-transform-ac84bfa1abec-phase-memory.md)
+distinguishes retained fitted memory and fit/transform phase-peak RSS
+from whole-process peak RSS for the same workload. Retained fitted
+memory is 0.3–3.8% of peak RSS at 20,000 rows; transform dominates
+peak RSS for KNNImputer and available-donor.
+
 All 432 runs passed output and input-preservation checks. Within each
 method, both APIs produced identical outputs, with primary-workload
 total-time medians differing by less than 1%.
