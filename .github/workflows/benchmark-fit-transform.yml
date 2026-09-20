@@ -4,9 +4,36 @@ on:
   workflow_dispatch:
     inputs:
       phase_memory:
-        description: "Measure phase-separated memory (retained fitted memory and fit/transform peak RSS); timings from this run are for reference only"
-        type: boolean
-        default: false
+      description: "Measure phase-separated memory (retained fitted memory and fit/transform peak RSS); timings from this run are for reference only"
+      type: boolean
+      default: false
+    sizes:
+      description: "Training sizes, space-separated (e.g. '1000 3000 10000')"
+      type: string
+      default: "1000 3000 10000 20000"
+    features:
+      description: "Feature count"
+      type: number
+      default: 20
+    neighbors:
+      description: "Neighbor count"
+      type: number
+      default: 5
+    missing_rate:
+      description: "Target missing rate between 0 and 1"
+      type: number
+      default: 0.10
+    missing_pattern:
+      description: "Missingness pattern"
+      type: choice
+      options:
+        - mcar
+        - mar
+      default: mcar
+    repeats:
+      description: "Repeats per case"
+      type: number
+      default: 3
 
 permissions:
   contents: read
@@ -180,9 +207,13 @@ jobs:
           cp -R "$GITHUB_WORKSPACE/benchmarks" "$BENCHMARK_DIR/benchmarks"
 
       - name: Run same-data comparison
+        env:
+          BENCH_SIZES: ${{ inputs.sizes }}
         run: |
           unset PYTHONPATH
           cd "$BENCHMARK_DIR"
+
+          read -ra SIZES <<< "$BENCH_SIZES"
 
           PHASE_MEMORY_FLAG=()
           if [ "${{ inputs.phase_memory }}" = "true" ]; then
@@ -193,9 +224,13 @@ jobs:
             -m benchmarks.benchmark_fit_transform \
             --expected-version "$CANDIDATE_VERSION" \
             --provenance "$OUTPUT_DIR/candidate-build.json" \
-            --sizes 1000 3000 10000 20000 \
+            --sizes "${SIZES[@]}" \
             --seeds 101 202 303 \
-            --repeats 3 \
+            --repeats "${{ inputs.repeats }}" \
+            --features "${{ inputs.features }}" \
+            --neighbors "${{ inputs.neighbors }}" \
+            --missing-rate "${{ inputs.missing_rate }}" \
+            --missing-pattern "${{ inputs.missing_pattern }}" \
             --timeout-seconds 300 \
             --budget-seconds 5400 \
             "${PHASE_MEMORY_FLAG[@]}" \
