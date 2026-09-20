@@ -57,8 +57,6 @@ KNNImputer, and both FaissImputer donor policies.
 Reports under `docs/benchmarks/` document validation checks and
 reproduction instructions, with links to archived raw results.
 
-Remaining work:
-
 The [float32 investigation](docs/benchmarks/real-data-coverage-8f289647.md#agreement-with-knnimputer)
 is complete for the 15,000-row MAR case with seed 303.
 
@@ -68,12 +66,19 @@ calculations changed neighbor ordering in the affected rows. Both
 implementations agreed when the same prepared inputs were promoted
 to float64. This conclusion is limited to the reproduced case.
 
+The phase-separated memory investigation
+[is complete for the same-data fit_transform workload](docs/benchmarks/fit-transform-ac84bfa1abec-phase-memory.md).
+Retained fitted memory was 0.3–3.8% of process peak RSS at 20,000 rows
+across methods and dtypes; whole-process peak RSS is dominated by
+transform for KNNImputer and available-donor. Timings from
+`--phase-memory` runs are reference-only. This conclusion is limited
+to the measured configurations (20 features, 5 neighbors, 10%
+missingness, one pinned thread).
+
 Remaining work:
 - Vary training size, feature count, missingness patterns, and neighbor
   counts independently.
 - Measure callable metrics separately.
-- Distinguish retained fitted memory and phase-specific peaks from
-  whole-process peak RSS.
 - Extend held-out measurements to additional real datasets, retaining
   simple baselines. Report quality against hidden ground truth
   separately from agreement with another imputer.
