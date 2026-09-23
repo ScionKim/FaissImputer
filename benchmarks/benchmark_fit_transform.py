@@ -159,7 +159,10 @@ def validate_record(record, values, environment, inputs, outputs):
     if case in inputs and inputs[case] != fingerprints:
         raise ValueError("Methods or APIs received different inputs")
 
-    output_key = case + (record["method"], record["metric"])
+    output_key = case + (
+        record["method"],
+        record.get("metric", "builtin"),
+    )
     reference = outputs.get(output_key)
     difference = 0.0
     if reference is not None:
@@ -183,15 +186,20 @@ def validate_record(record, values, environment, inputs, outputs):
     record["max_abs_difference_from_first_success"] = difference
 
 
-def summarize(records, configs):
-    planned = Counter(
-        tuple(config[field] for field in GROUP_FIELDS)
-        for config in configs
+def _group_key(record):
+    return tuple(
+        record.get("metric", "builtin")
+        if field == "metric"
+        else record[field]
+        for field in GROUP_FIELDS
     )
+
+
+def summarize(records, configs):
+    planned = Counter(_group_key(config) for config in configs)
     groups = defaultdict(list)
     for record in records:
-        key = tuple(record[field] for field in GROUP_FIELDS)
-        groups[key].append(record)
+        groups[_group_key(record)].append(record)
 
     summaries = []
     for key, count in planned.items():
