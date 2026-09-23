@@ -702,8 +702,8 @@ def make_report(result):
             f"{mae['max']:.10g}",
         ])
     lines.append(table(
-        ["API", "dtype", "Pairs", "Median |ΔRMSE|", "Max |ΔRMSE|",
-         "Median |ΔMAE|", "Max |ΔMAE|"],
+        ["API", "dtype", "Pairs", "Median abs ΔRMSE", "Max abs ΔRMSE",
+         "Median abs ΔMAE", "Max abs ΔMAE"],
         rows,
     ))
     lines.extend([
