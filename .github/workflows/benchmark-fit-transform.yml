@@ -30,6 +30,14 @@ on:
           - mcar
           - mar
         default: mcar
+      metrics:
+        description: "Metric modes; for callable checks start with sizes='100', repeats=1"
+        type: choice
+        options:
+          - builtin
+          - callable_nan_euclidean
+          - "builtin callable_nan_euclidean"
+        default: builtin
       repeats:
         description: "Repeats per case"
         type: number
@@ -209,11 +217,13 @@ jobs:
       - name: Run same-data comparison
         env:
           BENCH_SIZES: ${{ inputs.sizes }}
+          BENCH_METRICS: ${{ inputs.metrics }}
         run: |
           unset PYTHONPATH
           cd "$BENCHMARK_DIR"
 
           read -ra SIZES <<< "$BENCH_SIZES"
+          read -ra METRICS <<< "$BENCH_METRICS"
 
           PHASE_MEMORY_FLAG=()
           if [ "${{ inputs.phase_memory }}" = "true" ]; then
@@ -225,6 +235,7 @@ jobs:
             --expected-version "$CANDIDATE_VERSION" \
             --provenance "$OUTPUT_DIR/candidate-build.json" \
             --sizes "${SIZES[@]}" \
+            --metrics "${METRICS[@]}" \
             --seeds 101 202 303 \
             --repeats "${{ inputs.repeats }}" \
             --features "${{ inputs.features }}" \

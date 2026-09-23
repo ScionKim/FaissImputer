@@ -14,6 +14,7 @@ import numpy as np
 
 from benchmarks.benchmark_fit_transform_worker import (
     APIS,
+    METRICS,
     TARGET_MISSING_RATE,
 )
 from benchmarks.benchmark_scaling_threads import (
@@ -28,7 +29,7 @@ from benchmarks.benchmark_scaling_threads import (
 
 
 DTYPES = ("float32", "float64")
-GROUP_FIELDS = ("size", "dtype", "method", "api")
+GROUP_FIELDS = ("size", "dtype", "method", "api", "metric")
 ENVIRONMENT_FIELDS = (
     "python",
     "numpy",
@@ -158,7 +159,7 @@ def validate_record(record, values, environment, inputs, outputs):
     if case in inputs and inputs[case] != fingerprints:
         raise ValueError("Methods or APIs received different inputs")
 
-    output_key = case + (record["method"],)
+    output_key = case + (record["method"], record["metric"])
     reference = outputs.get(output_key)
     difference = 0.0
     if reference is not None:
@@ -173,7 +174,7 @@ def validate_record(record, values, environment, inputs, outputs):
         ):
             raise ValueError(
                 "Outputs differ across APIs or repetitions "
-                "for the same method"
+                "for the same method and metric"
             )
 
     # Only validated results may become comparison references.
@@ -238,6 +239,13 @@ def main():
         default="mcar",
     )
     parser.add_argument(
+        "--metrics",
+        nargs="+",
+        choices=METRICS,
+        default=["builtin"],
+        help="Metric modes to compare; start callable runs with small sizes.",
+    )
+    parser.add_argument(
         "--phase-memory",
         action="store_true",
         help=(
@@ -273,6 +281,8 @@ def main():
                 "observed and the remaining features need room for MAR "
                 "probability contrast"
             )
+    if len(set(args.metrics)) != len(args.metrics):
+        parser.error("metrics must be unique")
     if len(set(args.sizes)) != len(args.sizes):
         parser.error("sizes must be unique")
     if min(args.seeds) < 0 or len(set(args.seeds)) != len(args.seeds):
@@ -297,7 +307,12 @@ def main():
     ):
         parser.error("provenance must include a SHA-256 wheel hash")
 
-    pairs = [(method, api) for method in METHODS for api in APIS]
+    pairs = [
+        (method, api, metric)
+        for method in METHODS
+        for api in APIS
+        for metric in args.metrics
+    ]
     configs = []
     for seed_index, seed in enumerate(args.seeds):
         for size in args.sizes:
@@ -307,10 +322,11 @@ def main():
                         seed_index * args.repeats + repeat
                     ) % len(pairs)
                     order = pairs[offset:] + pairs[:offset]
-                    for method, api in order:
+                    for method, api, metric in order:
                         configs.append({
                             "method": method,
                             "api": api,
+                            "metric": metric,
                             "size": size,
                             "dtype": dtype,
                             "seed": seed,
@@ -324,13 +340,14 @@ def main():
                         })
 
     results = {
-        "schema_version": 1,
+        "schema_version": 2,
         "metadata": environment,
         "provenance": provenance,
         "parameters": {
             "sizes": args.sizes,
             "dtypes": list(DTYPES),
             "methods": list(METHODS),
+            "metrics": list(args.metrics),
             "apis": list(APIS),
             "seeds": args.seeds,
             "repeats": args.repeats,
@@ -348,9 +365,22 @@ def main():
         },
         "notes": [
             "One fresh sequential worker per method/API measurement.",
-            "Method/API order rotates across seeds and repetitions.",
+            "Method/API/metric order rotates across seeds and repetitions.",
+            "Builtin mode preserves KNNImputer's nan_euclidean metric "
+            "and FaissImputer's l2 metric.",
+            "Callable mode passes the same callable_nan_euclidean function "
+            "to all methods. It computes sqrt(sum of squared differences "
+            "over shared observed features * original feature count / "
+            "shared feature count), using float64 arithmetic for both "
+            "input dtypes. No shared features gives an undefined distance "
+            "(NaN). This is one specific Python callback workload.",
+            "FaissImputer callable search evaluates distances directly "
+            "without building a Faiss index.",
+            "Metric modes receive identical data; output equality is not "
+            "required between modes or between different methods.",
             "All methods receive the same incomplete training data.",
-            "The first five rows are kept complete; actual missingness is recorded.",
+            f"The first {args.neighbors} rows are kept complete; "
+            "actual missingness is recorded.",
             "Float64 data is generated without a float32 round trip.",
             "Both APIs use a fresh estimator after a small untimed warmup.",
             "By default, split fit and transform are timed consecutively without "
@@ -366,7 +396,7 @@ def main():
             "original benchmark conditions and leave the phase-memory "
             "fields null.",
             "Output equality is required across APIs and repetitions "
-            "of the same method, not across different methods.",
+            "of the same method and metric.",
             "RMSE and MAE describe reconstruction of masked training entries.",
             "Peak RSS includes preparation and validation and is sampled "
             "before JSON serialization; it is not fitted-model memory.",
@@ -423,7 +453,8 @@ def main():
             f"{index}/{len(configs)} "
             f"rows={config['size']} {config['dtype']} "
             f"seed={config['seed']} repeat={config['repeat']} "
-            f"{config['method']} {config['api']}: {record['status']}",
+            f"{config['method']} {config['api']} "
+            f"metric={config['metric']}: {record['status']}",
             flush=True,
         )
 
