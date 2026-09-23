@@ -75,9 +75,23 @@ transform for KNNImputer and available-donor. Timings from
 to the measured configurations (20 features, 5 neighbors, 10%
 missingness, one pinned thread).
 
+The [same-data OFAT sweep](docs/benchmarks/fit-transform-ofat-9683d03.md)
+at source commit `9683d03` is complete for the measured configurations.
+It covers row counts, feature counts, missing rates, MCAR/MAR
+missingness, and neighbor counts.
+
+A reproducible analysis script generates the report and full-precision
+summary from twelve preserved raw JSON files. APIs and dtypes are
+reported separately, with median [min–max] timings and median
+matched-record speedups.
+
+The AMD neighbors sweep varies guaranteed complete rows with k, so
+incomplete inputs are not identical across neighbor settings.
+The Intel k=30 observation and Intel 50,000-row stress result are
+reported separately from the AMD sweeps. The stress result summarizes
+three seeds with one repeat per seed.
+
 Remaining work:
-- Vary training size, feature count, missingness patterns, and neighbor
-  counts independently.
 - Measure callable metrics separately.
 - Extend held-out measurements to additional real datasets, retaining
   simple baselines. Report quality against hidden ground truth

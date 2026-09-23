@@ -35,6 +35,8 @@ constraints explicitly, including when the training data is itself incomplete.
 
 ## Performance
 
+### Separate-query benchmark — published 0.3.20
+
 **A 2.7× first-transform speedup over scikit-learn KNNImputer on one
 available-donor workload.**
 
@@ -61,6 +63,33 @@ Performance depends on workload, configuration, and hardware.
 
 [Benchmark run and artifacts](https://github.com/ScionKim/FaissImputer/actions/runs/35015576984)
 · [Reports, methodology, and historical results](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/README.md)
+
+### Same-data OFAT benchmark — source commit 9683d03
+
+A separate 12-run benchmark sweep measures imputation of the same
+incomplete data used for fitting. It covers row counts, feature counts,
+missing rates, MCAR/MAR missingness, and neighbor counts using a source
+build at commit `9683d03`.
+
+Results are reported separately for `fit_transform` and
+`fit_then_transform`, and for float32 and float64. Both API measurements
+include fitting. Timings are median [min–max], and speedups are medians
+of matched record-level KNNImputer/FaissImputer timing ratios.
+
+FaissImputer's available-donor mode showed similar aggregate
+reconstruction RMSE and MAE to KNNImputer under the tested conditions.
+This does not establish identical predictions or algorithmic equivalence.
+Complete-donor results are reported alongside donor counts and
+reconstruction error to make the quality trade-off explicit.
+
+The Intel k=30 observation and Intel 50,000-row stress result are
+presented separately from the AMD sweeps. The report also documents
+changes in guaranteed complete rows across neighbor settings and the
+stress run's single repeat per seed.
+
+[Full report and methodology](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/fit-transform-ofat-9683d03.md)
+· [Raw benchmark results](https://github.com/ScionKim/FaissImputer/tree/main/benchmarks/results/ofat-2026-09-22/)
+· [Full-precision analysis summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/ofat-2026-09-22-summary.json)
 
 ## Installation
 

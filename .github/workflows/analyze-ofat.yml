@@ -1,0 +1,42 @@
+name: Analyze OFAT benchmark results
+
+on:
+  push:
+    branches:
+      - bench/sweep-ofat
+    paths:
+      - .github/workflows/analyze-ofat.yml
+      - benchmarks/analyze_ofat.py
+      - benchmarks/results/ofat-2026-09-22/*.json
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate report and analysis summary
+        run: python benchmarks/analyze_ofat.py
+
+      - name: Verify raw results are unchanged
+        run: git diff --exit-code -- benchmarks/results/ofat-2026-09-22/
+
+      - name: Upload analysis outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ofat-2026-09-22-analysis
+          if-no-files-found: error
+          path: |
+            docs/benchmarks/fit-transform-ofat-9683d03.md
+            benchmarks/results/ofat-2026-09-22-summary.json

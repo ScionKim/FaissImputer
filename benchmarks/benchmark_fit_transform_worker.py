@@ -30,31 +30,72 @@ APIS = ("fit_transform", "fit_then_transform")
 TARGET_MISSING_RATE = 0.10
 
 
-def make_training_data(size, seed, dtype):
+def make_training_data(
+    size,
+    seed,
+    dtype,
+    features=FEATURES,
+    n_neighbors=NEIGHBORS,
+    target_missing_rate=TARGET_MISSING_RATE,
+    missing_pattern="mcar",
+):
     """Generate incomplete training data and its hidden ground truth."""
     dtype = np.dtype(dtype)
     if dtype not in (np.dtype("float32"), np.dtype("float64")):
         raise ValueError("dtype must be float32 or float64")
-    if size <= NEIGHBORS:
-        raise ValueError(f"size must exceed {NEIGHBORS}")
+    if size <= n_neighbors:
+        raise ValueError(f"size must exceed {n_neighbors}")
 
     loadings = np.random.default_rng([seed, 0]).normal(
-        size=(5, FEATURES)
+        size=(5, features)
     )
     latent = np.random.default_rng([seed, 1]).normal(size=(size, 5))
     noise = np.random.default_rng([seed, 2]).normal(
-        size=(size, FEATURES)
+        size=(size, features)
     )
     scale = np.sqrt(np.sum(loadings * loadings, axis=0) + 0.15**2)
     truth = ((latent @ loadings + 0.15 * noise) / scale).astype(dtype)
 
-    missing = (
-        np.random.default_rng([seed, 5]).random(truth.shape)
-        < TARGET_MISSING_RATE
-    )
+    if missing_pattern == "mcar":
+        missing = (
+            np.random.default_rng([seed, 5]).random(truth.shape)
+            < target_missing_rate
+        )
+    elif missing_pattern == "mar":
+        if features < 2:
+            raise ValueError("MAR missingness needs at least 2 features")
+
+        # Feature 0 stays fully observed and drives missingness in the
+        # other features. The remaining features carry a rescaled
+        # probability to target the requested overall matrix rate in
+        # expectation; rows above the driver median get the higher
+        # probability.
+        base_rate = target_missing_rate * features / (features - 1)
+        if base_rate >= 1.0:
+            raise ValueError(
+                f"target_missing_rate {target_missing_rate} is too high "
+                f"for MAR with {features} features"
+            )
+
+        shift = min(base_rate / 2, 1.0 - base_rate)
+        rng = np.random.default_rng([seed, 6])
+        missing = np.zeros(truth.shape, dtype=bool)
+        driver = truth[:, 0]
+        above = driver > np.median(driver)
+
+        missing[above, 1:] = (
+            rng.random((int(above.sum()), features - 1))
+            < base_rate + shift
+        )
+        missing[~above, 1:] = (
+            rng.random((int((~above).sum()), features - 1))
+            < base_rate - shift
+        )
+    else:
+        raise ValueError(f"unknown missing pattern: {missing_pattern}")
     # Guarantee enough complete donors and at least one observed value
     # in every feature. Record the resulting actual missingness rate.
-    missing[:NEIGHBORS] = False
+    missing[:n_neighbors] = False
     if not missing.any():
         raise ValueError("The generated case contains no missing entries")
 
@@ -78,8 +119,21 @@ def worker(config):
     ):
         faiss.omp_set_num_threads(1)
 
+        features = config.get("features", FEATURES)
+        n_neighbors = config.get("n_neighbors", NEIGHBORS)
+        target_missing_rate = config.get(
+            "target_missing_rate", TARGET_MISSING_RATE
+        )
+        missing_pattern = config.get("missing_pattern", "mcar")
+
         data, truth, missing = make_training_data(
-            config["size"], config["seed"], config["dtype"]
+            config["size"],
+            config["seed"],
+            config["dtype"],
+            features,
+            n_neighbors,
+            target_missing_rate,
+            missing_pattern,
         )
         before = data.copy()
         fingerprints = {
@@ -89,8 +143,17 @@ def worker(config):
         }
 
         # Warm the selected API on a separate, small dataset.
-        warm_data, _, _ = make_training_data(32, 7, config["dtype"])
-        warm_model = make_model(method)
+        warm_size = max(32, n_neighbors + 1)
+        warm_data, _, _ = make_training_data(
+            warm_size,
+            7,
+            config["dtype"],
+            features,
+            n_neighbors,
+            target_missing_rate,
+            missing_pattern,
+        )
+        warm_model = make_model(method, n_neighbors)
         if api == "fit_transform":
             warm_model.fit_transform(warm_data)
         else:
@@ -113,7 +176,7 @@ def worker(config):
             for pool in threadpool_info()
         ]
 
-        model = make_model(method)
+        model = make_model(method, n_neighbors)
         gc.collect()
 
         measure_phase_memory = bool(config.get("measure_phase_memory", False))
@@ -218,11 +281,12 @@ def worker(config):
             "fingerprints": fingerprints,
             "input_dtype": str(data.dtype),
             "output_dtype": str(output.dtype),
-            "features": FEATURES,
-            "n_neighbors": NEIGHBORS,
-            "target_missing_rate": TARGET_MISSING_RATE,
+            "features": features,
+            "n_neighbors": n_neighbors,
+            "target_missing_rate": target_missing_rate,
+            "missing_pattern": missing_pattern,
             "actual_missing_rate": float(missing.mean()),
-            "guaranteed_complete_rows": NEIGHBORS,
+            "guaranteed_complete_rows": n_neighbors,
             "complete_donors": int((~missing.any(axis=1)).sum()),
             "missing_patterns": int(np.unique(missing, axis=0).shape[0]),
             "threads": 1,

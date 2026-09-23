@@ -229,6 +229,14 @@ def main():
         "--seeds", type=int, nargs="+", default=[101, 202, 303]
     )
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--features", type=int, default=20)
+    parser.add_argument("--neighbors", type=int, default=5)
+    parser.add_argument("--missing-rate", type=float, default=0.10)
+    parser.add_argument(
+        "--missing-pattern",
+        choices=("mcar", "mar"),
+        default="mcar",
+    )
     parser.add_argument(
         "--phase-memory",
         action="store_true",
@@ -247,8 +255,24 @@ def main():
     )
     args = parser.parse_args()
 
-    if min(args.sizes) <= NEIGHBORS:
-        parser.error(f"sizes must exceed {NEIGHBORS}")
+    if min(args.sizes) <= args.neighbors:
+        parser.error(f"sizes must exceed {args.neighbors}")
+    if args.features <= 0:
+        parser.error("features must be positive")
+    if args.neighbors <= 0:
+        parser.error("neighbors must be positive")
+    if not 0.0 < args.missing_rate < 1.0:
+        parser.error("missing-rate must be between 0 and 1")
+    if args.missing_pattern == "mar":
+        if args.features < 2:
+            parser.error("MAR missingness needs at least 2 features")
+        base_rate = args.missing_rate * args.features / (args.features - 1)
+        if base_rate >= 1.0:
+            parser.error(
+                "missing-rate is too high for MAR: feature 0 stays "
+                "observed and the remaining features need room for MAR "
+                "probability contrast"
+            )
     if len(set(args.sizes)) != len(args.sizes):
         parser.error("sizes must be unique")
     if min(args.seeds) < 0 or len(set(args.seeds)) != len(args.seeds):
@@ -293,6 +317,10 @@ def main():
                             "repeat": repeat + 1,
                             "expected_version": args.expected_version,
                             "measure_phase_memory": args.phase_memory,
+                            "features": args.features,
+                            "n_neighbors": args.neighbors,
+                            "target_missing_rate": args.missing_rate,
+                            "missing_pattern": args.missing_pattern,
                         })
 
     results = {
@@ -306,10 +334,11 @@ def main():
             "apis": list(APIS),
             "seeds": args.seeds,
             "repeats": args.repeats,
-            "features": FEATURES,
-            "n_neighbors": NEIGHBORS,
-            "target_missing_rate": TARGET_MISSING_RATE,
-            "guaranteed_complete_rows": NEIGHBORS,
+            "features": args.features,
+            "n_neighbors": args.neighbors,
+            "target_missing_rate": args.missing_rate,
+            "missing_pattern": args.missing_pattern,
+            "guaranteed_complete_rows": args.neighbors,
             "threads": 1,
             "phase_memory_measured": args.phase_memory,
             "sklearn_working_memory_mib": WORKING_MEMORY_MIB,

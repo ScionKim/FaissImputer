@@ -160,3 +160,26 @@ a general advantage in reconstruction accuracy.
 
 The report includes timing variation, simple-baseline quality,
 memory measurements, reproduction instructions, and raw results.
+
+## Same-data OFAT sweep — 9683d03
+
+[Report](fit-transform-ofat-9683d03.md) ·
+[Raw benchmark JSON files](../../benchmarks/results/ofat-2026-09-22/) ·
+[Full-precision analysis summary](../../benchmarks/results/ofat-2026-09-22-summary.json) ·
+[Analysis script](../../benchmarks/analyze_ofat.py)
+
+Twelve runs compare KNNImputer with FaissImputer's complete and available
+donor policies across row counts, feature counts, missing rates,
+missingness patterns, and neighbor counts.
+
+Results separate `fit_transform` from `fit_then_transform`, and float32
+from float64. Timings are median [min–max]; speedups are medians of
+matched record-level KNN/Faiss timing ratios.
+
+The Intel k=30 observation and Intel 50,000-row stress result are reported
+separately from the AMD sweeps. The neighbors sweep also varies the
+number of guaranteed complete rows with k.
+
+RMSE and MAE describe reconstruction error against ground truth.
+Close aggregate metrics do not establish identical predictions or
+algorithmic equivalence.
