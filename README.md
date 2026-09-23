@@ -87,9 +87,9 @@ presented separately from the AMD sweeps. The report also documents
 changes in guaranteed complete rows across neighbor settings and the
 stress run's single repeat per seed.
 
-[Full report and methodology](docs/benchmarks/fit-transform-ofat-9683d03.md)
-· [Raw benchmark results](benchmarks/results/ofat-2026-09-22/)
-· [Full-precision analysis summary](benchmarks/results/ofat-2026-09-22-summary.json)
+[Full report and methodology](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/fit-transform-ofat-9683d03.md)
+· [Raw benchmark results](https://github.com/ScionKim/FaissImputer/tree/main/benchmarks/results/ofat-2026-09-22/)
+· [Full-precision analysis summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/ofat-2026-09-22-summary.json)
 
 ## Installation
 
