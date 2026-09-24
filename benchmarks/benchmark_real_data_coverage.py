@@ -314,6 +314,52 @@ def update_agreement(key, records, output_references):
             record["agreement_with_knn"] = comparisons[record["method"]]
 
 
+def summarize(records, configs):
+    planned = Counter(
+        config_key(config, GROUP_FIELDS)
+        for config in configs
+    )
+    grouped = defaultdict(list)
+    for record in records:
+        grouped[config_key(record, GROUP_FIELDS)].append(record)
+
+    summaries = []
+    for key, expected in planned.items():
+        rows = grouped[key]
+        successful = [row for row in rows if row["status"] == "ok"]
+        summary = dict(zip(GROUP_FIELDS, key))
+        summary.update({
+            "planned_workers": expected,
+            "recorded_workers": len(rows),
+            "successful_workers": len(successful),
+            "pending_workers": expected - len(rows),
+            "status_counts": dict(Counter(row["status"] for row in rows)),
+        })
+
+        for name in MEASURES:
+            values = [
+                row[name] for row in successful
+                if row.get(name) is not None
+            ]
+            if values:
+                summary[name] = distribution(values)
+
+        comparisons = [
+            row["agreement_with_knn"]["max_abs_difference"]
+            for row in successful
+            if row.get("agreement_with_knn") is not None
+        ]
+        summary["agreement_with_knn"] = {
+            "compared_workers": len(comparisons),
+            "max_abs_difference": (
+                distribution(comparisons) if comparisons else None
+            ),
+        }
+        summaries.append(summary)
+
+    return summaries
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-version", required=True)
@@ -448,244 +494,6 @@ def main():
                 "actual missingness is recorded."
             ),
             "Original-unit feature errors refer to supplied source values.",
-            "Each case is scaled using its observed training values only.",
-            "Standardized inputs and error units can change across cases.",
-            "One fresh sequential worker per method and repetition.",
-            "Method order rotates across seeds and repetitions.",
-            "Each worker uses a separate small untimed warmup.",
-            "Fit and first transform are timed consecutively.",
-            "Timing excludes loading, preparation, scoring, and validation.",
-            "Quality compares outputs with hidden held-out float64 truth.",
-            "Original-unit errors are reported separately for each feature.",
-            "KNN output agreement is separate from reconstruction quality.",
-            "Missing KNN comparisons remain null, not zero.",
-            "Repeated timings are not independent accuracy observations.",
-            "Peak RSS includes setup and validation, before JSON serialization.",
-            "Peak RSS is not retained-model or transform-only memory.",
-            "Summaries include successful workers only.",
-            "Any failed, inapplicable, or unrun worker makes the command fail.",
-        ],
-        "records": [],
-    }
-
-    output = args.output.resolve()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_name(output.name + ".tmp")
-    case_references = {}
-    query_references = {}
-    output_references = {}
-    started = time.perf_counter()
-
-    def save_results():
-        results["elapsed_seconds"] = time.perf_counter() - started
-        results["summaries"] = summarize(results["records"], configs)
-        temporary.write_text(
-            json.dumps(results, indent=2, allow_nan=False) + "\n",
-            encoding="utf-8",
-        )
-        temporary.replace(output)
-
-    save_results()
-    for position, config in enumerate(configs, start=1):
-        remaining = args.budget_seconds - (time.perf_counter() - started)
-        if remaining > 0:
-            payload = run_worker(
-                config,
-                min(args.timeout_seconds, remaining),
-            )
-        else:
-            payload = {"status": "not_run_budget"}
-
-        values = payload.pop("_values", None)
-        record = {**payload, **config, "agreement_with_knn": None}
-
-        if record["status"] == "ok":
-            try:
-                validate_record(
-                    record,
-                    values,
-                    environment,
-                    dataset,
-                    case_references,
-                    query_references,
-                    output_references,
-                )
-            except Exception as error:
-                record["status"] = "validation_error"
-                record["checks_passed"] = False
-                record["error"] = str(error)
-
-        results["records"].append(record)
-        if record["status"] == "ok":
-            update_agreement(
-                case_key(record),
-                results["records"],
-                output_references,
-            )
-
-        save_results()
-        print(
-            f"{position}/{len(configs)} "
-            f"train={config['train_size']} "
-            f"{config['mechanism']} {config['dtype']} "
-            f"seed={config['seed']} repeat={config['repeat']} "
-            f"{config['method']}: {record['status']}",
-            flush=True,
-        )
-
-    print(f"Results: {output}", flush=True)
-    return int(any(row["status"] != "ok" for row in results["records"]))
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
-
-    summaries = []
-    for key, expected in planned.items():
-        rows = grouped[key]
-        successful = [row for row in rows if row["status"] == "ok"]
-        summary = dict(zip(GROUP_FIELDS, key))
-        summary.update({
-            "planned_workers": expected,
-            "recorded_workers": len(rows),
-            "successful_workers": len(successful),
-            "pending_workers": expected - len(rows),
-            "status_counts": dict(Counter(row["status"] for row in rows)),
-        })
-
-        for name in MEASURES:
-            values = [
-                row[name] for row in successful
-                if row.get(name) is not None
-            ]
-            if values:
-                summary[name] = distribution(values)
-
-        comparisons = [
-            row["agreement_with_knn"]["max_abs_difference"]
-            for row in successful
-            if row.get("agreement_with_knn") is not None
-        ]
-        summary["agreement_with_knn"] = {
-            "compared_workers": len(comparisons),
-            "max_abs_difference": (
-                distribution(comparisons) if comparisons else None
-            ),
-        }
-        summaries.append(summary)
-
-    return summaries
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--expected-version", required=True)
-    parser.add_argument("--provenance", type=Path, required=True)
-    parser.add_argument("--data-home", type=Path, required=True)
-    parser.add_argument(
-        "--train-sizes", type=int, nargs="+", default=list(TRAIN_SIZES)
-    )
-    parser.add_argument("--query-size", type=int, default=QUERY_SIZE)
-    parser.add_argument("--seeds", type=int, nargs="+", default=[101, 202, 303])
-    parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--timeout-seconds", type=int, default=300)
-    parser.add_argument("--budget-seconds", type=int, default=5400)
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=ROOT / "benchmark_outputs" / "real_data_coverage.json",
-    )
-    args = parser.parse_args()
-
-    if (
-        args.query_size < 1
-        or args.repeats < 1
-        or args.timeout_seconds < 1
-        or args.budget_seconds < 1
-        or any(seed < 0 for seed in args.seeds)
-        or any(size < MAR_REFERENCE_ROWS for size in args.train_sizes)
-    ):
-        parser.error(
-            "Positive sizes, repetitions and time limits are required; "
-            "seeds must be nonnegative and training sizes must be >= 10000"
-        )
-    if (
-        len(set(args.train_sizes)) != len(args.train_sizes)
-        or len(set(args.seeds)) != len(args.seeds)
-    ):
-        parser.error("Training sizes and seeds must not contain duplicates")
-
-    check_released_package(args.expected_version)
-    environment = metadata()
-    provenance = json.loads(args.provenance.read_text(encoding="utf-8"))
-    if provenance.get("version") != args.expected_version:
-        parser.error("Provenance version differs from the installed candidate")
-    if provenance.get("source_commit") != environment["git_commit"]:
-        parser.error("Provenance source commit differs from the benchmark")
-    if not re.fullmatch(
-        r"[0-9a-f]{64}", str(provenance.get("wheel_sha256", ""))
-    ):
-        parser.error("Provenance must contain a lowercase wheel SHA256")
-
-    data_home = args.data_home.expanduser().resolve()
-    data, names, dataset = load_dataset(
-        data_home,
-        download_if_missing=False,
-    )
-    if max(args.train_sizes) + args.query_size > len(data):
-        parser.error("Insufficient rows for the requested disjoint splits")
-    del data, names
-
-    configs = []
-    for seed_index, seed in enumerate(args.seeds):
-        for train_size in args.train_sizes:
-            for mechanism in MECHANISMS:
-                for dtype in DTYPES:
-                    for repeat in range(args.repeats):
-                        offset = (seed_index * args.repeats + repeat) % len(METHODS)
-                        order = METHODS[offset:] + METHODS[:offset]
-                        for method in order:
-                            configs.append({
-                                "method": method,
-                                "train_size": train_size,
-                                "query_size": args.query_size,
-                                "mechanism": mechanism,
-                                "dtype": dtype,
-                                "seed": seed,
-                                "repeat": repeat + 1,
-                                "missing_rate": MISSING_RATE,
-                                "mar_reference_rows": MAR_REFERENCE_ROWS,
-                                "data_home": str(data_home),
-                                "expected_version": args.expected_version,
-                            })
-
-    results = {
-        "schema_version": 1,
-        "metadata": environment,
-        "provenance": provenance,
-        "dataset": dataset,
-        "parameters": {
-            "train_sizes": args.train_sizes,
-            "query_size": args.query_size,
-            "mechanisms": list(MECHANISMS),
-            "dtypes": list(DTYPES),
-            "methods": list(METHODS),
-            "seeds": args.seeds,
-            "repeats": args.repeats,
-            "nominal_overall_missing_rate": MISSING_RATE,
-            "mar_reference_rows": MAR_REFERENCE_ROWS,
-            "threads": 1,
-            "sklearn_working_memory_mib": WORKING_MEMORY_MIB,
-            "worker_timeout_seconds": args.timeout_seconds,
-            "run_budget_seconds": args.budget_seconds,
-            "expected_workers": len(configs),
-        },
-        "notes": [
-            "Real feature values with artificial missingness; target unused.",
-            "Training and query rows are disjoint.",
-            "Raw query rows and masks are shared across training sizes.",
-            "MAR uses the MedInc median of a common 10000-row training prefix.",
-            "MedInc always remains observed; actual missingness is recorded.",
             "Each case is scaled using its observed training values only.",
             "Standardized inputs and error units can change across cases.",
             "One fresh sequential worker per method and repetition.",
