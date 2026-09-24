@@ -15,10 +15,9 @@ from threadpoolctl import threadpool_info, threadpool_limits
 from faiss_imputer import FaissImputer
 
 from benchmarks.benchmark_real_data_cases import (
-    MAR_REFERENCE_ROWS,
+    DATASET_DEFAULTS,
     MISSING_RATE,
     N_NEIGHBORS,
-    QUERY_SIZE,
     array_digest,
     load_dataset,
     prepare_case,
@@ -133,9 +132,12 @@ def worker(config):
     ):
         faiss.omp_set_num_threads(1)
 
+        dataset_id = config.get("dataset_id", "california_housing")
+        defaults = DATASET_DEFAULTS[dataset_id]
         data, names, dataset_metadata = load_dataset(
             config["data_home"],
             download_if_missing=False,
+            dataset_id=dataset_id,
         )
         train, query, truth, missing, case = prepare_case(
             data,
@@ -143,12 +145,13 @@ def worker(config):
             config["seed"],
             config["mechanism"],
             train_size=config["train_size"],
-            query_size=config.get("query_size", QUERY_SIZE),
+            query_size=config.get("query_size", defaults["query_size"]),
             dtype=config["dtype"],
             missing_rate=config.get("missing_rate", MISSING_RATE),
             mar_reference_rows=config.get(
-                "mar_reference_rows", MAR_REFERENCE_ROWS
+                "mar_reference_rows", defaults["mar_reference_rows"]
             ),
+            mar_driver=config.get("mar_driver", defaults["mar_driver"]),
         )
         del data, names
 

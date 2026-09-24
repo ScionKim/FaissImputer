@@ -1,8 +1,12 @@
 """Prepare held-out real-data imputation cases without query leakage."""
 
 import hashlib
+from io import BytesIO
 import json
 from numbers import Integral
+from pathlib import Path
+from urllib.request import urlopen
+from zipfile import ZipFile
 
 import numpy as np
 from sklearn.datasets import fetch_california_housing
@@ -17,6 +21,137 @@ N_NEIGHBORS = 5
 DTYPES = ("float32", "float64")
 MECHANISMS = ("MCAR", "MAR")
 
+DATASET_DEFAULTS = {
+    "california_housing": {
+        "train_sizes": TRAIN_SIZES,
+        "query_size": QUERY_SIZE,
+        "mar_reference_rows": MAR_REFERENCE_ROWS,
+        "mar_driver": "MedInc",
+    },
+    "wine_quality_white": {
+        "train_sizes": (1_000, 3_000),
+        "query_size": 1_000,
+        "mar_reference_rows": 1_000,
+        "mar_driver": "alcohol",
+    },
+    "abalone": {
+        "train_sizes": (1_000, 3_000),
+        "query_size": 1_000,
+        "mar_reference_rows": 1_000,
+        "mar_driver": "Length",
+    },
+}
+
+UCI_DATASETS = {
+    "wine_quality_white": {
+        "name": "Wine Quality (white)",
+        "source": "https://archive.ics.uci.edu/dataset/186/wine+quality",
+        "url": (
+            "https://archive.ics.uci.edu/static/public/186/"
+            "wine%2Bquality.zip"
+        ),
+        "filename": "winequality-white.csv",
+        "rows": 4_898,
+        "delimiter": ";",
+        "skiprows": 1,
+        "usecols": tuple(range(11)),
+        "feature_names": (
+            "fixed acidity", "volatile acidity", "citric acid",
+            "residual sugar", "chlorides", "free sulfur dioxide",
+            "total sulfur dioxide", "density", "pH", "sulphates",
+            "alcohol",
+        ),
+        "excluded_columns": ("quality",),
+        "citation": (
+            "Cortez et al. (2009). Wine Quality. "
+            "https://doi.org/10.24432/C56S3T"
+        ),
+    },
+    "abalone": {
+        "name": "Abalone (numerical features)",
+        "source": "https://archive.ics.uci.edu/dataset/1/abalone",
+        "url": "https://archive.ics.uci.edu/static/public/1/abalone.zip",
+        "filename": "abalone.data",
+        "rows": 4_177,
+        "delimiter": ",",
+        "skiprows": 0,
+        "usecols": tuple(range(1, 8)),
+        "feature_names": (
+            "Length", "Diameter", "Height", "Whole_weight",
+            "Shucked_weight", "Viscera_weight", "Shell_weight",
+        ),
+        "excluded_columns": ("Sex", "Rings"),
+        "citation": (
+            "Nash et al. (1994). Abalone. "
+            "https://doi.org/10.24432/C55C7W"
+        ),
+    },
+}
+
+
+def _load_uci_dataset(data_home, dataset_id, *, download_if_missing):
+    spec = UCI_DATASETS[dataset_id]
+    cache = Path(data_home).expanduser() / f"{dataset_id}.zip"
+    downloaded = not cache.is_file()
+    if downloaded:
+        if not download_if_missing:
+            raise FileNotFoundError(f"Dataset is not cached: {cache}")
+        with urlopen(spec["url"], timeout=60) as response:
+            archive_bytes = response.read()
+    else:
+        archive_bytes = cache.read_bytes()
+
+    with ZipFile(BytesIO(archive_bytes)) as archive:
+        source_bytes = archive.read(spec["filename"])
+
+    names = list(spec["feature_names"])
+    if spec["skiprows"]:
+        header = source_bytes.splitlines()[0].decode("utf-8")
+        columns = [value.strip('"') for value in header.split(";")]
+        if columns != names + ["quality"]:
+            raise ValueError("Unexpected Wine Quality column order")
+
+    data = np.ascontiguousarray(
+        np.loadtxt(
+            BytesIO(source_bytes),
+            delimiter=spec["delimiter"],
+            skiprows=spec["skiprows"],
+            usecols=spec["usecols"],
+            dtype=np.float64,
+            ndmin=2,
+        )
+    )
+    if data.shape != (spec["rows"], len(names)):
+        raise ValueError(f"Unexpected feature shape for {dataset_id}")
+    if not np.isfinite(data).all():
+        raise ValueError("Dataset features must contain finite values")
+
+    # Cache only validated downloads. Workers never download.
+    if downloaded:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        temporary = cache.with_suffix(".zip.tmp")
+        temporary.write_bytes(archive_bytes)
+        temporary.replace(cache)
+
+    metadata = {
+        "dataset": spec["name"],
+        "loader": "UCI ZIP archive with numpy.loadtxt",
+        "source": spec["source"],
+        "source_url": spec["url"],
+        "source_file": spec["filename"],
+        "source_archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "source_file_sha256": hashlib.sha256(source_bytes).hexdigest(),
+        "citation": spec["citation"],
+        "license": "CC BY 4.0",
+        "rows": int(data.shape[0]),
+        "features": int(data.shape[1]),
+        "feature_names": names,
+        "excluded_columns": list(spec["excluded_columns"]),
+        "dataset_sha256": array_digest(data),
+        "target_used": False,
+        "original_units": "Values as supplied in the source data file",
+    }
+    return data, names, metadata
 
 def array_digest(array):
     """Hash logical C-order values together with shape and dtype."""
@@ -32,8 +167,17 @@ def array_digest(array):
     return result.hexdigest()
 
 
-def load_dataset(data_home, *, download_if_missing=False):
-    """Load cached California Housing features; ignore the target."""
+def load_dataset(
+    data_home, *, download_if_missing=False, dataset_id="california_housing"
+):
+    """Load cached numerical features; ignore dataset targets."""
+    if dataset_id not in DATASET_DEFAULTS:
+        raise ValueError(f"Unknown dataset: {dataset_id}")
+    if dataset_id != "california_housing":
+        return _load_uci_dataset(
+            data_home, dataset_id,
+            download_if_missing=download_if_missing,
+        )
     dataset = fetch_california_housing(
         data_home=data_home,
         download_if_missing=download_if_missing,
@@ -83,13 +227,14 @@ def prepare_case(
     dtype="float32",
     missing_rate=MISSING_RATE,
     mar_reference_rows=MAR_REFERENCE_ROWS,
+    mar_driver="MedInc",
 ):
     """Prepare one case; scoring truth remains float64.
 
     Query rows are fixed across training sizes. Training rows form
     nested prefixes of a separate shuffled pool.
 
-    MAR uses the MedInc median of a common training prefix. Scalers
+    MAR uses the selected driver's median of a common training prefix. Scalers
     are fitted separately for each case, using observed training
     values only.
     """
@@ -132,8 +277,8 @@ def prepare_case(
         or len(set(names)) != len(names)
     ):
         raise ValueError("Feature names must be unique strings matching data")
-    if "MedInc" not in names:
-        raise ValueError("The always-observed MedInc feature is required")
+    if not isinstance(mar_driver, str) or mar_driver not in names:
+        raise ValueError("The always-observed MAR driver must name a feature")
     if train_size + query_size > len(data):
         raise ValueError("Insufficient rows for disjoint training and query sets")
     if mar_reference_rows > train_size:
@@ -143,7 +288,7 @@ def prepare_case(
     if not 0 < missing_rate < 1:
         raise ValueError("missing_rate must be between zero and one")
 
-    condition_column = names.index("MedInc")
+    condition_column = names.index(mar_driver)
     eligible = [
         index for index in range(data.shape[1])
         if index != condition_column
@@ -227,7 +372,7 @@ def prepare_case(
         "feature_names": names,
         "nominal_overall_missing_rate": missing_rate,
         "eligible_base_probability": base_probability,
-        "always_observed": ["MedInc"],
+        "always_observed": [mar_driver],
         "mar_reference_rows": (
             mar_reference_rows if mechanism == "MAR" else None
         ),

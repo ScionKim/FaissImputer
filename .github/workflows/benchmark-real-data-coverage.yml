@@ -2,6 +2,16 @@ name: Real-data coverage benchmark
 
 on:
   workflow_dispatch:
+    inputs:
+      dataset:
+        description: "Dataset to benchmark"
+        type: choice
+        required: true
+        default: california_housing
+        options:
+          - california_housing
+          - wine_quality_white
+          - abalone
 
 permissions:
   contents: read
@@ -16,6 +26,7 @@ jobs:
         shell: bash
 
     env:
+      BENCH_DATASET: ${{ inputs.dataset }}
       PYTHONNOUSERSITE: "1"
       PYTHONHASHSEED: "0"
       PYTHONPATH: ""
@@ -195,6 +206,7 @@ jobs:
           import json
           import os
           from pathlib import Path
+          import shutil
 
           from benchmarks.benchmark_real_data_cases import load_dataset
           from benchmarks.benchmark_scaling_threads import check_released_package
@@ -203,6 +215,7 @@ jobs:
           data, names, dataset = load_dataset(
               os.environ["BENCH_DATA_HOME"],
               download_if_missing=True,
+              dataset_id=os.environ["BENCH_DATASET"],
           )
 
           destination = (
@@ -212,6 +225,18 @@ jobs:
               json.dumps(dataset, indent=2, allow_nan=False) + "\n",
               encoding="utf-8",
           )
+
+          # Preserve downloaded UCI archives alongside their fingerprints.
+          cached_archive = (
+              Path(os.environ["BENCH_DATA_HOME"])
+              / f"{os.environ['BENCH_DATASET']}.zip"
+          )
+          if cached_archive.is_file():
+              source_dir = (
+                  Path(os.environ["BENCH_OUTPUT_DIR"]) / "source-data"
+              )
+              source_dir.mkdir(exist_ok=True)
+              shutil.copy2(cached_archive, source_dir / cached_archive.name)
 
           print(f"Dataset shape: {data.shape}")
           print(f"Features: {names}")
@@ -227,8 +252,7 @@ jobs:
             --expected-version "$BENCH_EXPECTED_VERSION" \
             --provenance "$BENCH_OUTPUT_DIR/candidate-build.json" \
             --data-home "$BENCH_DATA_HOME" \
-            --train-sizes 10000 15000 \
-            --query-size 3000 \
+            --dataset "$BENCH_DATASET" \
             --seeds 101 202 303 \
             --repeats 3 \
             --timeout-seconds 300 \
@@ -239,7 +263,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: real-data-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          name: real-data-coverage-${{ inputs.dataset }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: benchmark_outputs/
           if-no-files-found: warn
           retention-days: 30

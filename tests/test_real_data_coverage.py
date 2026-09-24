@@ -1,6 +1,9 @@
 """Offline regression checks for held-out real-data benchmarks."""
 
 from copy import deepcopy
+from hashlib import sha256
+from io import BytesIO
+from zipfile import ZipFile
 
 import numpy as np
 import pytest
@@ -40,6 +43,7 @@ def prevent_dataset_download(monkeypatch):
     monkeypatch.setattr(
         cases, "fetch_california_housing", reject_download
     )
+    monkeypatch.setattr(cases, "urlopen", reject_download)
 
 
 def prepare(data, mechanism="MCAR", dtype="float32", train_size=80):
@@ -81,7 +85,10 @@ def cached_data(monkeypatch, source_data):
         "dataset_sha256": cases.array_digest(source_data),
     }
 
-    def load_cached(data_home, *, download_if_missing):
+    def load_cached(
+        data_home, *, download_if_missing, dataset_id="california_housing"
+    ):
+        assert dataset_id == "california_housing"
         assert data_home == "unused-test-cache"
         assert download_if_missing is False
         return source_data, NAMES.copy(), deepcopy(dataset)
@@ -432,3 +439,196 @@ def test_summary_excludes_failed_measurements(successful_record):
     assert first[0]["successful_workers"] == 1
     assert first[0]["pending_workers"] == 1
     assert first[0]["status_counts"] == {"ok": 1, "timeout": 1}
+
+@pytest.mark.parametrize("mechanism", ["MCAR", "MAR"])
+def test_named_driver_preserves_nested_splits_and_training_only_statistics(
+    source_data, mechanism
+):
+    names = [f"feature_{index}" for index in range(source_data.shape[1])]
+    names[3] = "driver"
+    options = {
+        "seed": 101,
+        "mechanism": mechanism,
+        "query_size": 32,
+        "dtype": "float64",
+        "mar_reference_rows": 40,
+        "mar_driver": "driver",
+    }
+    first = cases.prepare_case(source_data, names, train_size=80, **options)
+    again = cases.prepare_case(source_data, names, train_size=80, **options)
+    larger = cases.prepare_case(source_data, names, train_size=120, **options)
+    for left, right in zip(first[:4], again[:4]):
+        np.testing.assert_array_equal(left, right)
+    assert first[4] == again[4]
+    assert first[4]["always_observed"] == ["driver"]
+    assert not np.isnan(first[0][:, 3]).any()
+    assert not first[3][:, 3].any()
+    np.testing.assert_array_equal(first[3], larger[3])
+    np.testing.assert_array_equal(
+        np.isnan(first[0]), np.isnan(larger[0][:80])
+    )
+    for name in ("query_row_ids", "raw_query", "query_mask"):
+        assert first[4]["fingerprints"][name] == (
+            larger[4]["fingerprints"][name]
+        )
+    assert first[4]["mar_cutoff"] == larger[4]["mar_cutoff"]
+
+    order = np.random.default_rng([101, 0]).permutation(len(source_data))
+    changed = source_data.copy()
+    changed[order[:32], :] += 1_000
+    changed[order[112:], :] -= 2_000
+    modified = cases.prepare_case(changed, names, train_size=80, **options)
+    np.testing.assert_array_equal(first[0], modified[0])
+    for name in ("scaler_mean", "scaler_scale", "mar_cutoff"):
+        assert first[4][name] == modified[4][name]
+    if mechanism == "MAR":
+        assert first[4]["mar_cutoff"] == pytest.approx(
+            np.median(source_data[order[32:72], 3])
+        )
+
+
+@pytest.mark.parametrize("dataset_id", cases.UCI_DATASETS)
+@pytest.mark.parametrize("initially_cached", [True, False])
+def test_uci_loader_selects_features_and_reuses_cache(
+    tmp_path, monkeypatch, dataset_id, initially_cached
+):
+    spec = cases.UCI_DATASETS[dataset_id]
+    names = list(spec["feature_names"])
+    if dataset_id == "wine_quality_white":
+        header = ";".join(f'"{name}"' for name in names + ["quality"])
+        row = ";".join(str(value) for value in range(1, 12)) + ";9"
+        source = header + "\n" + (row + "\n") * spec["rows"]
+    else:
+        row = "M," + ",".join(str(value) for value in range(1, 8)) + ",99"
+        source = (row + "\n") * spec["rows"]
+
+    buffer = BytesIO()
+    with ZipFile(buffer, "w") as archive:
+        archive.writestr(spec["filename"], source)
+    archive_bytes = buffer.getvalue()
+    cache = tmp_path / f"{dataset_id}.zip"
+    calls = []
+    if initially_cached:
+        cache.write_bytes(archive_bytes)
+    else:
+        def download(url, *, timeout):
+            calls.append((url, timeout))
+            return BytesIO(archive_bytes)
+
+        monkeypatch.setattr(cases, "urlopen", download)
+
+    data, actual_names, metadata = cases.load_dataset(
+        tmp_path, dataset_id=dataset_id,
+        download_if_missing=not initially_cached,
+    )
+    assert calls == ([] if initially_cached else [(spec["url"], 60)])
+    assert cache.read_bytes() == archive_bytes
+
+    def reject_download(*args, **kwargs):
+        raise AssertionError("Cached loads must not download")
+
+    monkeypatch.setattr(cases, "urlopen", reject_download)
+    cached = cases.load_dataset(
+        tmp_path, dataset_id=dataset_id, download_if_missing=False
+    )
+    np.testing.assert_array_equal(data, cached[0])
+    assert (actual_names, metadata) == cached[1:]
+
+    assert actual_names == names
+    assert data.shape == (spec["rows"], len(names))
+    assert data.dtype == np.float64
+    np.testing.assert_array_equal(
+        data, np.tile(np.arange(1, len(names) + 1), (spec["rows"], 1))
+    )
+    assert metadata["target_used"] is False
+    assert metadata["excluded_columns"] == list(spec["excluded_columns"])
+    assert metadata["dataset_sha256"] == cases.array_digest(data)
+    assert metadata["source_archive_sha256"] == (
+        sha256(cache.read_bytes()).hexdigest()
+    )
+    assert metadata["source_file_sha256"] == (
+        sha256(source.encode()).hexdigest()
+    )
+
+
+@pytest.mark.parametrize("dataset_id", cases.UCI_DATASETS)
+def test_uci_missing_cache_never_downloads(tmp_path, dataset_id):
+    with pytest.raises(FileNotFoundError, match="not cached"):
+        cases.load_dataset(
+            tmp_path, dataset_id=dataset_id, download_if_missing=False
+        )
+
+
+def test_california_default_loader_call_remains_compatible(monkeypatch):
+    calls = []
+    data = np.ones((20_640, 8), dtype=np.float64)
+
+    class Dataset:
+        pass
+
+    dataset = Dataset()
+    dataset.data = data
+    dataset.feature_names = NAMES
+
+    def load_california(*, data_home, download_if_missing):
+        calls.append((data_home, download_if_missing))
+        return dataset
+
+    monkeypatch.setattr(cases, "fetch_california_housing", load_california)
+    default = cases.load_dataset("unused", download_if_missing=False)
+    explicit = cases.load_dataset(
+        "unused", download_if_missing=False, dataset_id="california_housing"
+    )
+    assert calls == [("unused", False), ("unused", False)]
+    np.testing.assert_array_equal(default[0], explicit[0])
+    assert default[1:] == explicit[1:]
+
+
+@pytest.mark.parametrize("mechanism", ["MCAR", "MAR"])
+def test_worker_threads_dataset_selection_and_driver(
+    monkeypatch, source_data, mechanism
+):
+    names = [f"feature_{index}" for index in range(source_data.shape[1])]
+    names[3] = "Length"
+    dataset = {
+        "dataset": "synthetic Abalone routing fixture",
+        "feature_names": names,
+        "dataset_sha256": cases.array_digest(source_data),
+    }
+
+    def load_cached(data_home, *, download_if_missing, dataset_id):
+        assert data_home == "unused-test-cache"
+        assert dataset_id == "abalone"
+        assert download_if_missing is False
+        return source_data, names, deepcopy(dataset)
+
+    monkeypatch.setattr(worker_module, "load_dataset", load_cached)
+    config = worker_config(mechanism=mechanism)
+    config["dataset_id"] = "abalone"
+    payload = worker_module.worker(config)
+    values = np.asarray(payload.pop("_values"), dtype=np.float64)
+    record = {**payload, **config, "agreement_with_knn": None}
+
+    assert record["status"] == "ok"
+    assert record["case"]["always_observed"] == ["Length"]
+    assert record["dataset"] == dataset
+    validate(record, values, ({}, {}, {}))
+
+    invalid = deepcopy(record)
+    invalid["mar_driver"] = "Diameter"
+    with pytest.raises(ValueError, match="does not match"):
+        validate(invalid, values, ({}, {}, {}))
+
+
+def test_summary_separates_datasets_and_defaults_legacy_records(
+    successful_record
+):
+    legacy, _ = successful_record
+    other = deepcopy(legacy)
+    other["dataset_id"] = "abalone"
+    summaries = coverage.summarize([legacy, other], [legacy, other])
+    assert {row["dataset_id"] for row in summaries} == {
+        "california_housing", "abalone",
+    }
+    assert all(row["planned_workers"] == 1 for row in summaries)
+    assert coverage.case_key(legacy) != coverage.case_key(other)
