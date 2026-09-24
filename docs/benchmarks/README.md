@@ -183,3 +183,30 @@ number of guaranteed complete rows with k.
 RMSE and MAE describe reconstruction error against ground truth.
 Close aggregate metrics do not establish identical predictions or
 algorithmic equivalence.
+
+## Same-data callable metrics — 76e0230
+
+[Report](fit-transform-callable-76e0230.md) ·
+[Raw benchmark JSON](../../benchmarks/results/fit-transform-callable-76e0230.json) ·
+[Full-precision analysis summary](../../benchmarks/results/fit-transform-callable-76e0230-summary.json) ·
+[Analysis script](../../benchmarks/analyze_callable_metrics.py)
+
+Compares built-in metrics with a shared Python nan-Euclidean callable
+on 300 and 1,000 training rows, using KNNImputer and both FaissImputer
+donor policies. Both metric modes were measured on the same Intel
+Xeon Platinum 8370C runner.
+
+Results separate `fit_transform` from `fit_then_transform`, and float32
+from float64. Timings are median [min–max] across three seeds and three
+repeats. KNN/Faiss speedups and callable/builtin time multipliers are
+medians of matched record-level ratios.
+
+Under these tested callable conditions, available-donor mode was slower
+than KNNImputer. Complete-donor mode was faster, with fewer eligible
+donors and higher reconstruction error. Callable metrics do not build
+a Faiss index.
+
+RMSE and MAE measure reconstruction error against hidden ground truth.
+Quality summaries use three seed datasets after verifying consistency
+across APIs and repeats. Similar aggregate errors do not establish
+identical predictions or algorithmic equivalence.

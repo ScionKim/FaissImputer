@@ -1,0 +1,46 @@
+name: Analyze callable metric benchmark results
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - bench/callable-metrics
+    paths:
+      - .github/workflows/analyze-callable-metrics.yml
+      - benchmarks/analyze_callable_metrics.py
+      - benchmarks/results/fit-transform-callable-76e0230.json
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out analysis source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Generate report and full-precision summary
+        run: python benchmarks/analyze_callable_metrics.py
+
+      - name: Verify raw results are unchanged
+        run: git diff --exit-code -- benchmarks/results/fit-transform-callable-76e0230.json
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: callable-metrics-76e0230-analysis
+          path: |
+            docs/benchmarks/fit-transform-callable-76e0230.md
+            benchmarks/results/fit-transform-callable-76e0230-summary.json
+          if-no-files-found: error
+          retention-days: 30

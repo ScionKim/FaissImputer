@@ -91,8 +91,23 @@ The Intel k=30 observation and Intel 50,000-row stress result are
 reported separately from the AMD sweeps. The stress result summarizes
 three seeds with one repeat per seed.
 
+The [same-data callable-metric comparison](docs/benchmarks/fit-transform-callable-76e0230.md)
+at source commit `76e0230` is complete for one shared Python
+nan-Euclidean callback at 300 and 1,000 training rows.
+
+Built-in and callable metrics were measured on the same Intel Xeon
+Platinum 8370C runner. The report separates APIs and dtypes, with
+median [min–max] timings, matched-record speedups, and same-method
+callable/builtin time ratios. Preserved raw results and an analysis
+script reproduce every table.
+
+Under these tested callable conditions, available-donor mode was slower
+than KNNImputer. Complete-donor mode was faster, with fewer eligible
+donors and higher reconstruction error. Callable metrics do not build
+a Faiss index. These findings do not establish performance for other
+callbacks or workloads.
+
 Remaining work:
-- Measure callable metrics separately.
 - Extend held-out measurements to additional real datasets, retaining
   simple baselines. Report quality against hidden ground truth
   separately from agreement with another imputer.

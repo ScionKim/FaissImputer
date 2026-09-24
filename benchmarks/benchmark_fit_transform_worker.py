@@ -25,10 +25,37 @@ from benchmarks.benchmark_scaling_threads import (
     peak_rss_mib,
 )
 
-
 APIS = ("fit_transform", "fit_then_transform")
 TARGET_MISSING_RATE = 0.10
+METRICS = ("builtin", "callable_nan_euclidean")
 
+def callable_nan_euclidean(x, y, *, missing_values=np.nan):
+    """Compute a shared-feature Euclidean distance in float64."""
+    if not np.isnan(missing_values):
+        raise ValueError("This benchmark metric requires NaN missing values")
+
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    if x.ndim != 1 or x.shape != y.shape:
+        raise ValueError("Metric inputs must be same-shaped 1D arrays")
+
+    shared = ~(np.isnan(x) | np.isnan(y))
+    count = int(np.count_nonzero(shared))
+    if count == 0:
+        return float("nan")
+
+    difference = x[shared] - y[shared]
+    squared = float(np.dot(difference, difference))
+    return float(np.sqrt(squared * (x.size / count)))
+
+def make_benchmark_model(method, n_neighbors, metric):
+    if metric not in METRICS:
+        raise ValueError(f"Unknown benchmark metric: {metric}")
+
+    model = make_model(method, n_neighbors)
+    if metric == "callable_nan_euclidean":
+        model.set_params(metric=callable_nan_euclidean)
+    return model
 
 def make_training_data(
     size,
@@ -107,10 +134,13 @@ def make_training_data(
 def worker(config):
     method = config["method"]
     api = config["api"]
+    metric = config.get("metric", "builtin")
     if method not in METHODS:
         raise ValueError(f"Unknown method: {method}")
     if api not in APIS:
         raise ValueError(f"Unknown API: {api}")
+    if metric not in METRICS:
+        raise ValueError(f"Unknown benchmark metric: {metric}")
 
     check_released_package(config.get("expected_version"))
 
@@ -153,7 +183,7 @@ def worker(config):
             target_missing_rate,
             missing_pattern,
         )
-        warm_model = make_model(method, n_neighbors)
+        warm_model = make_benchmark_model(method, n_neighbors, metric)
         if api == "fit_transform":
             warm_model.fit_transform(warm_data)
         else:
@@ -176,7 +206,7 @@ def worker(config):
             for pool in threadpool_info()
         ]
 
-        model = make_model(method, n_neighbors)
+        model = make_benchmark_model(method, n_neighbors, metric)
         gc.collect()
 
         measure_phase_memory = bool(config.get("measure_phase_memory", False))
@@ -277,6 +307,7 @@ def worker(config):
 
         result = {
             "status": "ok",
+            "metric": metric,
             "environment": environment,
             "fingerprints": fingerprints,
             "input_dtype": str(data.dtype),
