@@ -91,6 +91,34 @@ stress run's single repeat per seed.
 · [Raw benchmark results](https://github.com/ScionKim/FaissImputer/tree/main/benchmarks/results/ofat-2026-09-22/)
 · [Full-precision analysis summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/ofat-2026-09-22-summary.json)
 
+### Held-out real-data benchmark — source commit ef04b1b
+
+A development build at commit `ef04b1b` was evaluated on Wine Quality
+(white) and Abalone, using 1,000 and 3,000 training rows with 1,000
+held-out queries, MCAR/MAR missingness, and float32/float64 inputs.
+Methods include mean and median baselines, KNNImputer, and both
+FaissImputer donor policies.
+
+Timings include fit plus first transform and are reported as median
+[min–max] across three seeds and three repeats. Speedups are medians
+of nine matched record-level KNNImputer/FaissImputer timing ratios.
+Datasets and dtypes are reported separately.
+
+Available mode was slower than KNNImputer on Wine Quality for both
+dtypes and on Abalone for float64; it was faster on Abalone for
+float32. Complete mode was faster on both datasets. Reconstruction
+error and donor counts are reported alongside timing.
+
+RMSE and MAE measure reconstruction error on masked query entries.
+Quality summaries use three seed datasets after verifying consistency
+across repeats. Available-mode output differences from KNNImputer were
+observed, including with float64 inputs on Abalone; similar aggregate
+errors do not establish identical predictions.
+
+[Full report and methodology](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/real-data-datasets-ef04b1b.md)
+· [Raw benchmark evidence](https://github.com/ScionKim/FaissImputer/tree/main/benchmarks/results/real-data-datasets-ef04b1b/)
+· [Full-precision analysis summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/real-data-datasets-ef04b1b-summary.json)
+
 ## Installation
 
 Requires Python 3.10 or newer.

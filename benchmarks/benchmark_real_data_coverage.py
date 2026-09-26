@@ -15,12 +15,10 @@ import time
 import numpy as np
 
 from benchmarks.benchmark_real_data_cases import (
+    DATASET_DEFAULTS,
     DTYPES,
-    MAR_REFERENCE_ROWS,
     MECHANISMS,
     MISSING_RATE,
-    QUERY_SIZE,
-    TRAIN_SIZES,
     load_dataset,
 )
 from benchmarks.benchmark_real_data_worker import METHODS
@@ -32,8 +30,12 @@ from benchmarks.benchmark_scaling_threads import (
 )
 
 
-CASE_FIELDS = ("train_size", "query_size", "mechanism", "dtype", "seed")
-GROUP_FIELDS = ("train_size", "query_size", "mechanism", "dtype", "method")
+CASE_FIELDS = (
+    "dataset_id", "train_size", "query_size", "mechanism", "dtype", "seed",
+)
+GROUP_FIELDS = (
+    "dataset_id", "train_size", "query_size", "mechanism", "dtype", "method",
+)
 ENVIRONMENT_FIELDS = (
     "python",
     "numpy",
@@ -54,8 +56,17 @@ MEASURES = (
 )
 
 
+def config_key(record, fields):
+    # Records written before dataset selection implicitly use California.
+    return tuple(
+        record.get(name, "california_housing")
+        if name == "dataset_id" else record[name]
+        for name in fields
+    )
+
+
 def case_key(record):
-    return tuple(record[name] for name in CASE_FIELDS)
+    return config_key(record, CASE_FIELDS)
 
 
 def distribution(values):
@@ -161,7 +172,18 @@ def validate_record(
         raise ValueError("Worker native thread count differs from one")
 
     case = record["case"]
+    defaults = DATASET_DEFAULTS[
+        record.get("dataset_id", "california_housing")
+    ]
     expected_case = {
+        "always_observed": [record.get("mar_driver", defaults["mar_driver"])],
+        "nominal_overall_missing_rate": record.get(
+            "missing_rate", MISSING_RATE
+        ),
+        "mar_reference_rows": (
+            record.get("mar_reference_rows", defaults["mar_reference_rows"])
+            if record["mechanism"] == "MAR" else None
+        ),
         "n_train": record["train_size"],
         "n_query": record["query_size"],
         "seed": record["seed"],
@@ -238,6 +260,7 @@ def validate_record(
         raise ValueError("Matching cases received different prepared inputs")
 
     query_key = (
+        record.get("dataset_id", "california_housing"),
         record["query_size"],
         record["mechanism"],
         record["seed"],
@@ -293,12 +316,12 @@ def update_agreement(key, records, output_references):
 
 def summarize(records, configs):
     planned = Counter(
-        tuple(config[name] for name in GROUP_FIELDS)
+        config_key(config, GROUP_FIELDS)
         for config in configs
     )
     grouped = defaultdict(list)
     for record in records:
-        grouped[tuple(record[name] for name in GROUP_FIELDS)].append(record)
+        grouped[config_key(record, GROUP_FIELDS)].append(record)
 
     summaries = []
     for key, expected in planned.items():
@@ -343,9 +366,12 @@ def main():
     parser.add_argument("--provenance", type=Path, required=True)
     parser.add_argument("--data-home", type=Path, required=True)
     parser.add_argument(
-        "--train-sizes", type=int, nargs="+", default=list(TRAIN_SIZES)
+        "--dataset", choices=tuple(DATASET_DEFAULTS),
+        default="california_housing",
     )
-    parser.add_argument("--query-size", type=int, default=QUERY_SIZE)
+    parser.add_argument("--train-sizes", type=int, nargs="+")
+    parser.add_argument("--query-size", type=int)
+    parser.add_argument("--mar-reference-rows", type=int)
     parser.add_argument("--seeds", type=int, nargs="+", default=[101, 202, 303])
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--timeout-seconds", type=int, default=300)
@@ -356,6 +382,14 @@ def main():
         default=ROOT / "benchmark_outputs" / "real_data_coverage.json",
     )
     args = parser.parse_args()
+    defaults = DATASET_DEFAULTS[args.dataset]
+    if args.train_sizes is None:
+        args.train_sizes = list(defaults["train_sizes"])
+    if args.query_size is None:
+        args.query_size = defaults["query_size"]
+    if args.mar_reference_rows is None:
+        args.mar_reference_rows = defaults["mar_reference_rows"]
+    mar_driver = defaults["mar_driver"]
 
     if (
         args.query_size < 1
@@ -363,11 +397,13 @@ def main():
         or args.timeout_seconds < 1
         or args.budget_seconds < 1
         or any(seed < 0 for seed in args.seeds)
-        or any(size < MAR_REFERENCE_ROWS for size in args.train_sizes)
+        or args.mar_reference_rows < 1
+        or any(size < args.mar_reference_rows for size in args.train_sizes)
     ):
         parser.error(
             "Positive sizes, repetitions and time limits are required; "
-            "seeds must be nonnegative and training sizes must be >= 10000"
+            "seeds must be nonnegative and training sizes must cover "
+            "the positive MAR reference prefix"
         )
     if (
         len(set(args.train_sizes)) != len(args.train_sizes)
@@ -391,6 +427,7 @@ def main():
     data, names, dataset = load_dataset(
         data_home,
         download_if_missing=False,
+        dataset_id=args.dataset,
     )
     if max(args.train_sizes) + args.query_size > len(data):
         parser.error("Insufficient rows for the requested disjoint splits")
@@ -407,6 +444,8 @@ def main():
                         for method in order:
                             configs.append({
                                 "method": method,
+                                "dataset_id": args.dataset,
+                                "mar_driver": mar_driver,
                                 "train_size": train_size,
                                 "query_size": args.query_size,
                                 "mechanism": mechanism,
@@ -414,17 +453,19 @@ def main():
                                 "seed": seed,
                                 "repeat": repeat + 1,
                                 "missing_rate": MISSING_RATE,
-                                "mar_reference_rows": MAR_REFERENCE_ROWS,
+                                "mar_reference_rows": args.mar_reference_rows,
                                 "data_home": str(data_home),
                                 "expected_version": args.expected_version,
                             })
 
     results = {
-        "schema_version": 1,
+        "schema_version": 2,
         "metadata": environment,
         "provenance": provenance,
         "dataset": dataset,
         "parameters": {
+            "dataset_id": args.dataset,
+            "mar_driver": mar_driver,
             "train_sizes": args.train_sizes,
             "query_size": args.query_size,
             "mechanisms": list(MECHANISMS),
@@ -433,7 +474,7 @@ def main():
             "seeds": args.seeds,
             "repeats": args.repeats,
             "nominal_overall_missing_rate": MISSING_RATE,
-            "mar_reference_rows": MAR_REFERENCE_ROWS,
+            "mar_reference_rows": args.mar_reference_rows,
             "threads": 1,
             "sklearn_working_memory_mib": WORKING_MEMORY_MIB,
             "worker_timeout_seconds": args.timeout_seconds,
@@ -444,8 +485,15 @@ def main():
             "Real feature values with artificial missingness; target unused.",
             "Training and query rows are disjoint.",
             "Raw query rows and masks are shared across training sizes.",
-            "MAR uses the MedInc median of a common 10000-row training prefix.",
-            "MedInc always remains observed; actual missingness is recorded.",
+            (
+                f"MAR uses the {mar_driver} median of a common "
+                f"{args.mar_reference_rows}-row training prefix."
+            ),
+            (
+                f"{mar_driver} remains observed under MCAR and MAR; "
+                "actual missingness is recorded."
+            ),
+            "Original-unit feature errors refer to supplied source values.",
             "Each case is scaled using its observed training values only.",
             "Standardized inputs and error units can change across cases.",
             "One fresh sequential worker per method and repetition.",

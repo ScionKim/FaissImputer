@@ -1,0 +1,52 @@
+name: Analyze real-data dataset results
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - bench/real-data-datasets
+    paths:
+      - benchmarks/analyze_real_data_datasets.py
+      - benchmarks/results/real-data-datasets-ef04b1b/**
+      - .github/workflows/analyze-real-data-datasets.yml
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out preserved evidence and analysis script
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Validate evidence and generate report
+        run: python benchmarks/analyze_real_data_datasets.py
+
+      - name: Show report in workflow summary
+        run: |
+          cat docs/benchmarks/real-data-datasets-ef04b1b.md \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report and full-precision summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-data-datasets-ef04b1b-analysis
+          path: |
+            docs/benchmarks/real-data-datasets-ef04b1b.md
+            benchmarks/results/real-data-datasets-ef04b1b-summary.json
+          if-no-files-found: error
+          retention-days: 30

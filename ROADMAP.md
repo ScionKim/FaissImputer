@@ -107,9 +107,33 @@ donors and higher reconstruction error. Callable metrics do not build
 a Faiss index. These findings do not establish performance for other
 callbacks or workloads.
 
+The [held-out Wine Quality and Abalone comparison](docs/benchmarks/real-data-datasets-ef04b1b.md)
+at source commit `ef04b1b` is complete for the measured configurations.
+Both datasets use 1,000 and 3,000 training rows with 1,000 held-out
+queries, MCAR/MAR missingness, and float32/float64 inputs. Methods
+include mean and median baselines, KNNImputer, and both FaissImputer
+donor policies. The two runs contain 720 successful worker records.
+
+Preserved raw JSON files, source dataset archives, and an analysis
+script support reproducible reporting. Datasets and dtypes remain
+separate. Fit-plus-first-transform time and whole-worker peak RSS
+use nine records per method and configuration; KNN/Faiss speedups
+use nine matched record-level timing ratios.
+
+Reconstruction quality uses three seed datasets after verifying
+consistency across repeats. The report includes complete-donor counts,
+actual missingness, and output differences from KNNImputer. Per-feature
+errors in standardized and source units are preserved in the
+full-precision summary.
+
 Remaining work:
-- Extend held-out measurements to additional real datasets, retaining
-  simple baselines. Report quality against hidden ground truth
+
+- Investigate observed available-mode output differences from
+  KNNImputer, including Abalone float64, using independent reference
+  calculations to establish case-specific explanations.
+- Extend this isolated held-out suite beyond California Housing,
+  Wine Quality (white), and Abalone where concrete workloads warrant
+  it. Retain simple baselines and report reconstruction error
   separately from agreement with another imputer.
 
 Use published wheels for released-package claims and identify development

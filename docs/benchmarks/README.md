@@ -210,3 +210,37 @@ RMSE and MAE measure reconstruction error against hidden ground truth.
 Quality summaries use three seed datasets after verifying consistency
 across APIs and repeats. Similar aggregate errors do not establish
 identical predictions or algorithmic equivalence.
+
+## Held-out Wine Quality and Abalone — ef04b1b
+
+[Report](real-data-datasets-ef04b1b.md) ·
+[Raw benchmark evidence](../../benchmarks/results/real-data-datasets-ef04b1b/) ·
+[Full-precision analysis summary](../../benchmarks/results/real-data-datasets-ef04b1b-summary.json) ·
+[Analysis script](../../benchmarks/analyze_real_data_datasets.py)
+
+Compares mean and median baselines, KNNImputer, and both FaissImputer
+donor policies on Wine Quality (white) and Abalone. Each dataset uses
+1,000 and 3,000 training rows, 1,000 held-out queries, MCAR/MAR
+missingness, and float32/float64 inputs. All 720 worker records passed
+the benchmark checks.
+
+Datasets and dtypes are reported separately. Fit-plus-first-transform
+time and whole-worker peak RSS are median [min–max] across three seeds
+and three repeats. KNN/Faiss speedups are medians of nine matched
+record-level total-time ratios.
+
+Available mode was slower than KNNImputer in Wine Quality and in
+Abalone float64, but faster in Abalone float32. Complete mode was
+faster on both datasets; reconstruction quality and donor counts
+are reported separately.
+
+RMSE and MAE measure error on masked held-out query entries against
+ground truth in standardized units. Quality summaries use three seed
+datasets after verifying consistency across repeats. Per-feature
+errors in standardized and source units are preserved in the
+full-precision summary.
+
+The report separately records differences between imputed outputs,
+including available-mode differences from KNNImputer in Abalone
+float64. Similar aggregate reconstruction errors do not establish
+identical predictions or algorithmic equivalence.
