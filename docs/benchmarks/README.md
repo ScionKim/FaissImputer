@@ -244,3 +244,13 @@ The report separately records differences between imputed outputs,
 including available-mode differences from KNNImputer in Abalone
 float64. Similar aggregate reconstruction errors do not establish
 identical predictions or algorithmic equivalence.
+
+## Abalone float64 output diagnostic - 1969f4b
+
+[Report](abalone-output-1969f4b.md) | [Evidence archive](../../benchmarks/results/abalone-output-1969f4b.zip) | [Diagnostic script](../../benchmarks/diagnose_abalone_output.py)
+
+Reproduces the original outputs for Abalone with 3000 training rows, 1000 held-out queries, MAR, float64 and seed 303.
+
+Independent exact arithmetic on the prepared binary64 inputs explains all nine masked entries with output differences above 1e-5: six involve different admissible selections among exact boundary ties, and three involve near-equal distance ordering reversals in the captured KNNImputer calculation.
+
+The findings apply to this case. They do not establish prediction equivalence, general reconstruction-quality superiority, or an explanation for other benchmark cases.
