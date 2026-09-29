@@ -35,7 +35,7 @@ constraints explicitly, including when the training data is itself incomplete.
 
 ## Performance
 
-### Separate-query benchmark — published 0.3.20
+### Separate-query benchmark — measured with version 0.3.20
 
 **A 2.7× first-transform speedup over scikit-learn KNNImputer on one
 available-donor workload.**

@@ -90,7 +90,7 @@ Coordinates required for these searches must be representable as finite
 float32 values. Non-Flat factories also require this conversion when
 fitting their full donor index.
 
-**Unreleased correction:** Complete-donor mode with `index_factory="Flat"`
+**Correction in 0.3.21:** Complete-donor mode with `index_factory="Flat"`
 and built-in L2 metrics (`"l2"` or `"nan_euclidean"`) selectively recomputes
 neighbors in float64 to repair detected underflow, overflow, and invalid
 search results. Refinement uses the original normalized coordinates,
@@ -172,7 +172,7 @@ Non-Flat factories retain their Faiss training requirements and must
 support every projected dimension used for search. A successful `fit()`
 does not guarantee support for every later query mask.
 
-**Unreleased error reporting:** If Faiss raises `RuntimeError` while
+**Error reporting in 0.3.21:** If Faiss raises `RuntimeError` while
 creating, training, populating, or searching a non-Flat projected index,
 `transform()` adds the factory name, observed-feature count, and donor
 count to the error. The original Faiss exception is preserved as its cause.
