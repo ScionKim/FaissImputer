@@ -126,15 +126,34 @@ actual missingness, and output differences from KNNImputer. Per-feature
 errors in standardized and source units are preserved in the
 full-precision summary.
 
-Remaining work:
+The following output diagnostics are complete for their selected cases:
 
-- Investigate observed available-mode output differences from
-  KNNImputer, including Abalone float64, using independent reference
-  calculations to establish case-specific explanations.
-- Extend this isolated held-out suite beyond California Housing,
-  Wine Quality (white), and Abalone where concrete workloads warrant
-  it. Retain simple baselines and report reconstruction error
-  separately from agreement with another imputer.
+- [Abalone float64](docs/benchmarks/abalone-output-1969f4b.md):
+  3,000 training rows, 1,000 held-out queries, MAR, seed 303.
+  The large output differences involve admissible choices among exact
+  boundary ties and near-equal distance ordering reversals in the
+  captured KNNImputer calculation.
+- [Wine Quality float32](docs/benchmarks/wine-quality-output-71a6e60.md):
+  3,000 training rows, 1,000 held-out queries, MCAR, seed 101.
+  Both large output differences involve near-equal distance ordering
+  reversals in the captured KNNImputer calculation.
+
+Both diagnostics reproduce the original output fingerprints and preserve
+prepared inputs, outputs, actual neighbor traces, and exact rational
+distance references. Their reports separate neighbor-selection agreement
+from reconstruction quality against held-out ground truth.
+
+These findings apply to the diagnosed cases. They do not establish
+prediction equivalence or explain every disagreement in other cases.
+
+Remaining work:
+- Extend isolated held-out measurements to additional datasets and
+  configurations, retaining simple baselines and separate reporting of
+  reconstruction quality and agreement with another imputer.
+- Investigate additional output disagreements when warranted by evidence,
+  distinguishing exact boundary ties, numerical distance ordering, and
+  aggregation effects.
+
 
 Use published wheels for released-package claims and identify development
 measurements by source commit. Record matching inputs, hardware, thread
