@@ -19,7 +19,7 @@ The report records both donor policies, float32/float64 inputs, timing
 variation, process memory, output agreement, and synthetic-data quality.
 These results do not establish performance on other workloads.
 
-## Merged since 0.3.20
+## Merged since 0.3.21
 
 - **Complete-donor distance repair:** native Flat L2 searches selectively
   recompute neighbors in float64 for detected underflow, overflow, and
