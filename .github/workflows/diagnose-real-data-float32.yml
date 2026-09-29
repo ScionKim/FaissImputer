@@ -1,5 +1,5 @@
 name: Real-data output diagnostic
-run-name: "${{ inputs.diagnostic || 'abalone_float64' }} diagnostic (${{ github.ref_name }})"
+run-name: "${{ inputs.diagnostic || 'wine_quality_float32' }} diagnostic (${{ github.ref_name }})"
 
 on:
   workflow_dispatch:
@@ -8,8 +8,9 @@ on:
         description: Case to diagnose
         required: true
         type: choice
-        default: abalone_float64
+        default: wine_quality_float32
         options:
+          - wine_quality_float32
           - abalone_float64
           - california_float32
 
@@ -26,7 +27,7 @@ jobs:
         shell: bash
 
     env:
-      DIAG_CASE: ${{ inputs.diagnostic || 'abalone_float64' }}
+      DIAG_CASE: ${{ inputs.diagnostic || 'wine_quality_float32' }}
       PYTHONNOUSERSITE: "1"
       PYTHONHASHSEED: "0"
       PYTHONPATH: ""
@@ -43,8 +44,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Check out the original Abalone library source
-        if: env.DIAG_CASE == 'abalone_float64'
+      - name: Check out the original benchmark library source
+        if: env.DIAG_CASE == 'abalone_float64' || env.DIAG_CASE == 'wine_quality_float32'
         uses: actions/checkout@v7
         with:
           ref: ef04b1b0274d3abdd977440dd61e7d91e328c64d
@@ -58,18 +59,33 @@ jobs:
 
       - name: Initialize paths and selected case
         run: |
+          source_dir="$GITHUB_WORKSPACE/_diagnostic_library_source"
+          source_commit="ef04b1b0274d3abdd977440dd61e7d91e328c64d"
+          evidence="$GITHUB_WORKSPACE/benchmarks/results/real-data-datasets-ef04b1b"
+
           case "$DIAG_CASE" in
+            wine_quality_float32)
+              module="benchmarks.diagnose_wine_quality_output"
+              output_name="wine_quality_output_diagnostic.json"
+              dataset_id="wine_quality_white"
+              baseline="$evidence/wine-quality-white.json"
+              archive_name="wine_quality_white.zip"
+              ;;
             abalone_float64)
-              source_dir="$GITHUB_WORKSPACE/_diagnostic_library_source"
-              source_commit="ef04b1b0274d3abdd977440dd61e7d91e328c64d"
               module="benchmarks.diagnose_abalone_output"
               output_name="abalone_output_diagnostic.json"
+              dataset_id="abalone"
+              baseline="$evidence/abalone.json"
+              archive_name="abalone.zip"
               ;;
             california_float32)
               source_dir="$GITHUB_WORKSPACE"
               source_commit="$GITHUB_SHA"
               module="benchmarks.diagnose_real_data_float32"
               output_name="real_data_float32_diagnostic.json"
+              dataset_id="california_housing"
+              baseline="$GITHUB_WORKSPACE/benchmarks/results/real-data-coverage-8f289647.json"
+              archive_name=""
               ;;
             *)
               echo "Unsupported diagnostic: $DIAG_CASE" >&2
@@ -88,6 +104,9 @@ jobs:
             echo "DIAG_SOURCE_COMMIT=$source_commit"
             echo "DIAG_MODULE=$module"
             echo "DIAG_OUTPUT_NAME=$output_name"
+            echo "DIAG_DATASET_ID=$dataset_id"
+            echo "DIAG_BASELINE=$baseline"
+            echo "DIAG_ARCHIVE_NAME=$archive_name"
           } >> "$GITHUB_ENV"
 
           mkdir -p "$GITHUB_WORKSPACE/diagnostic_outputs/wheels"
@@ -206,7 +225,7 @@ jobs:
             "scikit-learn==1.9.1"
             "faiss-cpu==1.15.1"
           )
-          if [[ "$DIAG_CASE" == "abalone_float64" ]]; then
+          if [[ -n "$DIAG_ARCHIVE_NAME" ]]; then
             libraries+=(
               "scipy==1.18.1"
               "threadpoolctl==3.7.0"
@@ -234,17 +253,14 @@ jobs:
         run: |
           mkdir -p "$DIAG_RUN_DIR" "$DIAG_DATA_HOME"
           cp -R "$GITHUB_WORKSPACE/benchmarks" "$DIAG_RUN_DIR/benchmarks"
+          cp "$DIAG_BASELINE" "$DIAG_OUTPUT_DIR/reference-benchmark.json"
 
-          if [[ "$DIAG_CASE" == "abalone_float64" ]]; then
+          if [[ -n "$DIAG_ARCHIVE_NAME" ]]; then
             evidence="$GITHUB_WORKSPACE/benchmarks/results/real-data-datasets-ef04b1b"
-            cp "$evidence/abalone.json" "$DIAG_OUTPUT_DIR/reference-benchmark.json"
-            cp "$evidence/source-data/abalone.zip" "$DIAG_DATA_HOME/abalone.zip"
+            archive="$evidence/source-data/$DIAG_ARCHIVE_NAME"
+            cp "$archive" "$DIAG_DATA_HOME/$DIAG_ARCHIVE_NAME"
             mkdir -p "$DIAG_OUTPUT_DIR/source-data"
-            cp "$evidence/source-data/abalone.zip" "$DIAG_OUTPUT_DIR/source-data/abalone.zip"
-          else
-            cp \
-              "$GITHUB_WORKSPACE/benchmarks/results/real-data-coverage-8f289647.json" \
-              "$DIAG_OUTPUT_DIR/reference-benchmark.json"
+            cp "$archive" "$DIAG_OUTPUT_DIR/source-data/$DIAG_ARCHIVE_NAME"
           fi
 
       - name: Load and fingerprint the selected dataset
@@ -260,10 +276,10 @@ jobs:
           from benchmarks.benchmark_scaling_threads import check_released_package
 
           check_released_package(os.environ["DIAG_EXPECTED_VERSION"])
-          archived = os.environ["DIAG_CASE"] == "abalone_float64"
+          archived = bool(os.environ["DIAG_ARCHIVE_NAME"])
           data, names, dataset = load_dataset(
               os.environ["DIAG_DATA_HOME"],
-              dataset_id="abalone" if archived else "california_housing",
+              dataset_id=os.environ["DIAG_DATASET_ID"],
               download_if_missing=not archived,
           )
           destination = Path(os.environ["DIAG_OUTPUT_DIR"]) / "dataset.json"
