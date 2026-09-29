@@ -254,3 +254,13 @@ Reproduces the original outputs for Abalone with 3000 training rows, 1000 held-o
 Independent exact arithmetic on the prepared binary64 inputs explains all nine masked entries with output differences above 1e-5: six involve different admissible selections among exact boundary ties, and three involve near-equal distance ordering reversals in the captured KNNImputer calculation.
 
 The findings apply to this case. They do not establish prediction equivalence, general reconstruction-quality superiority, or an explanation for other benchmark cases.
+
+## Wine Quality float32 output diagnostic - 71a6e60
+
+[Report](wine-quality-output-71a6e60.md) | [Evidence archive](../../benchmarks/results/wine-quality-output-71a6e60.zip) | [Diagnostic script](../../benchmarks/diagnose_wine_quality_output.py)
+
+Reproduces the original outputs for Wine Quality (white) with 3000 training rows, 1000 held-out queries, MCAR, float32 and seed 101.
+
+Independent exact arithmetic on the prepared binary32 inputs explains both masked entries with output differences above 1e-5. The captured KNNImputer float32 distances reverse the ordering of two near-equal candidates, while Faiss selects the exact fifth neighbor.
+
+These findings concern the examined case. Exact-neighbor agreement is distinct from reconstruction quality: KNNImputer has slightly lower RMSE and MAE in this case.
