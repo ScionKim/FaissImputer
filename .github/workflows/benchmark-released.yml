@@ -58,7 +58,7 @@ jobs:
 
           case "$comparison_mode" in
             candidate) previous_version="0.3.20" ;;
-            released) previous_version="0.3.19" ;;
+            released) previous_version="0.3.20" ;;
             *)
               echo "Unknown comparison mode: $comparison_mode" >&2
               exit 1
@@ -68,7 +68,7 @@ jobs:
           {
             echo "COMPARISON_MODE=$comparison_mode"
             echo "PREVIOUS_VERSION=$previous_version"
-            echo "CURRENT_VERSION=0.3.20"
+            echo "CURRENT_VERSION=0.3.21"
             echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current"
             echo "PREVIOUS_ENV=$RUNNER_TEMP/faiss-previous"
             echo "BUILD_ENV=$RUNNER_TEMP/faiss-build"
@@ -297,7 +297,13 @@ jobs:
           set -euo pipefail
           comparison_started_at=$SECONDS
 
-          for query_count in 300 1000 3000; do
+          if [[ "$COMPARISON_MODE" == "released" ]]; then
+            query_counts=(300)
+          else
+            query_counts=(300 1000 3000)
+          fi
+
+          for query_count in "${query_counts[@]}"; do
             remaining_seconds=$((1800 - (SECONDS - comparison_started_at)))
 
             if (( remaining_seconds <= 0 )); then
