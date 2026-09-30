@@ -6,35 +6,47 @@
 
 ## Latest release comparison
 
-### FaissImputer 0.3.20
+### FaissImputer 0.3.21
 
-Comparison of published FaissImputer 0.3.20, FaissImputer 0.3.19,
-and KNNImputer with complete and available donor policies and
-float32/float64 inputs.
+Comparison of published FaissImputer 0.3.21, FaissImputer 0.3.20,
+and KNNImputer on one runner, with 20,000 training rows and 300 held-out
+queries. Both donor policies and float32/float64 inputs are reported
+separately. Complete-donor cases use fully observed training data;
+available-donor cases use 10% MCAR training missingness.
 
-On the measured available-donor workload, 0.3.20 achieved a
-2.71–2.73× first-transform speedup over KNNImputer.
-Fit itself was slower; fit plus first transform was 2.44–2.49× as fast.
+On the measured available-donor workload, 0.3.21 achieved a
+2.76–2.77× first-transform speedup over KNNImputer; fit plus first
+transform was 2.49× as fast for both dtypes. Available-mode peak RSS
+was slightly higher than KNNImputer. Compared with 0.3.20, complete
+float32 total time increased by a median of 1.85% across matched pairs.
 
-The report covers fit time, first and repeated transforms, timing
-variation, process memory, output agreement, error against synthetic
-ground truth, and reproduction instructions.
+All 108 workers passed their checks. Recorded output hashes matched
+between 0.3.20 and 0.3.21 in all 36 paired comparisons. This observation
+is limited to the measured inputs and does not establish general
+prediction equivalence or demonstrate that numerical repair was triggered.
 
-[Read the report](released_versions_0.3.20.md)
-· [Raw measurements](../../benchmarks/results/released_versions_0.3.20.json)
+The report covers first and repeated transforms, fit time, timing
+variation, full-worker memory, reconstruction error, and recorded output
+agreement. A standard-library analysis script regenerates the report and
+full-precision summary from the original ZIP, including environment files.
+
+[Read the report](released_versions_0.3.21.md)
+· [Original benchmark evidence](../../benchmarks/results/released_versions_0.3.21.zip)
+· [Full-precision summary](../../benchmarks/results/released_versions_0.3.21-summary.json)
 
 ## Historical version comparisons
 
 | Report | Coverage |
 | --- | --- |
+| [FaissImputer 0.3.20](released_versions_0.3.20.md) | Comparison with released 0.3.19 and KNNImputer under both donor policies and input dtypes, including timing, process memory, output agreement, and synthetic-data quality. |
 | [FaissImputer 0.3.19](released_versions_0.3.19.md) | Comparison with released 0.3.16 and KNNImputer under both donor policies and input dtypes, including timing, process memory, output agreement, and synthetic-data quality. |
 | [FaissImputer 0.3.10](released_versions_0.3.10.md) | Released-package comparisons with KNNImputer: an AMD 20,000-row run and an Intel training-size sweep. Includes tables, conditions, output agreement, and memory observations. |
 | [FaissImputer 0.2.0](v0.2.0.md) | Historical measurements of the earlier complete-donor-only implementation. |
 
-Speedup figures depend on whether fit is included. The 0.3.20 and
-0.3.19 reports provide both first-transform and fit-plus-first-transform
+Speedup figures depend on whether fit is included. The 0.3.21, 0.3.20,
+and 0.3.19 reports provide both first-transform and fit-plus-first-transform
 timings. The historical 0.3.10 speedup tables measure the first transform
-only.
+only. Use same-run paired measurements for version-to-version claims.
 
 ## Workload and implementation experiments
 
