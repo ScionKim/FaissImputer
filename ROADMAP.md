@@ -4,7 +4,7 @@ This roadmap tracks released capabilities, merged changes, and remaining
 priorities. Supported API options do not imply numerical identity with
 KNNImputer.
 
-## Released: 0.3.20
+## Previous release: 0.3.20
 
 Available-donor search with built-in L2 metrics reuses distance work
 buffers, batches preparation work, and releases temporary arrays before
@@ -200,3 +200,14 @@ for one million queries.
 
 Historical reports retain their measured versions and environments.
 Detailed implementation history remains available in Git.
+
+## Published 0.3.21 benchmark comparison
+
+The [published 0.3.21 comparison](docs/benchmarks/released_versions_0.3.21.md)
+is complete for 20,000 training rows and 300 held-out queries. It compares
+0.3.20, 0.3.21, and KNNImputer on one runner, separating donor policies
+and dtypes. All 108 workers passed their checks. The report preserves
+raw measurements and environments and documents timing, memory,
+reconstruction error, recorded output agreement, and the observed small
+complete-float32 slowdown. These measurements do not establish that the
+selective numerical repair was triggered.

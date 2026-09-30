@@ -35,34 +35,39 @@ constraints explicitly, including when the training data is itself incomplete.
 
 ## Performance
 
-### Separate-query benchmark — measured with version 0.3.20
+### Separate-query benchmark — measured with version 0.3.21
 
-**A 2.7× first-transform speedup over scikit-learn KNNImputer on one
+**A 2.76–2.77× first-transform speedup over scikit-learn KNNImputer on one
 available-donor workload.**
 
-This comparison measured the published **FaissImputer 0.3.20** package.
-It used 20,000 training rows, 300 queries, 20 features, five neighbors,
-and uniform-weight mean aggregation. Training data had 10% MCAR
-missingness; each query had four missing features.
+This comparison measured the published **FaissImputer 0.3.21** package.
+It used 20,000 training rows, 300 held-out queries, 20 features, five
+neighbors, and uniform-weight mean aggregation. Training data had 10%
+MCAR missingness; each query had four missing features.
 
-First-transform medians, **excluding fit**, on an AMD EPYC 7763 runner
+First-transform times, **excluding fit**, on an AMD EPYC 7763 runner
 with one native thread:
 
-| Input dtype | KNNImputer 1.9.1 | FaissImputer 0.3.20 | Speedup |
+| Input dtype | KNNImputer 1.9.1 (ms) | FaissImputer 0.3.21 (ms) | Paired speedup |
 | --- | ---: | ---: | ---: |
-| float32 | 279.93 ms | 103.40 ms | 2.71× |
-| float64 | 334.84 ms | 122.48 ms | 2.73× |
+| float32 | 274.60 [272.58–282.91] | 100.39 [97.96–104.07] | 2.77× |
+| float64 | 332.68 [320.05–341.91] | 119.33 [117.30–126.13] | 2.76× |
 
-Each method and dtype used three seeds and three fresh workers per seed,
-with a small untimed warmup. Fit took longer than KNNImputer in these
-cases; fit plus first transform was still 2.44–2.49× as fast.
+Times are median [min–max] across three seeds and three fresh workers
+per seed, with a small untimed warmup. Speedups are medians of nine
+matched seed/repeat timing ratios, not ratios of the displayed medians.
+Fit took longer than KNNImputer; fit plus first transform was **2.49×**
+as fast for both dtypes. Available-mode whole-worker peak RSS was
+slightly higher than KNNImputer in this workload.
 
-The full run covered both donor policies and both dtypes.
-All benchmark runs passed output and input-preservation checks.
-Performance depends on workload, configuration, and hardware.
+The same run compared 0.3.20 and 0.3.21 under both donor policies and
+dtypes. Complete-donor cases used fully observed training data and are
+reported separately. All 108 workers passed their checks. Performance
+depends on workload, configuration, and hardware.
 
-[Benchmark run and artifacts](https://github.com/ScionKim/FaissImputer/actions/runs/35015576984)
-· [Reports, methodology, and historical results](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/README.md)
+[Full comparison, methodology, and limitations](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.21.md)
+· [Original benchmark evidence](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21.zip)
+· [Full-precision analysis summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21-summary.json)
 
 ### Same-data OFAT benchmark — source commit 9683d03
 
