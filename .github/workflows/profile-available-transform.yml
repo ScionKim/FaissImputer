@@ -1,0 +1,236 @@
+name: Available-transform real-data profile
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: Dataset to profile
+        type: choice
+        options:
+          - wine_quality_white
+          - abalone
+        default: wine_quality_white
+      mechanism:
+        description: Missingness mechanism
+        type: choice
+        options:
+          - MCAR
+          - MAR
+        default: MCAR
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    name: Diagnose available-transform stages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      PYTHONNOUSERSITE: "1"
+      PYTHONHASHSEED: "0"
+      PYTHONPATH: ""
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PROFILE_DATASET: ${{ inputs.dataset }}
+      PROFILE_MECHANISM: ${{ inputs.mechanism }}
+
+    steps:
+      - name: Check out diagnostic source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up the recorded Python version
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12.14"
+
+      - name: Initialize isolated paths
+        run: |
+          {
+            echo "PROFILE_BUILD_ENV=$RUNNER_TEMP/available-profile-build-env"
+            echo "PROFILE_RUN_ENV=$RUNNER_TEMP/available-profile-run-env"
+            echo "PROFILE_BUILD_DIR=$RUNNER_TEMP/available-profile-build-source"
+            echo "PROFILE_RUN_DIR=$RUNNER_TEMP/available-profile-run"
+            echo "PROFILE_DATA_HOME=$RUNNER_TEMP/available-profile-data"
+            echo "PROFILE_OUTPUT_DIR=$GITHUB_WORKSPACE/profile_outputs"
+          } >> "$GITHUB_ENV"
+          mkdir -p "$GITHUB_WORKSPACE/profile_outputs/wheels"
+
+      - name: Prepare candidate source and recorded dependencies
+        run: |
+          python -m venv "$PROFILE_BUILD_ENV"
+          "$PROFILE_BUILD_ENV/bin/python" -m pip install "build>=1.2" packaging
+          mkdir -p "$PROFILE_BUILD_DIR"
+          git archive HEAD | tar -x -C "$PROFILE_BUILD_DIR"
+
+          "$PROFILE_BUILD_ENV/bin/python" - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import tomllib
+          from zipfile import ZipFile
+
+          from packaging.version import Version
+
+          commit = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], text=True
+          ).strip()
+          if commit != os.environ["GITHUB_SHA"]:
+              raise RuntimeError("Checkout differs from workflow source")
+
+          build_dir = Path(os.environ["PROFILE_BUILD_DIR"])
+          output = Path(os.environ["PROFILE_OUTPUT_DIR"])
+          project_path = build_dir / "pyproject.toml"
+          source = project_path.read_text(encoding="utf-8")
+          declared = tomllib.loads(source)["project"]["version"]
+          candidate = f"{Version(declared).public}+bench.{commit[:12]}"
+          lines = source.splitlines(keepends=True)
+          in_project = False
+          replaced = 0
+          for position, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("["):
+                  in_project = stripped.split("#", 1)[0].strip() == "[project]"
+              elif in_project and re.match(r"^\s*version\s*=", line):
+                  lines[position] = f'version = "{candidate}"\n'
+                  replaced += 1
+          if replaced != 1:
+              raise RuntimeError("Expected one static project version")
+          updated = "".join(lines)
+          if tomllib.loads(updated)["project"]["version"] != candidate:
+              raise RuntimeError("Candidate version replacement failed")
+          project_path.write_text(updated, encoding="utf-8")
+
+          relative_archive = "benchmarks/results/released_versions_0.3.21.zip"
+          archive_path = Path(os.environ["GITHUB_WORKSPACE"]) / relative_archive
+          archive_hash = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+          if archive_hash != "53ef359c45525b2fff05ea7a3cb9be685ba06c18ac742d68ba8882ad1377e229":
+              raise RuntimeError("Recorded dependency archive hash differs")
+          with ZipFile(archive_path) as archive:
+              pins = archive.read("shared-dependencies.txt")
+          if not pins.strip():
+              raise RuntimeError("Recorded dependency list is empty")
+          (output / "recorded-dependencies.txt").write_bytes(pins)
+
+          provenance = {
+              "version": candidate,
+              "declared_version": declared,
+              "source_commit": commit,
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "pinned_environment_archive": relative_archive,
+              "pinned_environment_archive_sha256": archive_hash,
+              "recorded_dependencies_sha256": hashlib.sha256(pins).hexdigest(),
+          }
+          (output / "candidate-build.json").write_text(
+              json.dumps(provenance, indent=2) + "\n", encoding="utf-8"
+          )
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"PROFILE_EXPECTED_VERSION={candidate}\n")
+          print(f"Candidate: {candidate}; source: {commit}")
+          PY
+
+      - name: Build and fingerprint candidate wheel
+        run: |
+          "$PROFILE_BUILD_ENV/bin/python" -m build --wheel \
+            --outdir "$PROFILE_OUTPUT_DIR/wheels" "$PROFILE_BUILD_DIR"
+          "$PROFILE_BUILD_ENV/bin/python" - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          output = Path(os.environ["PROFILE_OUTPUT_DIR"])
+          wheels = list((output / "wheels").glob("*.whl"))
+          if len(wheels) != 1:
+              raise RuntimeError("Expected exactly one candidate wheel")
+          wheel = wheels[0]
+          path = output / "candidate-build.json"
+          metadata = json.loads(path.read_text(encoding="utf-8"))
+          metadata.update({
+              "wheel_filename": wheel.name,
+              "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
+          })
+          path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Install candidate with recorded dependency versions
+        run: |
+          python -m venv "$PROFILE_RUN_ENV"
+          "$PROFILE_RUN_ENV/bin/python" -m pip install --only-binary=:all: \
+            --report "$PROFILE_OUTPUT_DIR/install-report.json" \
+            -r "$PROFILE_OUTPUT_DIR/recorded-dependencies.txt" \
+            "$PROFILE_OUTPUT_DIR"/wheels/*.whl
+          "$PROFILE_RUN_ENV/bin/python" -m pip check
+          "$PROFILE_RUN_ENV/bin/python" -m pip freeze \
+            > "$PROFILE_OUTPUT_DIR/environment.txt"
+
+      - name: Prepare diagnostics outside the checkout
+        run: |
+          mkdir -p "$PROFILE_RUN_DIR/benchmarks" "$PROFILE_DATA_HOME"
+          touch "$PROFILE_RUN_DIR/benchmarks/__init__.py"
+          cp "$GITHUB_WORKSPACE/benchmarks/profile_available_transform.py" \
+            "$PROFILE_RUN_DIR/benchmarks/"
+          cp "$GITHUB_WORKSPACE/benchmarks/benchmark_real_data_cases.py" \
+            "$PROFILE_RUN_DIR/benchmarks/"
+
+      - name: Download and fingerprint the dataset once
+        timeout-minutes: 5
+        working-directory: ${{ env.PROFILE_RUN_DIR }}
+        run: |
+          "$PROFILE_RUN_ENV/bin/python" - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from benchmarks.benchmark_real_data_cases import load_dataset
+
+          data, names, metadata = load_dataset(
+              os.environ["PROFILE_DATA_HOME"],
+              download_if_missing=True,
+              dataset_id=os.environ["PROFILE_DATASET"],
+          )
+          output = Path(os.environ["PROFILE_OUTPUT_DIR"]) / "dataset.json"
+          output.write_text(
+              json.dumps(metadata, indent=2, allow_nan=False) + "\n",
+              encoding="utf-8",
+          )
+          print(f"Dataset: {metadata['dataset']}; shape: {data.shape}")
+          PY
+
+      - name: Profile six fresh workers with output agreement checks
+        working-directory: ${{ env.PROFILE_RUN_DIR }}
+        run: |
+          "$PROFILE_RUN_ENV/bin/python" -u \
+            -m benchmarks.profile_available_transform \
+            --expected-version "$PROFILE_EXPECTED_VERSION" \
+            --provenance "$PROFILE_OUTPUT_DIR/candidate-build.json" \
+            --data-home "$PROFILE_DATA_HOME" \
+            --dataset "$PROFILE_DATASET" \
+            --mechanism "$PROFILE_MECHANISM" \
+            --train-size 3000 --query-size 1000 \
+            --seeds 101 202 303 --dtypes float32 float64 \
+            --output "$PROFILE_OUTPUT_DIR/available_transform_profile.json"
+
+      - name: Upload profile and reproduction metadata
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: available-transform-profile-${{ inputs.dataset }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: profile_outputs/
+          if-no-files-found: warn
+          retention-days: 30
