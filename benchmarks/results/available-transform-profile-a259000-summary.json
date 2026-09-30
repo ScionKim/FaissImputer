@@ -1,0 +1,4677 @@
+{
+  "aggregation": {
+    "cell": "dataset and dtype; three seeds, one traced execution per seed; no API/dtype pooling",
+    "full_refinement_seconds": "sum of sibling full_direct_distances.suspect and .tie inclusive_seconds",
+    "quality": "RMSE/MAE against masked standardized held-out ground truth, not a KNN comparison",
+    "stage_fraction": "stage seconds / instrumented_transform_seconds for each record, then median/min/max",
+    "statistics": "median, min, max across the three seed records; no rounding in JSON",
+    "timer_hierarchy": "inclusive buckets overlap; do not add full kernels to their full-refinement parents",
+    "timing_status": "instrumented diagnostic/reference-only; fit excluded; no benchmark speedups"
+  },
+  "cells": [
+    {
+      "dataset": "wine_quality_white",
+      "dtype": "float32",
+      "records": 3,
+      "seeds": [
+        101,
+        202,
+        303
+      ],
+      "statistics": {
+        "aggregate_fraction": {
+          "max": 0.009261374726312005,
+          "median": 0.008934058496434985,
+          "min": 0.008557641116973377
+        },
+        "aggregate_seconds": {
+          "max": 0.0015743939999595113,
+          "median": 0.0015058840000392593,
+          "min": 0.0014621540000234745
+        },
+        "available_transform_self_fraction": {
+          "max": 0.02292366631634348,
+          "median": 0.022389448854180455,
+          "min": 0.021904972932862997
+        },
+        "available_transform_self_seconds": {
+          "max": 0.003896925000020701,
+          "median": 0.0037738629999637396,
+          "min": 0.003742671999958702
+        },
+        "expansion_search_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "faiss_kmin_fraction": {
+          "max": 0.022774437953306203,
+          "median": 0.022149246787096188,
+          "min": 0.022034512140920316
+        },
+        "faiss_kmin_seconds": {
+          "max": 0.003838755000032279,
+          "median": 0.00376527699998519,
+          "min": 0.00376480500000298
+        },
+        "full_refinement_fraction": {
+          "max": 0.6764883184814774,
+          "median": 0.6690234553971255,
+          "min": 0.6684436330476508
+        },
+        "full_refinement_seconds": {
+          "max": 0.11430899099966041,
+          "median": 0.11402577399971392,
+          "min": 0.11363255200024014
+        },
+        "full_row_events": {
+          "max": 236,
+          "median": 235,
+          "min": 233
+        },
+        "full_suspect_row_events": {
+          "max": 167,
+          "median": 165,
+          "min": 156
+        },
+        "full_tie_row_events": {
+          "max": 77,
+          "median": 70,
+          "min": 69
+        },
+        "initial_batch_query_rows": {
+          "max": 706,
+          "median": 699,
+          "min": 680
+        },
+        "mae": {
+          "max": 0.5545421522086339,
+          "median": 0.5049077623493594,
+          "min": 0.49919072773235573
+        },
+        "matrix_fraction": {
+          "max": 0.13721382491560746,
+          "median": 0.13364053041260326,
+          "min": 0.13217122467079262
+        },
+        "matrix_prepare_self_fraction": {
+          "max": 0.05618739873508284,
+          "median": 0.052590720331796716,
+          "min": 0.049232993525467596
+        },
+        "matrix_prepare_self_seconds": {
+          "max": 0.009600148999993507,
+          "median": 0.008940196999986938,
+          "min": 0.00829848800000832
+        },
+        "matrix_seconds": {
+          "max": 0.023325761999984707,
+          "median": 0.02258270499999071,
+          "min": 0.0225258359999998
+        },
+        "reference_transform_seconds": {
+          "max": 0.17078609099999653,
+          "median": 0.1668031749999841,
+          "min": 0.16581106399999612
+        },
+        "retain_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "rmse": {
+          "max": 0.8514761210862603,
+          "median": 0.8013359884100253,
+          "min": 0.6943968042774052
+        },
+        "scored_cells": {
+          "max": 1105,
+          "median": 1103,
+          "min": 1093
+        },
+        "search_calls": {
+          "max": 3,
+          "median": 3,
+          "min": 3
+        },
+        "search_self_fraction": {
+          "max": 0.04974399223938661,
+          "median": 0.04689772008605998,
+          "min": 0.04420227938099826
+        },
+        "search_self_seconds": {
+          "max": 0.008499232000474422,
+          "median": 0.007904864999943584,
+          "min": 0.007514197999597627
+        },
+        "selected_donor_pair_events": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "selected_refinement_fraction": {
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0
+        },
+        "selected_refinement_seconds": {
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0
+        },
+        "selected_row_events": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "transform_fraction": {
+          "max": 1.0,
+          "median": 1.0,
+          "min": 1.0
+        },
+        "transform_seconds": {
+          "max": 0.17085946700001386,
+          "median": 0.1699957129999916,
+          "min": 0.16855542199999718
+        }
+      }
+    },
+    {
+      "dataset": "wine_quality_white",
+      "dtype": "float64",
+      "records": 3,
+      "seeds": [
+        101,
+        202,
+        303
+      ],
+      "statistics": {
+        "aggregate_fraction": {
+          "max": 0.006822497641885573,
+          "median": 0.006755552794904772,
+          "min": 0.006674109552357426
+        },
+        "aggregate_seconds": {
+          "max": 0.0014131399999826044,
+          "median": 0.0013849180000988781,
+          "min": 0.0013581450000970108
+        },
+        "available_transform_self_fraction": {
+          "max": 0.019576899994776884,
+          "median": 0.019404818296385094,
+          "min": 0.019048469853686675
+        },
+        "available_transform_self_seconds": {
+          "max": 0.0040549520000467965,
+          "median": 0.00394877499991253,
+          "min": 0.0039050199999337565
+        },
+        "expansion_search_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "faiss_kmin_fraction": {
+          "max": 0.01900593330967893,
+          "median": 0.01857036302639952,
+          "min": 0.018492990490926446
+        },
+        "faiss_kmin_seconds": {
+          "max": 0.0039366880000102356,
+          "median": 0.0038070060000165995,
+          "min": 0.0037632230000212985
+        },
+        "full_refinement_fraction": {
+          "max": 0.5585367138938797,
+          "median": 0.5529306576745114,
+          "min": 0.5500240494573295
+        },
+        "full_refinement_seconds": {
+          "max": 0.11450248000002716,
+          "median": 0.11392616400021893,
+          "min": 0.11251838199984832
+        },
+        "full_row_events": {
+          "max": 236,
+          "median": 235,
+          "min": 233
+        },
+        "full_suspect_row_events": {
+          "max": 167,
+          "median": 165,
+          "min": 156
+        },
+        "full_tie_row_events": {
+          "max": 77,
+          "median": 70,
+          "min": 69
+        },
+        "initial_batch_query_rows": {
+          "max": 706,
+          "median": 699,
+          "min": 680
+        },
+        "mae": {
+          "max": 0.5545421515745903,
+          "median": 0.5049077638826194,
+          "min": 0.49919072788358915
+        },
+        "matrix_fraction": {
+          "max": 0.10880611714490752,
+          "median": 0.10802846908502178,
+          "min": 0.10771682591896362
+        },
+        "matrix_prepare_self_fraction": {
+          "max": 0.04780393169449121,
+          "median": 0.04770213645591724,
+          "min": 0.04561346459950096
+        },
+        "matrix_prepare_self_seconds": {
+          "max": 0.009880515999981299,
+          "median": 0.009800016000042433,
+          "min": 0.009282091999978093
+        },
+        "matrix_seconds": {
+          "max": 0.022311323999986143,
+          "median": 0.022305731999978207,
+          "min": 0.021983205999987376
+        },
+        "reference_transform_seconds": {
+          "max": 0.19526325899997232,
+          "median": 0.19405998400000612,
+          "min": 0.19283345499999882
+        },
+        "retain_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "rmse": {
+          "max": 0.8514761195307005,
+          "median": 0.801335990444968,
+          "min": 0.6943968040792654
+        },
+        "scored_cells": {
+          "max": 1105,
+          "median": 1103,
+          "min": 1093
+        },
+        "search_calls": {
+          "max": 3,
+          "median": 3,
+          "min": 3
+        },
+        "search_self_fraction": {
+          "max": 0.09900221313967382,
+          "median": 0.09805189289422014,
+          "min": 0.0955593229708355
+        },
+        "search_self_seconds": {
+          "max": 0.020309431999237404,
+          "median": 0.02014641199988887,
+          "min": 0.01959008100112669
+        },
+        "selected_donor_pair_events": {
+          "max": 7520,
+          "median": 7456,
+          "min": 7120
+        },
+        "selected_refinement_fraction": {
+          "max": 0.11770289632122571,
+          "median": 0.11682827180534004,
+          "min": 0.11142798778595611
+        },
+        "selected_refinement_seconds": {
+          "max": 0.024379733000444048,
+          "median": 0.023773918000244976,
+          "min": 0.022843226999270883
+        },
+        "selected_row_events": {
+          "max": 470,
+          "median": 466,
+          "min": 445
+        },
+        "transform_fraction": {
+          "max": 1.0,
+          "median": 1.0,
+          "min": 1.0
+        },
+        "transform_seconds": {
+          "max": 0.20712942299999781,
+          "median": 0.20500439299999584,
+          "min": 0.20349456200000304
+        }
+      }
+    },
+    {
+      "dataset": "abalone",
+      "dtype": "float32",
+      "records": 3,
+      "seeds": [
+        101,
+        202,
+        303
+      ],
+      "statistics": {
+        "aggregate_fraction": {
+          "max": 0.03045164243232196,
+          "median": 0.030406498238979635,
+          "min": 0.029085276475846782
+        },
+        "aggregate_seconds": {
+          "max": 0.0009418450000211465,
+          "median": 0.0009149799999690345,
+          "min": 0.0008690080000022249
+        },
+        "available_transform_self_fraction": {
+          "max": 0.07465000509554165,
+          "median": 0.0736053907879541,
+          "min": 0.07040547602858561
+        },
+        "available_transform_self_seconds": {
+          "max": 0.002276555999969787,
+          "median": 0.002230387999993866,
+          "min": 0.0021186130000288017
+        },
+        "expansion_search_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "faiss_kmin_fraction": {
+          "max": 0.09404327334746686,
+          "median": 0.09284704582144014,
+          "min": 0.09180970786135584
+        },
+        "faiss_kmin_seconds": {
+          "max": 0.002839601000005132,
+          "median": 0.002829912000002821,
+          "min": 0.0027740779999945175
+        },
+        "full_refinement_fraction": {
+          "max": 0.11406721712390736,
+          "median": 0.11155125248619155,
+          "min": 0.10043870167066729
+        },
+        "full_refinement_seconds": {
+          "max": 0.003528008000003524,
+          "median": 0.003356755000005762,
+          "min": 0.0030009010000000558
+        },
+        "full_row_events": {
+          "max": 8,
+          "median": 8,
+          "min": 7
+        },
+        "full_suspect_row_events": {
+          "max": 8,
+          "median": 6,
+          "min": 5
+        },
+        "full_tie_row_events": {
+          "max": 2,
+          "median": 2,
+          "min": 0
+        },
+        "initial_batch_query_rows": {
+          "max": 536,
+          "median": 534,
+          "min": 522
+        },
+        "mae": {
+          "max": 0.1817598463638953,
+          "median": 0.17739966366920756,
+          "min": 0.17612321568157147
+        },
+        "matrix_fraction": {
+          "max": 0.5247480791425874,
+          "median": 0.5181899636156088,
+          "min": 0.5095573432512494
+        },
+        "matrix_prepare_self_fraction": {
+          "max": 0.12706837663739962,
+          "median": 0.12659696863290726,
+          "min": 0.12399036354077861
+        },
+        "matrix_prepare_self_seconds": {
+          "max": 0.0038349230000065404,
+          "median": 0.0038236900000114815,
+          "min": 0.00378245600001037
+        },
+        "matrix_seconds": {
+          "max": 0.01576020200000272,
+          "median": 0.015678388999994297,
+          "min": 0.01559316199999472
+        },
+        "reference_transform_seconds": {
+          "max": 0.041280178999997474,
+          "median": 0.03421440500000017,
+          "min": 0.03265753400000193
+        },
+        "retain_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "rmse": {
+          "max": 0.31064088548424373,
+          "median": 0.2746437054335726,
+          "min": 0.25850292062766067
+        },
+        "scored_cells": {
+          "max": 711,
+          "median": 708,
+          "min": 693
+        },
+        "search_calls": {
+          "max": 3,
+          "median": 3,
+          "min": 3
+        },
+        "search_self_fraction": {
+          "max": 0.03989320513332345,
+          "median": 0.03463649679968232,
+          "min": 0.03180828506384832
+        },
+        "search_self_seconds": {
+          "max": 0.0012338649999961149,
+          "median": 0.0010348670000084326,
+          "min": 0.0009571619999775294
+        },
+        "selected_donor_pair_events": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "selected_refinement_fraction": {
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0
+        },
+        "selected_refinement_seconds": {
+          "max": 0.0,
+          "median": 0.0,
+          "min": 0.0
+        },
+        "selected_row_events": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "transform_fraction": {
+          "max": 1.0,
+          "median": 1.0,
+          "min": 1.0
+        },
+        "transform_seconds": {
+          "max": 0.03092920200000293,
+          "median": 0.030091593999998167,
+          "min": 0.029877934999994693
+        }
+      }
+    },
+    {
+      "dataset": "abalone",
+      "dtype": "float64",
+      "records": 3,
+      "seeds": [
+        101,
+        202,
+        303
+      ],
+      "statistics": {
+        "aggregate_fraction": {
+          "max": 0.012001703991793183,
+          "median": 0.011902812456495295,
+          "min": 0.0112835066035044
+        },
+        "aggregate_seconds": {
+          "max": 0.0008622169999767948,
+          "median": 0.0008542100000141772,
+          "min": 0.0008158910000020114
+        },
+        "available_transform_self_fraction": {
+          "max": 0.03268130068061453,
+          "median": 0.031433249697675886,
+          "min": 0.030945126563972206
+        },
+        "available_transform_self_seconds": {
+          "max": 0.0023673710000196024,
+          "median": 0.0022375890000034815,
+          "min": 0.002237231999977496
+        },
+        "expansion_search_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "faiss_kmin_fraction": {
+          "max": 0.03964749045899354,
+          "median": 0.039039875292109,
+          "min": 0.03850578427028219
+        },
+        "faiss_kmin_seconds": {
+          "max": 0.0028668419999959838,
+          "median": 0.0028279739999987896,
+          "min": 0.0027406130000002804
+        },
+        "full_refinement_fraction": {
+          "max": 0.06616857343733314,
+          "median": 0.060831769327220724,
+          "min": 0.053092785853376824
+        },
+        "full_refinement_seconds": {
+          "max": 0.004784535999981188,
+          "median": 0.00432964400000202,
+          "min": 0.0038459399999979382
+        },
+        "full_row_events": {
+          "max": 11,
+          "median": 10,
+          "min": 9
+        },
+        "full_suspect_row_events": {
+          "max": 8,
+          "median": 6,
+          "min": 5
+        },
+        "full_tie_row_events": {
+          "max": 5,
+          "median": 4,
+          "min": 2
+        },
+        "initial_batch_query_rows": {
+          "max": 536,
+          "median": 534,
+          "min": 522
+        },
+        "mae": {
+          "max": 0.1817598460158545,
+          "median": 0.17716370069732656,
+          "min": 0.17612321581596826
+        },
+        "matrix_fraction": {
+          "max": 0.23557419860180354,
+          "median": 0.22883994533964527,
+          "min": 0.22862460682928304
+        },
+        "matrix_prepare_self_fraction": {
+          "max": 0.06994264483430056,
+          "median": 0.05686200450624847,
+          "min": 0.052678735952336936
+        },
+        "matrix_prepare_self_seconds": {
+          "max": 0.004978101999995488,
+          "median": 0.004118975000004355,
+          "min": 0.0038091090000023087
+        },
+        "matrix_seconds": {
+          "max": 0.017064544999996656,
+          "median": 0.01653145299999892,
+          "min": 0.01628746800000158
+        },
+        "reference_transform_seconds": {
+          "max": 0.067929043999996,
+          "median": 0.06744972700000318,
+          "min": 0.06606864999999829
+        },
+        "retain_calls": {
+          "max": 0,
+          "median": 0,
+          "min": 0
+        },
+        "rmse": {
+          "max": 0.3106408858245694,
+          "median": 0.274563045128864,
+          "min": 0.2585029221298403
+        },
+        "scored_cells": {
+          "max": 711,
+          "median": 708,
+          "min": 693
+        },
+        "search_calls": {
+          "max": 3,
+          "median": 3,
+          "min": 3
+        },
+        "search_self_fraction": {
+          "max": 0.20258895924222875,
+          "median": 0.20233502843605913,
+          "min": 0.18959783943859965
+        },
+        "search_self_seconds": {
+          "max": 0.014656763000004958,
+          "median": 0.014648860000150421,
+          "min": 0.013494448000074044
+        },
+        "selected_donor_pair_events": {
+          "max": 8432,
+          "median": 8368,
+          "min": 8192
+        },
+        "selected_refinement_fraction": {
+          "max": 0.36076736383926905,
+          "median": 0.36021163727517913,
+          "min": 0.35948863065083525
+        },
+        "selected_refinement_seconds": {
+          "max": 0.026093042999988825,
+          "median": 0.025994005999869785,
+          "min": 0.025677277999939463
+        },
+        "selected_row_events": {
+          "max": 527,
+          "median": 523,
+          "min": 512
+        },
+        "transform_fraction": {
+          "max": 1.0,
+          "median": 1.0,
+          "min": 1.0
+        },
+        "transform_seconds": {
+          "max": 0.07243809000000567,
+          "median": 0.07230828399999467,
+          "min": 0.07117406000000415
+        }
+      }
+    }
+  ],
+  "common_environment": {
+    "case_helper_sha256": "a51dc31b9a5927f75a63028bf9443797741da7851c733eb722242186335ea6ac",
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "faiss": "1.15.1",
+    "faiss_imputer": "0.3.21+bench.a25900033ab5",
+    "faiss_imputer_source_sha256": "bf82b170a6af3161b49cf623f714b5b80ee849ff91a599f5fc05268f9acbd17a",
+    "matrix_source_sha256": "3454e6db843d74cde9c26628fee11cdcb658e13cfacec5319d61815bab4545a6",
+    "numpy": "2.5.3",
+    "profile_script_sha256": "54da53ab5c424287df1f440da3ecf8845dd88e03e80b9e8e3193f2c80bfd8ae7",
+    "python": "3.12.14",
+    "recorded_dependencies_sha256": "2847dbadceaf133bbdb9a975f473986cb7b3918e2e928d0abb4e110654824b5d",
+    "scikit_learn": "1.9.1"
+  },
+  "configuration": {
+    "api": "fit_then_transform",
+    "donor_policy": "available",
+    "index_factory": "Flat",
+    "mechanism": "MCAR",
+    "metric": "l2",
+    "n_neighbors": 5,
+    "n_query": 1000,
+    "n_train": 3000,
+    "strategy": "mean",
+    "target_missing_rate": 0.1,
+    "timing_scope": "first transform only; fit excluded",
+    "weights": "uniform"
+  },
+  "samples": [
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.16855542199999718,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.16855542199999718
+      },
+      "case": {
+        "always_observed": [
+          "alcohol"
+        ],
+        "complete_donors": 943,
+        "eligible_base_probability": 0.11000000000000001,
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "fingerprints": {
+          "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+          "query": "e9550d567661b86e31184b8c3e7b0cb21e8312910149f47c2ec78f36033ea1bb",
+          "query_mask": "0b8def8e0498df58f59a131a906e83b9af9dd6f37e3411d6639636f6842c5ce0",
+          "query_row_ids": "0ca3ab241914b1b8df7b5f8cf12380cf22c0f09ec6ad23331fb4cacb80827cf2",
+          "raw_query": "8761e1eab4e103591b6505f50fd2daf470b999452d1f46bda4d81db60cf2abbe",
+          "raw_train": "1705a356159e2b84e89d5285c8892eb0477be6b509bc9341f0ef71b46208f6ff",
+          "train": "8f82676414c457b393de78087e3e4b3fcb52af8c806e3aa62f1c7948eb1a8718",
+          "train_mask": "5002cacb5d55792a15399d1eb92c70c6a5341c38e873df7c04413a4768745b31",
+          "train_row_ids": "8b5518cf58946286acaf6ab3684eeab7f61e8fea747738bd808fde2d8583c495",
+          "truth": "1261c9c5cb43cb55aa68cfea7ca8bc5e15a181e3e0de592bd728d0786649bf99"
+        },
+        "input_dtype": "float32",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 294,
+          "eligible_missing_rate": 0.1105,
+          "missing_per_feature": [
+            108,
+            107,
+            119,
+            103,
+            105,
+            135,
+            112,
+            102,
+            103,
+            111,
+            0
+          ],
+          "overall_missing_rate": 0.10045454545454545,
+          "rows_with_missing": 706
+        },
+        "scaler_mean": [
+          6.877732189481519,
+          0.2772586015538288,
+          0.33396106327218267,
+          6.333878765340281,
+          0.0457814371257491,
+          34.95068850018608,
+          138.47086466165413,
+          0.9940552734082386,
+          3.1852578095596535,
+          0.4897607476635528,
+          10.49487111111113
+        ],
+        "scaler_scale": [
+          0.863102626498563,
+          0.10120068346737315,
+          0.11403673692387047,
+          5.125159745697746,
+          0.022486242960654195,
+          17.224952864977524,
+          42.582670554853514,
+          0.003030678426194492,
+          0.15148524300569674,
+          0.11206614681960103,
+          1.2146843752744165
+        ],
+        "seed": 101,
+        "train_mask": {
+          "complete_rows": 943,
+          "eligible_missing_rate": 0.10783333333333334,
+          "missing_per_feature": [
+            319,
+            297,
+            329,
+            311,
+            328,
+            313,
+            340,
+            330,
+            343,
+            325,
+            0
+          ],
+          "overall_missing_rate": 0.09803030303030304,
+          "rows_with_missing": 2057
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "e9550d567661b86e31184b8c3e7b0cb21e8312910149f47c2ec78f36033ea1bb",
+          "train": "8f82676414c457b393de78087e3e4b3fcb52af8c806e3aa62f1c7948eb1a8718"
+        },
+        "input_hashes_before": {
+          "query": "e9550d567661b86e31184b8c3e7b0cb21e8312910149f47c2ec78f36033ea1bb",
+          "train": "8f82676414c457b393de78087e3e4b3fcb52af8c806e3aa62f1c7948eb1a8718"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "wine_quality_white",
+        "donor_policy": "available",
+        "dtype": "float32",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 101,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 30,
+        "aggregation_row_events": 1105,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 706,
+        "full_suspect_donor_pair_events": 501000,
+        "full_suspect_row_events": 167,
+        "full_tie_donor_pair_events": 207000,
+        "full_tie_row_events": 69,
+        "initial_batch_query_rows": 706,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 2118000,
+        "matrix_build_query_rows": 706,
+        "matrix_suspect_query_rows": 167,
+        "precise_topk_calls": 236,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 11296,
+        "search_calls": 3,
+        "search_query_row_events": 706
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.49919072773235573,
+        "rmse": 0.6943968042774052,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 1105
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 88,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 58,
+          "tie_full_row_events": 30
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 87,
+          "precise_rows_before": 88,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 64,
+          "tie_full_row_events": 23
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 61,
+          "precise_rows_before": 87,
+          "query_rows": 194,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 45,
+          "tie_full_row_events": 16
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 30,
+          "inclusive_seconds": 0.0015058840000392593,
+          "self_seconds": 0.0015058840000392593
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.16831539000000362,
+          "self_seconds": 0.0037738629999637396
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 167,
+          "inclusive_seconds": 0.07919476100011025,
+          "self_seconds": 0.07919476100011025
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 69,
+          "inclusive_seconds": 0.03311178899980405,
+          "self_seconds": 0.03311178899980405
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.003838755000032279,
+          "self_seconds": 0.003838755000032279
+        },
+        "full_direct_distances.suspect": {
+          "calls": 167,
+          "inclusive_seconds": 0.08036061499993252,
+          "self_seconds": 0.001165853999822275
+        },
+        "full_direct_distances.tie": {
+          "calls": 69,
+          "inclusive_seconds": 0.0336651589997814,
+          "self_seconds": 0.0005533699999773489
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.16855542199999718,
+          "self_seconds": 0.00024003199999356184
+        },
+        "precise_topk": {
+          "calls": 236,
+          "inclusive_seconds": 0.006441925000302717,
+          "self_seconds": 0.006441925000302717
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.03082432400000812,
+          "self_seconds": 0.00829848800000832
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.0225258359999998,
+          "self_seconds": 0.0225258359999998
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.16303564300000062,
+          "self_seconds": 0.007904864999943584
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.008934058496434985,
+        "aggregate_seconds": 0.0015058840000392593,
+        "available_transform_self_fraction": 0.022389448854180455,
+        "available_transform_self_seconds": 0.0037738629999637396,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.022774437953306203,
+        "faiss_kmin_seconds": 0.003838755000032279,
+        "full_refinement_fraction": 0.6764883184814774,
+        "full_refinement_seconds": 0.11402577399971392,
+        "full_row_events": 236,
+        "full_suspect_row_events": 167,
+        "full_tie_row_events": 69,
+        "initial_batch_query_rows": 706,
+        "mae": 0.49919072773235573,
+        "matrix_fraction": 0.13364053041260326,
+        "matrix_prepare_self_fraction": 0.049232993525467596,
+        "matrix_prepare_self_seconds": 0.00829848800000832,
+        "matrix_seconds": 0.0225258359999998,
+        "reference_transform_seconds": 0.17078609099999653,
+        "retain_calls": 0,
+        "rmse": 0.6943968042774052,
+        "scored_cells": 1105,
+        "search_calls": 3,
+        "search_self_fraction": 0.04689772008605998,
+        "search_self_seconds": 0.007904864999943584,
+        "selected_donor_pair_events": 0,
+        "selected_refinement_fraction": 0.0,
+        "selected_refinement_seconds": 0.0,
+        "selected_row_events": 0,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.16855542199999718
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.1699957129999916,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.1699957129999916
+      },
+      "case": {
+        "always_observed": [
+          "alcohol"
+        ],
+        "complete_donors": 964,
+        "eligible_base_probability": 0.11000000000000001,
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "fingerprints": {
+          "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+          "query": "c08f756b206f5e98c81681b4c844ba7dd16b4087eaaeac507c6c00707091a538",
+          "query_mask": "c718caf46ce01367866868cdbfb39cda16f72adae59af9ddfe842de311a56d3e",
+          "query_row_ids": "3a3b1c64403e9e5c8d30fe9009e34a8f8fb0c1c72febf1e1a92f3894e48d4a61",
+          "raw_query": "313aa375f779267373bbefb2279d9fed55cc6ce9a7eb7bb6fc14167e648cf3ee",
+          "raw_train": "2dbc616d334283387de72bc2e7fb170508ced6af93f7a74b47eaf45d4f491626",
+          "train": "6dd12d782b4ba6b6f65f05817c1b4d894632549a6284acce42b9a4a4af8a1d0b",
+          "train_mask": "906be45a4d774c549d6811805f2e586572df4dc6f808ccd8fafb00ca733e3aaa",
+          "train_row_ids": "20e28c63a25fa170d0477cecd6555709924b217fe72e11400c1200ffee8cd0e7",
+          "truth": "79bc74310696dc790be266ea7b85873b46b9a5c359c49aa2e64e3a0a03197175"
+        },
+        "input_dtype": "float32",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 301,
+          "eligible_missing_rate": 0.1103,
+          "missing_per_feature": [
+            119,
+            100,
+            105,
+            104,
+            91,
+            111,
+            126,
+            113,
+            120,
+            114,
+            0
+          ],
+          "overall_missing_rate": 0.10027272727272728,
+          "rows_with_missing": 699
+        },
+        "scaler_mean": [
+          6.829462962962961,
+          0.2767582417582423,
+          0.3318161266013564,
+          6.474104477611945,
+          0.04514615675880404,
+          35.64755323122899,
+          138.40973254086182,
+          0.9940285946745556,
+          3.1909046362608353,
+          0.4889795918367352,
+          10.504091111111146
+        ],
+        "scaler_scale": [
+          0.8430881772117179,
+          0.09907949154800906,
+          0.11892485939251828,
+          5.151332708693124,
+          0.02066803284746353,
+          17.411290894316966,
+          42.75910904147313,
+          0.0030617755670025067,
+          0.15299920163298045,
+          0.11442604027479415,
+          1.232176188337595
+        ],
+        "seed": 202,
+        "train_mask": {
+          "complete_rows": 964,
+          "eligible_missing_rate": 0.10883333333333334,
+          "missing_per_feature": [
+            300,
+            361,
+            346,
+            320,
+            359,
+            323,
+            308,
+            296,
+            347,
+            305,
+            0
+          ],
+          "overall_missing_rate": 0.09893939393939394,
+          "rows_with_missing": 2036
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "c08f756b206f5e98c81681b4c844ba7dd16b4087eaaeac507c6c00707091a538",
+          "train": "6dd12d782b4ba6b6f65f05817c1b4d894632549a6284acce42b9a4a4af8a1d0b"
+        },
+        "input_hashes_before": {
+          "query": "c08f756b206f5e98c81681b4c844ba7dd16b4087eaaeac507c6c00707091a538",
+          "train": "6dd12d782b4ba6b6f65f05817c1b4d894632549a6284acce42b9a4a4af8a1d0b"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "wine_quality_white",
+        "donor_policy": "available",
+        "dtype": "float32",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 202,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 30,
+        "aggregation_row_events": 1103,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 699,
+        "full_suspect_donor_pair_events": 468000,
+        "full_suspect_row_events": 156,
+        "full_tie_donor_pair_events": 231000,
+        "full_tie_row_events": 77,
+        "initial_batch_query_rows": 699,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 2097000,
+        "matrix_build_query_rows": 699,
+        "matrix_suspect_query_rows": 156,
+        "precise_topk_calls": 233,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 11184,
+        "search_calls": 3,
+        "search_query_row_events": 699
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.5545421522086339,
+        "rmse": 0.8514761210862603,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 1103
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 75,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 51,
+          "tie_full_row_events": 24
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 92,
+          "precise_rows_before": 75,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 64,
+          "tie_full_row_events": 28
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 66,
+          "precise_rows_before": 92,
+          "query_rows": 187,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 41,
+          "tie_full_row_events": 25
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 30,
+          "inclusive_seconds": 0.0015743939999595113,
+          "self_seconds": 0.0015743939999595113
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.16921218799998883,
+          "self_seconds": 0.003896925000020701
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 156,
+          "inclusive_seconds": 0.07445870699973511,
+          "self_seconds": 0.07445870699973511
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 77,
+          "inclusive_seconds": 0.03747786699977951,
+          "self_seconds": 0.03747786699977951
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.00376527699998519,
+          "self_seconds": 0.00376527699998519
+        },
+        "full_direct_distances.suspect": {
+          "calls": 156,
+          "inclusive_seconds": 0.07553245700017897,
+          "self_seconds": 0.0010737500004438516
+        },
+        "full_direct_distances.tie": {
+          "calls": 77,
+          "inclusive_seconds": 0.038100095000061174,
+          "self_seconds": 0.000622228000281666
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.1699957129999916,
+          "self_seconds": 0.0007835250000027827
+        },
+        "precise_topk": {
+          "calls": 233,
+          "inclusive_seconds": 0.006562883000214015,
+          "self_seconds": 0.006562883000214015
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.032265958999971645,
+          "self_seconds": 0.008940196999986938
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.023325761999984707,
+          "self_seconds": 0.023325761999984707
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.16374086900000862,
+          "self_seconds": 0.007514197999597627
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.009261374726312005,
+        "aggregate_seconds": 0.0015743939999595113,
+        "available_transform_self_fraction": 0.02292366631634348,
+        "available_transform_self_seconds": 0.003896925000020701,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.022149246787096188,
+        "faiss_kmin_seconds": 0.00376527699998519,
+        "full_refinement_fraction": 0.6684436330476508,
+        "full_refinement_seconds": 0.11363255200024014,
+        "full_row_events": 233,
+        "full_suspect_row_events": 156,
+        "full_tie_row_events": 77,
+        "initial_batch_query_rows": 699,
+        "mae": 0.5545421522086339,
+        "matrix_fraction": 0.13721382491560746,
+        "matrix_prepare_self_fraction": 0.052590720331796716,
+        "matrix_prepare_self_seconds": 0.008940196999986938,
+        "matrix_seconds": 0.023325761999984707,
+        "reference_transform_seconds": 0.1668031749999841,
+        "retain_calls": 0,
+        "rmse": 0.8514761210862603,
+        "scored_cells": 1103,
+        "search_calls": 3,
+        "search_self_fraction": 0.04420227938099826,
+        "search_self_seconds": 0.007514197999597627,
+        "selected_donor_pair_events": 0,
+        "selected_refinement_fraction": 0.0,
+        "selected_refinement_seconds": 0.0,
+        "selected_row_events": 0,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.1699957129999916
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.17085946700001386,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.17085946700001386
+      },
+      "case": {
+        "always_observed": [
+          "alcohol"
+        ],
+        "complete_donors": 910,
+        "eligible_base_probability": 0.11000000000000001,
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "fingerprints": {
+          "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+          "query": "ea18621a88b275ebd489910ee32d6e95707850a2bfa4354c8831026eab2e203a",
+          "query_mask": "3a02bc830ba6fd7a353b5d84b07e5b0dca72cd6c2f22bafb94092b533c7cbbf6",
+          "query_row_ids": "845d2ef6a3f8edb5cfbac8c027018d0084d4b3f9572524e44c9ac88d8e5b62ff",
+          "raw_query": "c2d6423411ca7911d9faa2fa80774b7f4fab652b0fa2ccce130e3135c9a9706b",
+          "raw_train": "7998c7072eda8b2d4b889e26dcc60114fed8f668be8ae9183590016212ab9dd6",
+          "train": "ceffc8120970b933954aba7e9a97b45b9854f9e1bbb6716efdd2df5f1277273f",
+          "train_mask": "64ba45f70c4e3ddbee3eea76a0f8f1a1901f89ef052add2c8e55b2ee60407146",
+          "train_row_ids": "b11ef98111c8e90d9d4b9fb23b8d42f6053e55c9bd34dd561324a1f803577338",
+          "truth": "9c1b38ed5c22ebd2ec9accb03f99a86016553d16ea14d090fb0dd10ebff86b25"
+        },
+        "input_dtype": "float32",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 320,
+          "eligible_missing_rate": 0.1093,
+          "missing_per_feature": [
+            107,
+            104,
+            122,
+            119,
+            122,
+            103,
+            105,
+            100,
+            114,
+            97,
+            0
+          ],
+          "overall_missing_rate": 0.09936363636363636,
+          "rows_with_missing": 680
+        },
+        "scaler_mean": [
+          6.87491557223265,
+          0.2785471204188481,
+          0.33449253159708825,
+          6.441816816816826,
+          0.04605464071856344,
+          35.03838916070757,
+          138.05419646217538,
+          0.9941446976036484,
+          3.188198570891305,
+          0.49081678531285367,
+          10.479763333333365
+        ],
+        "scaler_scale": [
+          0.8312382783676101,
+          0.10236869394465953,
+          0.12129456598149649,
+          5.180664763316327,
+          0.02188102374251752,
+          17.289359043443014,
+          42.84334048311526,
+          0.0030406871260918776,
+          0.15117649582531792,
+          0.1156602876472102,
+          1.2230968222432306
+        ],
+        "seed": 303,
+        "train_mask": {
+          "complete_rows": 910,
+          "eligible_missing_rate": 0.11476666666666667,
+          "missing_per_feature": [
+            335,
+            326,
+            389,
+            336,
+            328,
+            343,
+            343,
+            371,
+            341,
+            331,
+            0
+          ],
+          "overall_missing_rate": 0.10433333333333333,
+          "rows_with_missing": 2090
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "ea18621a88b275ebd489910ee32d6e95707850a2bfa4354c8831026eab2e203a",
+          "train": "ceffc8120970b933954aba7e9a97b45b9854f9e1bbb6716efdd2df5f1277273f"
+        },
+        "input_hashes_before": {
+          "query": "ea18621a88b275ebd489910ee32d6e95707850a2bfa4354c8831026eab2e203a",
+          "train": "ceffc8120970b933954aba7e9a97b45b9854f9e1bbb6716efdd2df5f1277273f"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "wine_quality_white",
+        "donor_policy": "available",
+        "dtype": "float32",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 303,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 30,
+        "aggregation_row_events": 1093,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 680,
+        "full_suspect_donor_pair_events": 495000,
+        "full_suspect_row_events": 165,
+        "full_tie_donor_pair_events": 210000,
+        "full_tie_row_events": 70,
+        "initial_batch_query_rows": 680,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 2040000,
+        "matrix_build_query_rows": 680,
+        "matrix_suspect_query_rows": 165,
+        "precise_topk_calls": 235,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 10880,
+        "search_calls": 3,
+        "search_query_row_events": 680
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.5049077623493594,
+        "rmse": 0.8013359884100253,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 1093
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 85,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 59,
+          "tie_full_row_events": 26
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 95,
+          "precise_rows_before": 85,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 67,
+          "tie_full_row_events": 28
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 55,
+          "precise_rows_before": 95,
+          "query_rows": 168,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 39,
+          "tie_full_row_events": 16
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 30,
+          "inclusive_seconds": 0.0014621540000234745,
+          "self_seconds": 0.0014621540000234745
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.17057067299998607,
+          "self_seconds": 0.003742671999958702
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 165,
+          "inclusive_seconds": 0.07895581900001503,
+          "self_seconds": 0.07895581900001503
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 70,
+          "inclusive_seconds": 0.03364212700006419,
+          "self_seconds": 0.03364212700006419
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.00376480500000298,
+          "self_seconds": 0.00376480500000298
+        },
+        "full_direct_distances.suspect": {
+          "calls": 165,
+          "inclusive_seconds": 0.08011023999986833,
+          "self_seconds": 0.0011544209998533006
+        },
+        "full_direct_distances.tie": {
+          "calls": 70,
+          "inclusive_seconds": 0.03419875099979208,
+          "self_seconds": 0.0005566239997278899
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.17085946700001386,
+          "self_seconds": 0.0002887940000277922
+        },
+        "precise_topk": {
+          "calls": 235,
+          "inclusive_seconds": 0.006609964999881868,
+          "self_seconds": 0.006609964999881868
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.03218285399998422,
+          "self_seconds": 0.009600148999993507
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.02258270499999071,
+          "self_seconds": 0.02258270499999071
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.1653658470000039,
+          "self_seconds": 0.008499232000474422
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.008557641116973377,
+        "aggregate_seconds": 0.0014621540000234745,
+        "available_transform_self_fraction": 0.021904972932862997,
+        "available_transform_self_seconds": 0.003742671999958702,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.022034512140920316,
+        "faiss_kmin_seconds": 0.00376480500000298,
+        "full_refinement_fraction": 0.6690234553971255,
+        "full_refinement_seconds": 0.11430899099966041,
+        "full_row_events": 235,
+        "full_suspect_row_events": 165,
+        "full_tie_row_events": 70,
+        "initial_batch_query_rows": 680,
+        "mae": 0.5049077623493594,
+        "matrix_fraction": 0.13217122467079262,
+        "matrix_prepare_self_fraction": 0.05618739873508284,
+        "matrix_prepare_self_seconds": 0.009600148999993507,
+        "matrix_seconds": 0.02258270499999071,
+        "reference_transform_seconds": 0.16581106399999612,
+        "retain_calls": 0,
+        "rmse": 0.8013359884100253,
+        "scored_cells": 1093,
+        "search_calls": 3,
+        "search_self_fraction": 0.04974399223938661,
+        "search_self_seconds": 0.008499232000474422,
+        "selected_donor_pair_events": 0,
+        "selected_refinement_fraction": 0.0,
+        "selected_refinement_seconds": 0.0,
+        "selected_row_events": 0,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.17085946700001386
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.20712942299999781,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.20712942299999781
+      },
+      "case": {
+        "always_observed": [
+          "alcohol"
+        ],
+        "complete_donors": 943,
+        "eligible_base_probability": 0.11000000000000001,
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "fingerprints": {
+          "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+          "query": "f0cdd83dd060bd1b0336438574564f71e614790c5fe027443e4c394dd4586a27",
+          "query_mask": "0b8def8e0498df58f59a131a906e83b9af9dd6f37e3411d6639636f6842c5ce0",
+          "query_row_ids": "0ca3ab241914b1b8df7b5f8cf12380cf22c0f09ec6ad23331fb4cacb80827cf2",
+          "raw_query": "8761e1eab4e103591b6505f50fd2daf470b999452d1f46bda4d81db60cf2abbe",
+          "raw_train": "1705a356159e2b84e89d5285c8892eb0477be6b509bc9341f0ef71b46208f6ff",
+          "train": "c148b2fa336156367a2788a93b524f66e25f88029a6750fffeb5659e28e0b189",
+          "train_mask": "5002cacb5d55792a15399d1eb92c70c6a5341c38e873df7c04413a4768745b31",
+          "train_row_ids": "8b5518cf58946286acaf6ab3684eeab7f61e8fea747738bd808fde2d8583c495",
+          "truth": "1261c9c5cb43cb55aa68cfea7ca8bc5e15a181e3e0de592bd728d0786649bf99"
+        },
+        "input_dtype": "float64",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 294,
+          "eligible_missing_rate": 0.1105,
+          "missing_per_feature": [
+            108,
+            107,
+            119,
+            103,
+            105,
+            135,
+            112,
+            102,
+            103,
+            111,
+            0
+          ],
+          "overall_missing_rate": 0.10045454545454545,
+          "rows_with_missing": 706
+        },
+        "scaler_mean": [
+          6.877732189481519,
+          0.2772586015538288,
+          0.33396106327218267,
+          6.333878765340281,
+          0.0457814371257491,
+          34.95068850018608,
+          138.47086466165413,
+          0.9940552734082386,
+          3.1852578095596535,
+          0.4897607476635528,
+          10.49487111111113
+        ],
+        "scaler_scale": [
+          0.863102626498563,
+          0.10120068346737315,
+          0.11403673692387047,
+          5.125159745697746,
+          0.022486242960654195,
+          17.224952864977524,
+          42.582670554853514,
+          0.003030678426194492,
+          0.15148524300569674,
+          0.11206614681960103,
+          1.2146843752744165
+        ],
+        "seed": 101,
+        "train_mask": {
+          "complete_rows": 943,
+          "eligible_missing_rate": 0.10783333333333334,
+          "missing_per_feature": [
+            319,
+            297,
+            329,
+            311,
+            328,
+            313,
+            340,
+            330,
+            343,
+            325,
+            0
+          ],
+          "overall_missing_rate": 0.09803030303030304,
+          "rows_with_missing": 2057
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "f0cdd83dd060bd1b0336438574564f71e614790c5fe027443e4c394dd4586a27",
+          "train": "c148b2fa336156367a2788a93b524f66e25f88029a6750fffeb5659e28e0b189"
+        },
+        "input_hashes_before": {
+          "query": "f0cdd83dd060bd1b0336438574564f71e614790c5fe027443e4c394dd4586a27",
+          "train": "c148b2fa336156367a2788a93b524f66e25f88029a6750fffeb5659e28e0b189"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "71fbae2b3e741ce57fcac8c65867d8d17dd17ad0d36aad1ee2592480f5445b47",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "71fbae2b3e741ce57fcac8c65867d8d17dd17ad0d36aad1ee2592480f5445b47",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "wine_quality_white",
+        "donor_policy": "available",
+        "dtype": "float64",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 101,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 30,
+        "aggregation_row_events": 1105,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 706,
+        "full_suspect_donor_pair_events": 501000,
+        "full_suspect_row_events": 167,
+        "full_tie_donor_pair_events": 207000,
+        "full_tie_row_events": 69,
+        "initial_batch_query_rows": 706,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 2118000,
+        "matrix_build_query_rows": 706,
+        "matrix_suspect_query_rows": 167,
+        "precise_topk_calls": 236,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 11296,
+        "search_calls": 3,
+        "search_query_row_events": 706,
+        "selected_donor_pair_events": 7520,
+        "selected_row_events": 470
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.49919072788358915,
+        "rmse": 0.6943968040792654,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 1105
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 88,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 168,
+          "status": "ok",
+          "suspect_full_row_events": 58,
+          "tie_full_row_events": 30
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 87,
+          "precise_rows_before": 88,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 169,
+          "status": "ok",
+          "suspect_full_row_events": 64,
+          "tie_full_row_events": 23
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 61,
+          "precise_rows_before": 87,
+          "query_rows": 194,
+          "requested_k": 16,
+          "selected_row_events": 133,
+          "status": "ok",
+          "suspect_full_row_events": 45,
+          "tie_full_row_events": 16
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 30,
+          "inclusive_seconds": 0.0014131399999826044,
+          "self_seconds": 0.0014131399999826044
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.2068136489999972,
+          "self_seconds": 0.0040549520000467965
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 167,
+          "inclusive_seconds": 0.07922526000012908,
+          "self_seconds": 0.07922526000012908
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 69,
+          "inclusive_seconds": 0.03300672499997859,
+          "self_seconds": 0.03300672499997859
+        },
+        "direct_distance_kernel.selected": {
+          "calls": 470,
+          "inclusive_seconds": 0.024379733000444048,
+          "self_seconds": 0.024379733000444048
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.0039366880000102356,
+          "self_seconds": 0.0039366880000102356
+        },
+        "full_direct_distances.suspect": {
+          "calls": 167,
+          "inclusive_seconds": 0.08036417600035861,
+          "self_seconds": 0.0011389160002295284
+        },
+        "full_direct_distances.tie": {
+          "calls": 69,
+          "inclusive_seconds": 0.03356198799986032,
+          "self_seconds": 0.0005552629998817338
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.20712942299999781,
+          "self_seconds": 0.0003157740000006015
+        },
+        "precise_topk": {
+          "calls": 236,
+          "inclusive_seconds": 0.00660170000008975,
+          "self_seconds": 0.00660170000008975
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.03219183999996744,
+          "self_seconds": 0.009880515999981299
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.022311323999986143,
+          "self_seconds": 0.022311323999986143
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.2013455569999678,
+          "self_seconds": 0.020309431999237404
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.006822497641885573,
+        "aggregate_seconds": 0.0014131399999826044,
+        "available_transform_self_fraction": 0.019576899994776884,
+        "available_transform_self_seconds": 0.0040549520000467965,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.01900593330967893,
+        "faiss_kmin_seconds": 0.0039366880000102356,
+        "full_refinement_fraction": 0.5500240494573295,
+        "full_refinement_seconds": 0.11392616400021893,
+        "full_row_events": 236,
+        "full_suspect_row_events": 167,
+        "full_tie_row_events": 69,
+        "initial_batch_query_rows": 706,
+        "mae": 0.49919072788358915,
+        "matrix_fraction": 0.10771682591896362,
+        "matrix_prepare_self_fraction": 0.04770213645591724,
+        "matrix_prepare_self_seconds": 0.009880515999981299,
+        "matrix_seconds": 0.022311323999986143,
+        "reference_transform_seconds": 0.19526325899997232,
+        "retain_calls": 0,
+        "rmse": 0.6943968040792654,
+        "scored_cells": 1105,
+        "search_calls": 3,
+        "search_self_fraction": 0.09805189289422014,
+        "search_self_seconds": 0.020309431999237404,
+        "selected_donor_pair_events": 7520,
+        "selected_refinement_fraction": 0.11770289632122571,
+        "selected_refinement_seconds": 0.024379733000444048,
+        "selected_row_events": 470,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.20712942299999781
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.20349456200000304,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.20349456200000304
+      },
+      "case": {
+        "always_observed": [
+          "alcohol"
+        ],
+        "complete_donors": 964,
+        "eligible_base_probability": 0.11000000000000001,
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "fingerprints": {
+          "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+          "query": "307dc94f33193e6121ce1caa7fbd984fa8e680041a70baff8b63011592725b2e",
+          "query_mask": "c718caf46ce01367866868cdbfb39cda16f72adae59af9ddfe842de311a56d3e",
+          "query_row_ids": "3a3b1c64403e9e5c8d30fe9009e34a8f8fb0c1c72febf1e1a92f3894e48d4a61",
+          "raw_query": "313aa375f779267373bbefb2279d9fed55cc6ce9a7eb7bb6fc14167e648cf3ee",
+          "raw_train": "2dbc616d334283387de72bc2e7fb170508ced6af93f7a74b47eaf45d4f491626",
+          "train": "54281df3610996e0b11951405a01e1589c0367c1bb99cd7cb4c3a501c975b305",
+          "train_mask": "906be45a4d774c549d6811805f2e586572df4dc6f808ccd8fafb00ca733e3aaa",
+          "train_row_ids": "20e28c63a25fa170d0477cecd6555709924b217fe72e11400c1200ffee8cd0e7",
+          "truth": "79bc74310696dc790be266ea7b85873b46b9a5c359c49aa2e64e3a0a03197175"
+        },
+        "input_dtype": "float64",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 301,
+          "eligible_missing_rate": 0.1103,
+          "missing_per_feature": [
+            119,
+            100,
+            105,
+            104,
+            91,
+            111,
+            126,
+            113,
+            120,
+            114,
+            0
+          ],
+          "overall_missing_rate": 0.10027272727272728,
+          "rows_with_missing": 699
+        },
+        "scaler_mean": [
+          6.829462962962961,
+          0.2767582417582423,
+          0.3318161266013564,
+          6.474104477611945,
+          0.04514615675880404,
+          35.64755323122899,
+          138.40973254086182,
+          0.9940285946745556,
+          3.1909046362608353,
+          0.4889795918367352,
+          10.504091111111146
+        ],
+        "scaler_scale": [
+          0.8430881772117179,
+          0.09907949154800906,
+          0.11892485939251828,
+          5.151332708693124,
+          0.02066803284746353,
+          17.411290894316966,
+          42.75910904147313,
+          0.0030617755670025067,
+          0.15299920163298045,
+          0.11442604027479415,
+          1.232176188337595
+        ],
+        "seed": 202,
+        "train_mask": {
+          "complete_rows": 964,
+          "eligible_missing_rate": 0.10883333333333334,
+          "missing_per_feature": [
+            300,
+            361,
+            346,
+            320,
+            359,
+            323,
+            308,
+            296,
+            347,
+            305,
+            0
+          ],
+          "overall_missing_rate": 0.09893939393939394,
+          "rows_with_missing": 2036
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "307dc94f33193e6121ce1caa7fbd984fa8e680041a70baff8b63011592725b2e",
+          "train": "54281df3610996e0b11951405a01e1589c0367c1bb99cd7cb4c3a501c975b305"
+        },
+        "input_hashes_before": {
+          "query": "307dc94f33193e6121ce1caa7fbd984fa8e680041a70baff8b63011592725b2e",
+          "train": "54281df3610996e0b11951405a01e1589c0367c1bb99cd7cb4c3a501c975b305"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "25966b49adcaac73bd19882ea0363a33df16a9941abbf5abd22de911fb358f4a",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "25966b49adcaac73bd19882ea0363a33df16a9941abbf5abd22de911fb358f4a",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "wine_quality_white",
+        "donor_policy": "available",
+        "dtype": "float64",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 202,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 30,
+        "aggregation_row_events": 1103,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 699,
+        "full_suspect_donor_pair_events": 468000,
+        "full_suspect_row_events": 156,
+        "full_tie_donor_pair_events": 231000,
+        "full_tie_row_events": 77,
+        "initial_batch_query_rows": 699,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 2097000,
+        "matrix_build_query_rows": 699,
+        "matrix_suspect_query_rows": 156,
+        "precise_topk_calls": 233,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 11184,
+        "search_calls": 3,
+        "search_query_row_events": 699,
+        "selected_donor_pair_events": 7456,
+        "selected_row_events": 466
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.5545421515745903,
+        "rmse": 0.8514761195307005,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 1103
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 75,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 181,
+          "status": "ok",
+          "suspect_full_row_events": 51,
+          "tie_full_row_events": 24
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 92,
+          "precise_rows_before": 75,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 164,
+          "status": "ok",
+          "suspect_full_row_events": 64,
+          "tie_full_row_events": 28
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 66,
+          "precise_rows_before": 92,
+          "query_rows": 187,
+          "requested_k": 16,
+          "selected_row_events": 121,
+          "status": "ok",
+          "suspect_full_row_events": 41,
+          "tie_full_row_events": 25
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 30,
+          "inclusive_seconds": 0.0013581450000970108,
+          "self_seconds": 0.0013581450000970108
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.2032513540000025,
+          "self_seconds": 0.00394877499991253
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 156,
+          "inclusive_seconds": 0.07369789300008733,
+          "self_seconds": 0.07369789300008733
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 77,
+          "inclusive_seconds": 0.037126155999999355,
+          "self_seconds": 0.037126155999999355
+        },
+        "direct_distance_kernel.selected": {
+          "calls": 466,
+          "inclusive_seconds": 0.023773918000244976,
+          "self_seconds": 0.023773918000244976
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.0037632230000212985,
+          "self_seconds": 0.0037632230000212985
+        },
+        "full_direct_distances.suspect": {
+          "calls": 156,
+          "inclusive_seconds": 0.07479290899979674,
+          "self_seconds": 0.0010950159997094033
+        },
+        "full_direct_distances.tie": {
+          "calls": 77,
+          "inclusive_seconds": 0.03772547300005158,
+          "self_seconds": 0.0005993170000522241
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.20349456200000304,
+          "self_seconds": 0.00024320800000054987
+        },
+        "precise_topk": {
+          "calls": 233,
+          "inclusive_seconds": 0.006477201000024024,
+          "self_seconds": 0.006477201000024024
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.03126529799996547,
+          "self_seconds": 0.009282091999978093
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.021983205999987376,
+          "self_seconds": 0.021983205999987376
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.19794443399999295,
+          "self_seconds": 0.02014641199988887
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.006674109552357426,
+        "aggregate_seconds": 0.0013581450000970108,
+        "available_transform_self_fraction": 0.019404818296385094,
+        "available_transform_self_seconds": 0.00394877499991253,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.018492990490926446,
+        "faiss_kmin_seconds": 0.0037632230000212985,
+        "full_refinement_fraction": 0.5529306576745114,
+        "full_refinement_seconds": 0.11251838199984832,
+        "full_row_events": 233,
+        "full_suspect_row_events": 156,
+        "full_tie_row_events": 77,
+        "initial_batch_query_rows": 699,
+        "mae": 0.5545421515745903,
+        "matrix_fraction": 0.10802846908502178,
+        "matrix_prepare_self_fraction": 0.04561346459950096,
+        "matrix_prepare_self_seconds": 0.009282091999978093,
+        "matrix_seconds": 0.021983205999987376,
+        "reference_transform_seconds": 0.19283345499999882,
+        "retain_calls": 0,
+        "rmse": 0.8514761195307005,
+        "scored_cells": 1103,
+        "search_calls": 3,
+        "search_self_fraction": 0.09900221313967382,
+        "search_self_seconds": 0.02014641199988887,
+        "selected_donor_pair_events": 7456,
+        "selected_refinement_fraction": 0.11682827180534004,
+        "selected_refinement_seconds": 0.023773918000244976,
+        "selected_row_events": 466,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.20349456200000304
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.20500439299999584,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.20500439299999584
+      },
+      "case": {
+        "always_observed": [
+          "alcohol"
+        ],
+        "complete_donors": 910,
+        "eligible_base_probability": 0.11000000000000001,
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "fingerprints": {
+          "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+          "query": "82fa57d86c097932b8e6a4c2108601313dc7e1e5da341d9ba6b9b9fbed1cfb07",
+          "query_mask": "3a02bc830ba6fd7a353b5d84b07e5b0dca72cd6c2f22bafb94092b533c7cbbf6",
+          "query_row_ids": "845d2ef6a3f8edb5cfbac8c027018d0084d4b3f9572524e44c9ac88d8e5b62ff",
+          "raw_query": "c2d6423411ca7911d9faa2fa80774b7f4fab652b0fa2ccce130e3135c9a9706b",
+          "raw_train": "7998c7072eda8b2d4b889e26dcc60114fed8f668be8ae9183590016212ab9dd6",
+          "train": "e3e9b12c31436a5c64985a812c53d82b007563800570dca79a21078f47ac0db0",
+          "train_mask": "64ba45f70c4e3ddbee3eea76a0f8f1a1901f89ef052add2c8e55b2ee60407146",
+          "train_row_ids": "b11ef98111c8e90d9d4b9fb23b8d42f6053e55c9bd34dd561324a1f803577338",
+          "truth": "9c1b38ed5c22ebd2ec9accb03f99a86016553d16ea14d090fb0dd10ebff86b25"
+        },
+        "input_dtype": "float64",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 320,
+          "eligible_missing_rate": 0.1093,
+          "missing_per_feature": [
+            107,
+            104,
+            122,
+            119,
+            122,
+            103,
+            105,
+            100,
+            114,
+            97,
+            0
+          ],
+          "overall_missing_rate": 0.09936363636363636,
+          "rows_with_missing": 680
+        },
+        "scaler_mean": [
+          6.87491557223265,
+          0.2785471204188481,
+          0.33449253159708825,
+          6.441816816816826,
+          0.04605464071856344,
+          35.03838916070757,
+          138.05419646217538,
+          0.9941446976036484,
+          3.188198570891305,
+          0.49081678531285367,
+          10.479763333333365
+        ],
+        "scaler_scale": [
+          0.8312382783676101,
+          0.10236869394465953,
+          0.12129456598149649,
+          5.180664763316327,
+          0.02188102374251752,
+          17.289359043443014,
+          42.84334048311526,
+          0.0030406871260918776,
+          0.15117649582531792,
+          0.1156602876472102,
+          1.2230968222432306
+        ],
+        "seed": 303,
+        "train_mask": {
+          "complete_rows": 910,
+          "eligible_missing_rate": 0.11476666666666667,
+          "missing_per_feature": [
+            335,
+            326,
+            389,
+            336,
+            328,
+            343,
+            343,
+            371,
+            341,
+            331,
+            0
+          ],
+          "overall_missing_rate": 0.10433333333333333,
+          "rows_with_missing": 2090
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "82fa57d86c097932b8e6a4c2108601313dc7e1e5da341d9ba6b9b9fbed1cfb07",
+          "train": "e3e9b12c31436a5c64985a812c53d82b007563800570dca79a21078f47ac0db0"
+        },
+        "input_hashes_before": {
+          "query": "82fa57d86c097932b8e6a4c2108601313dc7e1e5da341d9ba6b9b9fbed1cfb07",
+          "train": "e3e9b12c31436a5c64985a812c53d82b007563800570dca79a21078f47ac0db0"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "5c637179cb112b6ee0762b4a4b2b76743d57958721d1804eb11062f658bd5ded",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "5c637179cb112b6ee0762b4a4b2b76743d57958721d1804eb11062f658bd5ded",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "wine_quality_white",
+        "donor_policy": "available",
+        "dtype": "float64",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 303,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 30,
+        "aggregation_row_events": 1093,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 680,
+        "full_suspect_donor_pair_events": 495000,
+        "full_suspect_row_events": 165,
+        "full_tie_donor_pair_events": 210000,
+        "full_tie_row_events": 70,
+        "initial_batch_query_rows": 680,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 2040000,
+        "matrix_build_query_rows": 680,
+        "matrix_suspect_query_rows": 165,
+        "precise_topk_calls": 235,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 10880,
+        "search_calls": 3,
+        "search_query_row_events": 680,
+        "selected_donor_pair_events": 7120,
+        "selected_row_events": 445
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.5049077638826194,
+        "rmse": 0.801335990444968,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 1093
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 85,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 171,
+          "status": "ok",
+          "suspect_full_row_events": 59,
+          "tie_full_row_events": 26
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 95,
+          "precise_rows_before": 85,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 161,
+          "status": "ok",
+          "suspect_full_row_events": 67,
+          "tie_full_row_events": 28
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 55,
+          "precise_rows_before": 95,
+          "query_rows": 168,
+          "requested_k": 16,
+          "selected_row_events": 113,
+          "status": "ok",
+          "suspect_full_row_events": 39,
+          "tie_full_row_events": 16
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 30,
+          "inclusive_seconds": 0.0013849180000988781,
+          "self_seconds": 0.0013849180000988781
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.2047572180000259,
+          "self_seconds": 0.0039050199999337565
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 165,
+          "inclusive_seconds": 0.07909085500006086,
+          "self_seconds": 0.07909085500006086
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 70,
+          "inclusive_seconds": 0.033722051000069087,
+          "self_seconds": 0.033722051000069087
+        },
+        "direct_distance_kernel.selected": {
+          "calls": 445,
+          "inclusive_seconds": 0.022843226999270883,
+          "self_seconds": 0.022843226999270883
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.0038070060000165995,
+          "self_seconds": 0.0038070060000165995
+        },
+        "full_direct_distances.suspect": {
+          "calls": 165,
+          "inclusive_seconds": 0.08022224299995173,
+          "self_seconds": 0.001131387999890876
+        },
+        "full_direct_distances.tie": {
+          "calls": 70,
+          "inclusive_seconds": 0.03428023700007543,
+          "self_seconds": 0.0005581860000063443
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.20500439299999584,
+          "self_seconds": 0.00024717499996995684
+        },
+        "precise_topk": {
+          "calls": 235,
+          "inclusive_seconds": 0.006618737999531277,
+          "self_seconds": 0.006618737999531277
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.03210574800002064,
+          "self_seconds": 0.009800016000042433
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.022305731999978207,
+          "self_seconds": 0.022305731999978207
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.19946727999999325,
+          "self_seconds": 0.01959008100112669
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.006755552794904772,
+        "aggregate_seconds": 0.0013849180000988781,
+        "available_transform_self_fraction": 0.019048469853686675,
+        "available_transform_self_seconds": 0.0039050199999337565,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.01857036302639952,
+        "faiss_kmin_seconds": 0.0038070060000165995,
+        "full_refinement_fraction": 0.5585367138938797,
+        "full_refinement_seconds": 0.11450248000002716,
+        "full_row_events": 235,
+        "full_suspect_row_events": 165,
+        "full_tie_row_events": 70,
+        "initial_batch_query_rows": 680,
+        "mae": 0.5049077638826194,
+        "matrix_fraction": 0.10880611714490752,
+        "matrix_prepare_self_fraction": 0.04780393169449121,
+        "matrix_prepare_self_seconds": 0.009800016000042433,
+        "matrix_seconds": 0.022305731999978207,
+        "reference_transform_seconds": 0.19405998400000612,
+        "retain_calls": 0,
+        "rmse": 0.801335990444968,
+        "scored_cells": 1093,
+        "search_calls": 3,
+        "search_self_fraction": 0.0955593229708355,
+        "search_self_seconds": 0.01959008100112669,
+        "selected_donor_pair_events": 7120,
+        "selected_refinement_fraction": 0.11142798778595611,
+        "selected_refinement_seconds": 0.022843226999270883,
+        "selected_row_events": 445,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.20500439299999584
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.029877934999994693,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.029877934999994693
+      },
+      "case": {
+        "always_observed": [
+          "Length"
+        ],
+        "complete_donors": 1444,
+        "eligible_base_probability": 0.11666666666666668,
+        "feature_names": [
+          "Length",
+          "Diameter",
+          "Height",
+          "Whole_weight",
+          "Shucked_weight",
+          "Viscera_weight",
+          "Shell_weight"
+        ],
+        "fingerprints": {
+          "dataset": "6d71332f0d6a22320c7eff7b18909fab5565975da5a68e7ceef0b49f4572e1a4",
+          "query": "2e11e8b0583b8b90ba17a404e6bfbca85a7df8289da7cdde6e01a26659243c40",
+          "query_mask": "689742c597ec4f45cac72c461324d6703c765ab2ede532990a98388f519f664b",
+          "query_row_ids": "cd99daed9c41d820276d209509561a7beb0ea455f767083ca80f544068b802ad",
+          "raw_query": "503ad2af920ecf67de4abbc4dd86079808beb712dc2d8b4c94b83b8e6ffae6a7",
+          "raw_train": "08326f5a8434be5be555c690c9f8ad97174757cd92135b66499a066355daa9f2",
+          "train": "9399d53882b7a2416670f3c2cc6ad212d6559fda7c15f16dc1ee0e5930fc7efb",
+          "train_mask": "22a52d9bf0d7898b4071450dfe454cc56c7dccb81ee4fe3cc0574e26dacc5043",
+          "train_row_ids": "10ec974c5aaac526095ec0a31fd512eba86f3329127127707515cd6c2a42a9c3",
+          "truth": "d3dc15172bdf44621547644c0a0a80e106dd523d3e2855075c1684e21a882765"
+        },
+        "input_dtype": "float32",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 464,
+          "eligible_missing_rate": 0.1185,
+          "missing_per_feature": [
+            0,
+            124,
+            116,
+            120,
+            125,
+            108,
+            118
+          ],
+          "overall_missing_rate": 0.10157142857142858,
+          "rows_with_missing": 536
+        },
+        "scaler_mean": [
+          0.522876666666667,
+          0.4065116279069773,
+          0.13968385397064348,
+          0.8179365501519763,
+          0.35427777777777825,
+          0.17937291033434644,
+          0.23807769516728633
+        ],
+        "scaler_scale": [
+          0.12012198572932231,
+          0.09909002351657681,
+          0.04320581390319757,
+          0.4885784308912659,
+          0.21754164537310622,
+          0.10968962540005943,
+          0.13984304898734903
+        ],
+        "seed": 101,
+        "train_mask": {
+          "complete_rows": 1444,
+          "eligible_missing_rate": 0.11438888888888889,
+          "missing_per_feature": [
+            0,
+            334,
+            343,
+            368,
+            336,
+            368,
+            310
+          ],
+          "overall_missing_rate": 0.09804761904761905,
+          "rows_with_missing": 1556
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "2e11e8b0583b8b90ba17a404e6bfbca85a7df8289da7cdde6e01a26659243c40",
+          "train": "9399d53882b7a2416670f3c2cc6ad212d6559fda7c15f16dc1ee0e5930fc7efb"
+        },
+        "input_hashes_before": {
+          "query": "2e11e8b0583b8b90ba17a404e6bfbca85a7df8289da7cdde6e01a26659243c40",
+          "train": "9399d53882b7a2416670f3c2cc6ad212d6559fda7c15f16dc1ee0e5930fc7efb"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "59d5bd304356abaf86549e34ad6c56ccd8dacd57c0730254ced295997e615cbf",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "59d5bd304356abaf86549e34ad6c56ccd8dacd57c0730254ced295997e615cbf",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "abalone",
+        "donor_policy": "available",
+        "dtype": "float32",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 101,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 18,
+        "aggregation_row_events": 711,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 536,
+        "full_suspect_donor_pair_events": 15000,
+        "full_suspect_row_events": 5,
+        "full_tie_donor_pair_events": 6000,
+        "full_tie_row_events": 2,
+        "initial_batch_query_rows": 536,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 1608000,
+        "matrix_build_query_rows": 536,
+        "matrix_suspect_query_rows": 5,
+        "precise_topk_calls": 7,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 8576,
+        "search_calls": 3,
+        "search_query_row_events": 536
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.17739966366920756,
+        "rmse": 0.2746437054335726,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 711
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 3,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 1,
+          "tie_full_row_events": 2
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 3,
+          "precise_rows_before": 3,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 3,
+          "tie_full_row_events": 0
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 1,
+          "precise_rows_before": 3,
+          "query_rows": 24,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 1,
+          "tie_full_row_events": 0
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 18,
+          "inclusive_seconds": 0.0008690080000022249,
+          "self_seconds": 0.0008690080000022249
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.02965865600000228,
+          "self_seconds": 0.002230387999993866
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 5,
+          "inclusive_seconds": 0.0020929030000047533,
+          "self_seconds": 0.0020929030000047533
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 2,
+          "inclusive_seconds": 0.0008413139999987607,
+          "self_seconds": 0.0008413139999987607
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.0027740779999945175,
+          "self_seconds": 0.0027740779999945175
+        },
+        "full_direct_distances.suspect": {
+          "calls": 5,
+          "inclusive_seconds": 0.002141051999998922,
+          "self_seconds": 4.814899999416866e-05
+        },
+        "full_direct_distances.tie": {
+          "calls": 2,
+          "inclusive_seconds": 0.0008598490000011338,
+          "self_seconds": 1.853500000237318e-05
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.029877934999994693,
+          "self_seconds": 0.00021927899999241163
+        },
+        "precise_topk": {
+          "calls": 7,
+          "inclusive_seconds": 0.0002885689999985175,
+          "self_seconds": 0.0002885689999985175
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.019460845000004667,
+          "self_seconds": 0.00378245600001037
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.015678388999994297,
+          "self_seconds": 0.015678388999994297
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.02655926000000619,
+          "self_seconds": 0.0010348670000084326
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.029085276475846782,
+        "aggregate_seconds": 0.0008690080000022249,
+        "available_transform_self_fraction": 0.07465000509554165,
+        "available_transform_self_seconds": 0.002230387999993866,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.09284704582144014,
+        "faiss_kmin_seconds": 0.0027740779999945175,
+        "full_refinement_fraction": 0.10043870167066729,
+        "full_refinement_seconds": 0.0030009010000000558,
+        "full_row_events": 7,
+        "full_suspect_row_events": 5,
+        "full_tie_row_events": 2,
+        "initial_batch_query_rows": 536,
+        "mae": 0.17739966366920756,
+        "matrix_fraction": 0.5247480791425874,
+        "matrix_prepare_self_fraction": 0.12659696863290726,
+        "matrix_prepare_self_seconds": 0.00378245600001037,
+        "matrix_seconds": 0.015678388999994297,
+        "reference_transform_seconds": 0.041280178999997474,
+        "retain_calls": 0,
+        "rmse": 0.2746437054335726,
+        "scored_cells": 711,
+        "search_calls": 3,
+        "search_self_fraction": 0.03463649679968232,
+        "search_self_seconds": 0.0010348670000084326,
+        "selected_donor_pair_events": 0,
+        "selected_refinement_fraction": 0.0,
+        "selected_refinement_seconds": 0.0,
+        "selected_row_events": 0,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.029877934999994693
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.030091593999998167,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.030091593999998167
+      },
+      "case": {
+        "always_observed": [
+          "Length"
+        ],
+        "complete_donors": 1419,
+        "eligible_base_probability": 0.11666666666666668,
+        "feature_names": [
+          "Length",
+          "Diameter",
+          "Height",
+          "Whole_weight",
+          "Shucked_weight",
+          "Viscera_weight",
+          "Shell_weight"
+        ],
+        "fingerprints": {
+          "dataset": "6d71332f0d6a22320c7eff7b18909fab5565975da5a68e7ceef0b49f4572e1a4",
+          "query": "9c9ed77403884991e8457f68a0ebc4e02c0f9e4edd373819def6d3332b3f6a88",
+          "query_mask": "1cc5a46da6d767775180b4382927f4f73d2b8d34a31179fc915166b653d81154",
+          "query_row_ids": "725e5b636bad25be4c7f8bba3b791af426e49c8d4c7d3cf7402b8ed1bb22be74",
+          "raw_query": "e89d9fa270820f3cbbadb10ea6cfb0f1cb3217c257ee686051f4aa2b47932e90",
+          "raw_train": "c408f0b9d6be9b94a87123457e643a56c9a840a6280083ac44629f269381a108",
+          "train": "20eb8a96a6bc53df850d7de5c8190b07fa9df3361fdefe04d58c7c4709b0873c",
+          "train_mask": "36c9a8e82ae2d86946f880038ac8bd427476f2dec374a5d6e0ccf860eb98ea03",
+          "train_row_ids": "c7a611ecb6a3dcca0885f8fb9b804b30abe1095634e1975f2cb90e7e8d327ebd",
+          "truth": "52aeaaf02f20c1608acd42aff4d67111990cda055eb1815ec2e3787120a31943"
+        },
+        "input_dtype": "float32",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 478,
+          "eligible_missing_rate": 0.1155,
+          "missing_per_feature": [
+            0,
+            106,
+            100,
+            131,
+            108,
+            111,
+            137
+          ],
+          "overall_missing_rate": 0.099,
+          "rows_with_missing": 522
+        },
+        "scaler_mean": [
+          0.5252416666666676,
+          0.4077443895017129,
+          0.14076486179477476,
+          0.8354626469472881,
+          0.36171471471471495,
+          0.18230451977401146,
+          0.24196104387291947
+        ],
+        "scaler_scale": [
+          0.12065550103727407,
+          0.10032900277549404,
+          0.04373362182394327,
+          0.4922002253549732,
+          0.22115879313396983,
+          0.1112336524661722,
+          0.1406232654793268
+        ],
+        "seed": 202,
+        "train_mask": {
+          "complete_rows": 1419,
+          "eligible_missing_rate": 0.11833333333333333,
+          "missing_per_feature": [
+            0,
+            371,
+            359,
+            363,
+            336,
+            345,
+            356
+          ],
+          "overall_missing_rate": 0.10142857142857142,
+          "rows_with_missing": 1581
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "9c9ed77403884991e8457f68a0ebc4e02c0f9e4edd373819def6d3332b3f6a88",
+          "train": "20eb8a96a6bc53df850d7de5c8190b07fa9df3361fdefe04d58c7c4709b0873c"
+        },
+        "input_hashes_before": {
+          "query": "9c9ed77403884991e8457f68a0ebc4e02c0f9e4edd373819def6d3332b3f6a88",
+          "train": "20eb8a96a6bc53df850d7de5c8190b07fa9df3361fdefe04d58c7c4709b0873c"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "b3f520dcb977c67479b9507ce9d544eb83252538192e31202a8b8b3d743bd10a",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "b3f520dcb977c67479b9507ce9d544eb83252538192e31202a8b8b3d743bd10a",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "abalone",
+        "donor_policy": "available",
+        "dtype": "float32",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 202,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 18,
+        "aggregation_row_events": 693,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 522,
+        "full_suspect_donor_pair_events": 24000,
+        "full_suspect_row_events": 8,
+        "initial_batch_query_rows": 522,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 1566000,
+        "matrix_build_query_rows": 522,
+        "matrix_suspect_query_rows": 8,
+        "precise_topk_calls": 8,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 8352,
+        "search_calls": 3,
+        "search_query_row_events": 522
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.17612321568157147,
+        "rmse": 0.25850292062766067,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 693
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 6,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 6,
+          "tie_full_row_events": 0
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 2,
+          "precise_rows_before": 6,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 2,
+          "tie_full_row_events": 0
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 0,
+          "precise_rows_before": 2,
+          "query_rows": 10,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 0,
+          "tie_full_row_events": 0
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 18,
+          "inclusive_seconds": 0.0009149799999690345,
+          "self_seconds": 0.0009149799999690345
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.02987769399999962,
+          "self_seconds": 0.0021186130000288017
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 8,
+          "inclusive_seconds": 0.003286286000005134,
+          "self_seconds": 0.003286286000005134
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.002829912000002821,
+          "self_seconds": 0.002829912000002821
+        },
+        "full_direct_distances.suspect": {
+          "calls": 8,
+          "inclusive_seconds": 0.003356755000005762,
+          "self_seconds": 7.046900000062806e-05
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.030091593999998167,
+          "self_seconds": 0.0002138999999985458
+        },
+        "precise_topk": {
+          "calls": 8,
+          "inclusive_seconds": 0.0002834200000094711,
+          "self_seconds": 0.0002834200000094711
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.0194168520000062,
+          "self_seconds": 0.0038236900000114815
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.01559316199999472,
+          "self_seconds": 0.01559316199999472
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.026844101000001785,
+          "self_seconds": 0.0009571619999775294
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.030406498238979635,
+        "aggregate_seconds": 0.0009149799999690345,
+        "available_transform_self_fraction": 0.07040547602858561,
+        "available_transform_self_seconds": 0.0021186130000288017,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.09404327334746686,
+        "faiss_kmin_seconds": 0.002829912000002821,
+        "full_refinement_fraction": 0.11155125248619155,
+        "full_refinement_seconds": 0.003356755000005762,
+        "full_row_events": 8,
+        "full_suspect_row_events": 8,
+        "full_tie_row_events": 0,
+        "initial_batch_query_rows": 522,
+        "mae": 0.17612321568157147,
+        "matrix_fraction": 0.5181899636156088,
+        "matrix_prepare_self_fraction": 0.12706837663739962,
+        "matrix_prepare_self_seconds": 0.0038236900000114815,
+        "matrix_seconds": 0.01559316199999472,
+        "reference_transform_seconds": 0.03265753400000193,
+        "retain_calls": 0,
+        "rmse": 0.25850292062766067,
+        "scored_cells": 693,
+        "search_calls": 3,
+        "search_self_fraction": 0.03180828506384832,
+        "search_self_seconds": 0.0009571619999775294,
+        "selected_donor_pair_events": 0,
+        "selected_refinement_fraction": 0.0,
+        "selected_refinement_seconds": 0.0,
+        "selected_row_events": 0,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.030091593999998167
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.03092920200000293,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.03092920200000293
+      },
+      "case": {
+        "always_observed": [
+          "Length"
+        ],
+        "complete_donors": 1383,
+        "eligible_base_probability": 0.11666666666666668,
+        "feature_names": [
+          "Length",
+          "Diameter",
+          "Height",
+          "Whole_weight",
+          "Shucked_weight",
+          "Viscera_weight",
+          "Shell_weight"
+        ],
+        "fingerprints": {
+          "dataset": "6d71332f0d6a22320c7eff7b18909fab5565975da5a68e7ceef0b49f4572e1a4",
+          "query": "028bf044d8daf34d900cd7fbb08efcb347de4a015cb195ff93e33cb11697e8a6",
+          "query_mask": "dacfe7ea04f965c6875f83aa64060f13850fbb3194e73dfb9c7494d10287600d",
+          "query_row_ids": "b369458026ac3a860a4d07f218f7970dc58e5c0bf2a9ce31cd24f1ae914a2775",
+          "raw_query": "45dc0950a720ec437815894971dfa084b8575ec01c6d651b8a4fd44d80ce5c06",
+          "raw_train": "682c3c2f287d460e362a30879bae211e95b13145f81c341b883b09ae026f1eb0",
+          "train": "6521e40047c4b181776316a266b967ce8ab2fed67c08f415648259e8af30325a",
+          "train_mask": "77aa4587ba676db26494b1f88c607e4f64210c80314bba8b17ca10e6dae39d43",
+          "train_row_ids": "e505ff45383801d32096f33c4170d09091d3ce289f1b2a655c6b4d68b0ff603e",
+          "truth": "d1341c8ce06b8247f1c3a8205ac58dadd74bd5990aefb4445c8817256a3ee50a"
+        },
+        "input_dtype": "float32",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 466,
+          "eligible_missing_rate": 0.118,
+          "missing_per_feature": [
+            0,
+            123,
+            119,
+            134,
+            105,
+            112,
+            115
+          ],
+          "overall_missing_rate": 0.10114285714285715,
+          "rows_with_missing": 534
+        },
+        "scaler_mean": [
+          0.525941666666666,
+          0.40807254082795313,
+          0.13992786636294585,
+          0.8323051203668329,
+          0.3609297052154197,
+          0.1829610438729195,
+          0.2397604441098987
+        ],
+        "scaler_scale": [
+          0.12080185538264238,
+          0.10024759160194731,
+          0.03975502191076791,
+          0.4943354192545879,
+          0.22374772823447153,
+          0.11086020160257776,
+          0.1407556021819604
+        ],
+        "seed": 303,
+        "train_mask": {
+          "complete_rows": 1383,
+          "eligible_missing_rate": 0.1205,
+          "missing_per_feature": [
+            0,
+            367,
+            366,
+            383,
+            354,
+            356,
+            343
+          ],
+          "overall_missing_rate": 0.10328571428571429,
+          "rows_with_missing": 1617
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "028bf044d8daf34d900cd7fbb08efcb347de4a015cb195ff93e33cb11697e8a6",
+          "train": "6521e40047c4b181776316a266b967ce8ab2fed67c08f415648259e8af30325a"
+        },
+        "input_hashes_before": {
+          "query": "028bf044d8daf34d900cd7fbb08efcb347de4a015cb195ff93e33cb11697e8a6",
+          "train": "6521e40047c4b181776316a266b967ce8ab2fed67c08f415648259e8af30325a"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "476e5c2ac4d07782e921728b57c2d3ca8ec8a279d2ea7d74ab53bc6e58d71f21",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "476e5c2ac4d07782e921728b57c2d3ca8ec8a279d2ea7d74ab53bc6e58d71f21",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "abalone",
+        "donor_policy": "available",
+        "dtype": "float32",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 303,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 18,
+        "aggregation_row_events": 708,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 534,
+        "full_suspect_donor_pair_events": 18000,
+        "full_suspect_row_events": 6,
+        "full_tie_donor_pair_events": 6000,
+        "full_tie_row_events": 2,
+        "initial_batch_query_rows": 534,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 1602000,
+        "matrix_build_query_rows": 534,
+        "matrix_suspect_query_rows": 6,
+        "precise_topk_calls": 8,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 8544,
+        "search_calls": 3,
+        "search_query_row_events": 534
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.1817598463638953,
+        "rmse": 0.31064088548424373,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 708
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 3,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 2,
+          "tie_full_row_events": 1
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 4,
+          "precise_rows_before": 3,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 3,
+          "tie_full_row_events": 1
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 1,
+          "precise_rows_before": 4,
+          "query_rows": 22,
+          "requested_k": 16,
+          "selected_row_events": 0,
+          "status": "ok",
+          "suspect_full_row_events": 1,
+          "tie_full_row_events": 0
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 18,
+          "inclusive_seconds": 0.0009418450000211465,
+          "self_seconds": 0.0009418450000211465
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.030706564999995578,
+          "self_seconds": 0.002276555999969787
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 6,
+          "inclusive_seconds": 0.002588671999994574,
+          "self_seconds": 0.002588671999994574
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 2,
+          "inclusive_seconds": 0.0008662200000060238,
+          "self_seconds": 0.0008662200000060238
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.002839601000005132,
+          "self_seconds": 0.002839601000005132
+        },
+        "full_direct_distances.suspect": {
+          "calls": 6,
+          "inclusive_seconds": 0.0026426630000031537,
+          "self_seconds": 5.3991000008579704e-05
+        },
+        "full_direct_distances.tie": {
+          "calls": 2,
+          "inclusive_seconds": 0.0008853450000003704,
+          "self_seconds": 1.912499999434658e-05
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.03092920200000293,
+          "self_seconds": 0.00022263700000735298
+        },
+        "precise_topk": {
+          "calls": 8,
+          "inclusive_seconds": 0.00029156499999061225,
+          "self_seconds": 0.00029156499999061225
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.01959512500000926,
+          "self_seconds": 0.0038349230000065404
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.01576020200000272,
+          "self_seconds": 0.01576020200000272
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.027488164000004645,
+          "self_seconds": 0.0012338649999961149
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.03045164243232196,
+        "aggregate_seconds": 0.0009418450000211465,
+        "available_transform_self_fraction": 0.0736053907879541,
+        "available_transform_self_seconds": 0.002276555999969787,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.09180970786135584,
+        "faiss_kmin_seconds": 0.002839601000005132,
+        "full_refinement_fraction": 0.11406721712390736,
+        "full_refinement_seconds": 0.003528008000003524,
+        "full_row_events": 8,
+        "full_suspect_row_events": 6,
+        "full_tie_row_events": 2,
+        "initial_batch_query_rows": 534,
+        "mae": 0.1817598463638953,
+        "matrix_fraction": 0.5095573432512494,
+        "matrix_prepare_self_fraction": 0.12399036354077861,
+        "matrix_prepare_self_seconds": 0.0038349230000065404,
+        "matrix_seconds": 0.01576020200000272,
+        "reference_transform_seconds": 0.03421440500000017,
+        "retain_calls": 0,
+        "rmse": 0.31064088548424373,
+        "scored_cells": 708,
+        "search_calls": 3,
+        "search_self_fraction": 0.03989320513332345,
+        "search_self_seconds": 0.0012338649999961149,
+        "selected_donor_pair_events": 0,
+        "selected_refinement_fraction": 0.0,
+        "selected_refinement_seconds": 0.0,
+        "selected_row_events": 0,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.03092920200000293
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.07243809000000567,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.07243809000000567
+      },
+      "case": {
+        "always_observed": [
+          "Length"
+        ],
+        "complete_donors": 1444,
+        "eligible_base_probability": 0.11666666666666668,
+        "feature_names": [
+          "Length",
+          "Diameter",
+          "Height",
+          "Whole_weight",
+          "Shucked_weight",
+          "Viscera_weight",
+          "Shell_weight"
+        ],
+        "fingerprints": {
+          "dataset": "6d71332f0d6a22320c7eff7b18909fab5565975da5a68e7ceef0b49f4572e1a4",
+          "query": "fabf90e4097107b8a440cd30679519195b66281abcfda0a34fe22732e938c9ec",
+          "query_mask": "689742c597ec4f45cac72c461324d6703c765ab2ede532990a98388f519f664b",
+          "query_row_ids": "cd99daed9c41d820276d209509561a7beb0ea455f767083ca80f544068b802ad",
+          "raw_query": "503ad2af920ecf67de4abbc4dd86079808beb712dc2d8b4c94b83b8e6ffae6a7",
+          "raw_train": "08326f5a8434be5be555c690c9f8ad97174757cd92135b66499a066355daa9f2",
+          "train": "8849da3b9b44e58c18a71d6905aa9c6a3f2244fec2cd68ba363225e6a8964ffd",
+          "train_mask": "22a52d9bf0d7898b4071450dfe454cc56c7dccb81ee4fe3cc0574e26dacc5043",
+          "train_row_ids": "10ec974c5aaac526095ec0a31fd512eba86f3329127127707515cd6c2a42a9c3",
+          "truth": "d3dc15172bdf44621547644c0a0a80e106dd523d3e2855075c1684e21a882765"
+        },
+        "input_dtype": "float64",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 464,
+          "eligible_missing_rate": 0.1185,
+          "missing_per_feature": [
+            0,
+            124,
+            116,
+            120,
+            125,
+            108,
+            118
+          ],
+          "overall_missing_rate": 0.10157142857142858,
+          "rows_with_missing": 536
+        },
+        "scaler_mean": [
+          0.522876666666667,
+          0.4065116279069773,
+          0.13968385397064348,
+          0.8179365501519763,
+          0.35427777777777825,
+          0.17937291033434644,
+          0.23807769516728633
+        ],
+        "scaler_scale": [
+          0.12012198572932231,
+          0.09909002351657681,
+          0.04320581390319757,
+          0.4885784308912659,
+          0.21754164537310622,
+          0.10968962540005943,
+          0.13984304898734903
+        ],
+        "seed": 101,
+        "train_mask": {
+          "complete_rows": 1444,
+          "eligible_missing_rate": 0.11438888888888889,
+          "missing_per_feature": [
+            0,
+            334,
+            343,
+            368,
+            336,
+            368,
+            310
+          ],
+          "overall_missing_rate": 0.09804761904761905,
+          "rows_with_missing": 1556
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "fabf90e4097107b8a440cd30679519195b66281abcfda0a34fe22732e938c9ec",
+          "train": "8849da3b9b44e58c18a71d6905aa9c6a3f2244fec2cd68ba363225e6a8964ffd"
+        },
+        "input_hashes_before": {
+          "query": "fabf90e4097107b8a440cd30679519195b66281abcfda0a34fe22732e938c9ec",
+          "train": "8849da3b9b44e58c18a71d6905aa9c6a3f2244fec2cd68ba363225e6a8964ffd"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "413eba69ceab42083c3069809162d35525250df31b43bf88f5bcade75ee21c51",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "413eba69ceab42083c3069809162d35525250df31b43bf88f5bcade75ee21c51",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "abalone",
+        "donor_policy": "available",
+        "dtype": "float64",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 101,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 18,
+        "aggregation_row_events": 711,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 536,
+        "full_suspect_donor_pair_events": 15000,
+        "full_suspect_row_events": 5,
+        "full_tie_donor_pair_events": 12000,
+        "full_tie_row_events": 4,
+        "initial_batch_query_rows": 536,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 1608000,
+        "matrix_build_query_rows": 536,
+        "matrix_suspect_query_rows": 5,
+        "precise_topk_calls": 9,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 8576,
+        "search_calls": 3,
+        "search_query_row_events": 536,
+        "selected_donor_pair_events": 8432,
+        "selected_row_events": 527
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.17716370069732656,
+        "rmse": 0.274563045128864,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 711
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 3,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 253,
+          "status": "ok",
+          "suspect_full_row_events": 1,
+          "tie_full_row_events": 2
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 4,
+          "precise_rows_before": 3,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 252,
+          "status": "ok",
+          "suspect_full_row_events": 3,
+          "tie_full_row_events": 1
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 2,
+          "precise_rows_before": 4,
+          "query_rows": 24,
+          "requested_k": 16,
+          "selected_row_events": 22,
+          "status": "ok",
+          "suspect_full_row_events": 1,
+          "tie_full_row_events": 1
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 18,
+          "inclusive_seconds": 0.0008622169999767948,
+          "self_seconds": 0.0008622169999767948
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.07220916600000038,
+          "self_seconds": 0.0023673710000196024
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 5,
+          "inclusive_seconds": 0.0020693409999950063,
+          "self_seconds": 0.0020693409999950063
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 4,
+          "inclusive_seconds": 0.0016930529999967803,
+          "self_seconds": 0.0016930529999967803
+        },
+        "direct_distance_kernel.selected": {
+          "calls": 527,
+          "inclusive_seconds": 0.026093042999988825,
+          "self_seconds": 0.026093042999988825
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.0028279739999987896,
+          "self_seconds": 0.0028279739999987896
+        },
+        "full_direct_distances.suspect": {
+          "calls": 5,
+          "inclusive_seconds": 0.002115637999992259,
+          "self_seconds": 4.62969999972529e-05
+        },
+        "full_direct_distances.tie": {
+          "calls": 4,
+          "inclusive_seconds": 0.001730302000005679,
+          "self_seconds": 3.724900000889875e-05
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.07243809000000567,
+          "self_seconds": 0.00022892400000529278
+        },
+        "precise_topk": {
+          "calls": 9,
+          "inclusive_seconds": 0.0003723380000124621,
+          "self_seconds": 0.0003723380000124621
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.02118352000000101,
+          "self_seconds": 0.004118975000004355
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.017064544999996656,
+          "self_seconds": 0.017064544999996656
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.06897957800000398,
+          "self_seconds": 0.014656763000004958
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.011902812456495295,
+        "aggregate_seconds": 0.0008622169999767948,
+        "available_transform_self_fraction": 0.03268130068061453,
+        "available_transform_self_seconds": 0.0023673710000196024,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.039039875292109,
+        "faiss_kmin_seconds": 0.0028279739999987896,
+        "full_refinement_fraction": 0.053092785853376824,
+        "full_refinement_seconds": 0.0038459399999979382,
+        "full_row_events": 9,
+        "full_suspect_row_events": 5,
+        "full_tie_row_events": 4,
+        "initial_batch_query_rows": 536,
+        "mae": 0.17716370069732656,
+        "matrix_fraction": 0.23557419860180354,
+        "matrix_prepare_self_fraction": 0.05686200450624847,
+        "matrix_prepare_self_seconds": 0.004118975000004355,
+        "matrix_seconds": 0.017064544999996656,
+        "reference_transform_seconds": 0.067929043999996,
+        "retain_calls": 0,
+        "rmse": 0.274563045128864,
+        "scored_cells": 711,
+        "search_calls": 3,
+        "search_self_fraction": 0.20233502843605913,
+        "search_self_seconds": 0.014656763000004958,
+        "selected_donor_pair_events": 8432,
+        "selected_refinement_fraction": 0.36021163727517913,
+        "selected_refinement_seconds": 0.026093042999988825,
+        "selected_row_events": 527,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.07243809000000567
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.07117406000000415,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.07117406000000415
+      },
+      "case": {
+        "always_observed": [
+          "Length"
+        ],
+        "complete_donors": 1419,
+        "eligible_base_probability": 0.11666666666666668,
+        "feature_names": [
+          "Length",
+          "Diameter",
+          "Height",
+          "Whole_weight",
+          "Shucked_weight",
+          "Viscera_weight",
+          "Shell_weight"
+        ],
+        "fingerprints": {
+          "dataset": "6d71332f0d6a22320c7eff7b18909fab5565975da5a68e7ceef0b49f4572e1a4",
+          "query": "64bc20baa92ab40011f9f8f478c9788de3e10977798a4fd082dfc9eb0b3e6b7e",
+          "query_mask": "1cc5a46da6d767775180b4382927f4f73d2b8d34a31179fc915166b653d81154",
+          "query_row_ids": "725e5b636bad25be4c7f8bba3b791af426e49c8d4c7d3cf7402b8ed1bb22be74",
+          "raw_query": "e89d9fa270820f3cbbadb10ea6cfb0f1cb3217c257ee686051f4aa2b47932e90",
+          "raw_train": "c408f0b9d6be9b94a87123457e643a56c9a840a6280083ac44629f269381a108",
+          "train": "964389346f9e9609c0d715f8ac36b6cfc9718fbe08b2e2f47622c732feb1b3fa",
+          "train_mask": "36c9a8e82ae2d86946f880038ac8bd427476f2dec374a5d6e0ccf860eb98ea03",
+          "train_row_ids": "c7a611ecb6a3dcca0885f8fb9b804b30abe1095634e1975f2cb90e7e8d327ebd",
+          "truth": "52aeaaf02f20c1608acd42aff4d67111990cda055eb1815ec2e3787120a31943"
+        },
+        "input_dtype": "float64",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 478,
+          "eligible_missing_rate": 0.1155,
+          "missing_per_feature": [
+            0,
+            106,
+            100,
+            131,
+            108,
+            111,
+            137
+          ],
+          "overall_missing_rate": 0.099,
+          "rows_with_missing": 522
+        },
+        "scaler_mean": [
+          0.5252416666666676,
+          0.4077443895017129,
+          0.14076486179477476,
+          0.8354626469472881,
+          0.36171471471471495,
+          0.18230451977401146,
+          0.24196104387291947
+        ],
+        "scaler_scale": [
+          0.12065550103727407,
+          0.10032900277549404,
+          0.04373362182394327,
+          0.4922002253549732,
+          0.22115879313396983,
+          0.1112336524661722,
+          0.1406232654793268
+        ],
+        "seed": 202,
+        "train_mask": {
+          "complete_rows": 1419,
+          "eligible_missing_rate": 0.11833333333333333,
+          "missing_per_feature": [
+            0,
+            371,
+            359,
+            363,
+            336,
+            345,
+            356
+          ],
+          "overall_missing_rate": 0.10142857142857142,
+          "rows_with_missing": 1581
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "64bc20baa92ab40011f9f8f478c9788de3e10977798a4fd082dfc9eb0b3e6b7e",
+          "train": "964389346f9e9609c0d715f8ac36b6cfc9718fbe08b2e2f47622c732feb1b3fa"
+        },
+        "input_hashes_before": {
+          "query": "64bc20baa92ab40011f9f8f478c9788de3e10977798a4fd082dfc9eb0b3e6b7e",
+          "train": "964389346f9e9609c0d715f8ac36b6cfc9718fbe08b2e2f47622c732feb1b3fa"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "6877e09f0a51f55f193f29fd3a16935770fde8f9365e55ba86c33ddf72b80918",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "6877e09f0a51f55f193f29fd3a16935770fde8f9365e55ba86c33ddf72b80918",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "abalone",
+        "donor_policy": "available",
+        "dtype": "float64",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 202,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 18,
+        "aggregation_row_events": 693,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 522,
+        "full_suspect_donor_pair_events": 24000,
+        "full_suspect_row_events": 8,
+        "full_tie_donor_pair_events": 6000,
+        "full_tie_row_events": 2,
+        "initial_batch_query_rows": 522,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 1566000,
+        "matrix_build_query_rows": 522,
+        "matrix_suspect_query_rows": 8,
+        "precise_topk_calls": 10,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 8352,
+        "search_calls": 3,
+        "search_query_row_events": 522,
+        "selected_donor_pair_events": 8192,
+        "selected_row_events": 512
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.17612321581596826,
+        "rmse": 0.2585029221298403,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 693
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 7,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 249,
+          "status": "ok",
+          "suspect_full_row_events": 6,
+          "tie_full_row_events": 1
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 3,
+          "precise_rows_before": 7,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 253,
+          "status": "ok",
+          "suspect_full_row_events": 2,
+          "tie_full_row_events": 1
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 0,
+          "precise_rows_before": 3,
+          "query_rows": 10,
+          "requested_k": 16,
+          "selected_row_events": 10,
+          "status": "ok",
+          "suspect_full_row_events": 0,
+          "tie_full_row_events": 0
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 18,
+          "inclusive_seconds": 0.0008542100000141772,
+          "self_seconds": 0.0008542100000141772
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.07094234099999852,
+          "self_seconds": 0.002237231999977496
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 8,
+          "inclusive_seconds": 0.0033486079999889284,
+          "self_seconds": 0.0033486079999889284
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 2,
+          "inclusive_seconds": 0.0008955489999991073,
+          "self_seconds": 0.0008955489999991073
+        },
+        "direct_distance_kernel.selected": {
+          "calls": 512,
+          "inclusive_seconds": 0.025677277999939463,
+          "self_seconds": 0.025677277999939463
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.0027406130000002804,
+          "self_seconds": 0.0027406130000002804
+        },
+        "full_direct_distances.suspect": {
+          "calls": 8,
+          "inclusive_seconds": 0.0034154420000049868,
+          "self_seconds": 6.683400001605833e-05
+        },
+        "full_direct_distances.tie": {
+          "calls": 2,
+          "inclusive_seconds": 0.000914201999997033,
+          "self_seconds": 1.865299999792569e-05
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.07117406000000415,
+          "self_seconds": 0.00023171900000562573
+        },
+        "precise_topk": {
+          "calls": 10,
+          "inclusive_seconds": 0.0003433459999939714,
+          "self_seconds": 0.0003433459999939714
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.02126556999999707,
+          "self_seconds": 0.004978101999995488
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.01628746800000158,
+          "self_seconds": 0.01628746800000158
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.06785089900000685,
+          "self_seconds": 0.013494448000074044
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.012001703991793183,
+        "aggregate_seconds": 0.0008542100000141772,
+        "available_transform_self_fraction": 0.031433249697675886,
+        "available_transform_self_seconds": 0.002237231999977496,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.03850578427028219,
+        "faiss_kmin_seconds": 0.0027406130000002804,
+        "full_refinement_fraction": 0.060831769327220724,
+        "full_refinement_seconds": 0.00432964400000202,
+        "full_row_events": 10,
+        "full_suspect_row_events": 8,
+        "full_tie_row_events": 2,
+        "initial_batch_query_rows": 522,
+        "mae": 0.17612321581596826,
+        "matrix_fraction": 0.22883994533964527,
+        "matrix_prepare_self_fraction": 0.06994264483430056,
+        "matrix_prepare_self_seconds": 0.004978101999995488,
+        "matrix_seconds": 0.01628746800000158,
+        "reference_transform_seconds": 0.06606864999999829,
+        "retain_calls": 0,
+        "rmse": 0.2585029221298403,
+        "scored_cells": 693,
+        "search_calls": 3,
+        "search_self_fraction": 0.18959783943859965,
+        "search_self_seconds": 0.013494448000074044,
+        "selected_donor_pair_events": 8192,
+        "selected_refinement_fraction": 0.36076736383926905,
+        "selected_refinement_seconds": 0.025677277999939463,
+        "selected_row_events": 512,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.07117406000000415
+      }
+    },
+    {
+      "accounting": {
+        "definition": "Self times partition only the instrumented transform root, including tracing overhead. Inclusive times overlap. The root self time includes validation, output formatting, cache cleanup, and tracing work outside traced children. The available_transform self time is residual work outside search, aggregation, and retain calls; it is not pure aggregation time. Do not equate these values with the untraced reference timing.",
+        "root_inclusive_seconds": 0.07230828399999467,
+        "root_minus_self_sum_seconds": 0.0,
+        "sum_of_all_traced_self_seconds": 0.07230828399999467
+      },
+      "case": {
+        "always_observed": [
+          "Length"
+        ],
+        "complete_donors": 1383,
+        "eligible_base_probability": 0.11666666666666668,
+        "feature_names": [
+          "Length",
+          "Diameter",
+          "Height",
+          "Whole_weight",
+          "Shucked_weight",
+          "Viscera_weight",
+          "Shell_weight"
+        ],
+        "fingerprints": {
+          "dataset": "6d71332f0d6a22320c7eff7b18909fab5565975da5a68e7ceef0b49f4572e1a4",
+          "query": "969167d1a2acaf36e71e155ddc6b16a938e1a710a3fa5cbc52fca61353678bf5",
+          "query_mask": "dacfe7ea04f965c6875f83aa64060f13850fbb3194e73dfb9c7494d10287600d",
+          "query_row_ids": "b369458026ac3a860a4d07f218f7970dc58e5c0bf2a9ce31cd24f1ae914a2775",
+          "raw_query": "45dc0950a720ec437815894971dfa084b8575ec01c6d651b8a4fd44d80ce5c06",
+          "raw_train": "682c3c2f287d460e362a30879bae211e95b13145f81c341b883b09ae026f1eb0",
+          "train": "0e1222ca9acaac33b1ca8503a2877063ef8dcd2f0a35593c203e07c9eefeefe1",
+          "train_mask": "77aa4587ba676db26494b1f88c607e4f64210c80314bba8b17ca10e6dae39d43",
+          "train_row_ids": "e505ff45383801d32096f33c4170d09091d3ce289f1b2a655c6b4d68b0ff603e",
+          "truth": "d1341c8ce06b8247f1c3a8205ac58dadd74bd5990aefb4445c8817256a3ee50a"
+        },
+        "input_dtype": "float64",
+        "mar_cutoff": null,
+        "mar_high_probability": null,
+        "mar_low_probability": null,
+        "mar_reference_rows": null,
+        "mechanism": "MCAR",
+        "n_query": 1000,
+        "n_train": 3000,
+        "nominal_overall_missing_rate": 0.1,
+        "quality_scope": "masked held-out query entries",
+        "quality_units": "standardized using observed training values",
+        "query_mask": {
+          "complete_rows": 466,
+          "eligible_missing_rate": 0.118,
+          "missing_per_feature": [
+            0,
+            123,
+            119,
+            134,
+            105,
+            112,
+            115
+          ],
+          "overall_missing_rate": 0.10114285714285715,
+          "rows_with_missing": 534
+        },
+        "scaler_mean": [
+          0.525941666666666,
+          0.40807254082795313,
+          0.13992786636294585,
+          0.8323051203668329,
+          0.3609297052154197,
+          0.1829610438729195,
+          0.2397604441098987
+        ],
+        "scaler_scale": [
+          0.12080185538264238,
+          0.10024759160194731,
+          0.03975502191076791,
+          0.4943354192545879,
+          0.22374772823447153,
+          0.11086020160257776,
+          0.1407556021819604
+        ],
+        "seed": 303,
+        "train_mask": {
+          "complete_rows": 1383,
+          "eligible_missing_rate": 0.1205,
+          "missing_per_feature": [
+            0,
+            367,
+            366,
+            383,
+            354,
+            356,
+            343
+          ],
+          "overall_missing_rate": 0.10328571428571429,
+          "rows_with_missing": 1617
+        },
+        "truth_dtype": "float64"
+      },
+      "checks": {
+        "exact_reference_output_agreement_equal_nan": true,
+        "finite_output": true,
+        "input_hashes_after": {
+          "query": "969167d1a2acaf36e71e155ddc6b16a938e1a710a3fa5cbc52fca61353678bf5",
+          "train": "0e1222ca9acaac33b1ca8503a2877063ef8dcd2f0a35593c203e07c9eefeefe1"
+        },
+        "input_hashes_before": {
+          "query": "969167d1a2acaf36e71e155ddc6b16a938e1a710a3fa5cbc52fca61353678bf5",
+          "train": "0e1222ca9acaac33b1ca8503a2877063ef8dcd2f0a35593c203e07c9eefeefe1"
+        },
+        "inputs_unchanged": true,
+        "instrumented_output_sha256": "fffa3d54e8d5250578e52e26a21ea992c6a0059061f12fbe9d1b618cff44be54",
+        "observed_values_preserved": true,
+        "patches_restored": true,
+        "query_cache_cleared": true,
+        "reference_output_sha256": "fffa3d54e8d5250578e52e26a21ea992c6a0059061f12fbe9d1b618cff44be54",
+        "shape_and_dtype_preserved": true
+      },
+      "configuration": {
+        "api": "fit_then_transform",
+        "dataset": "abalone",
+        "donor_policy": "available",
+        "dtype": "float64",
+        "index_factory": "Flat",
+        "mechanism": "MCAR",
+        "metric": "l2",
+        "n_neighbors": 5,
+        "n_query": 1000,
+        "n_train": 3000,
+        "seed": 303,
+        "strategy": "mean",
+        "target_missing_rate": 0.1,
+        "timing_scope": "first transform only; fit excluded",
+        "weights": "uniform"
+      },
+      "counters": {
+        "aggregation_calls": 18,
+        "aggregation_row_events": 708,
+        "faiss_kmin_calls": 3,
+        "faiss_kmin_query_row_events": 534,
+        "full_suspect_donor_pair_events": 18000,
+        "full_suspect_row_events": 6,
+        "full_tie_donor_pair_events": 15000,
+        "full_tie_row_events": 5,
+        "initial_batch_query_rows": 534,
+        "initial_batch_search_calls": 3,
+        "matrix_build_calls": 3,
+        "matrix_build_donor_pairs": 1602000,
+        "matrix_build_query_rows": 534,
+        "matrix_suspect_query_rows": 6,
+        "precise_topk_calls": 11,
+        "prepared_distance_calls": 3,
+        "requested_candidate_pair_events": 8544,
+        "search_calls": 3,
+        "search_query_row_events": 534,
+        "selected_donor_pair_events": 8368,
+        "selected_row_events": 523
+      },
+      "cpu": {
+        "affinity_cpus": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "logical_cpus": 4,
+        "native_thread_limit": 1,
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "processor": "AMD EPYC 7763 64-Core Processor"
+      },
+      "quality": {
+        "mae": 0.1817598460158545,
+        "rmse": 0.3106408858245694,
+        "scope": "masked held-out query entries against benchmark ground truth",
+        "scored_cells": 708
+      },
+      "retain_events": [],
+      "search_events": [
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 1,
+          "precise_rows_after": 6,
+          "precise_rows_before": 0,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 250,
+          "status": "ok",
+          "suspect_full_row_events": 2,
+          "tie_full_row_events": 4
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 2,
+          "precise_rows_after": 4,
+          "precise_rows_before": 6,
+          "query_rows": 256,
+          "requested_k": 16,
+          "selected_row_events": 252,
+          "status": "ok",
+          "suspect_full_row_events": 3,
+          "tie_full_row_events": 1
+        },
+        {
+          "cache_hit_before": false,
+          "cache_identity_after": true,
+          "call": 3,
+          "precise_rows_after": 1,
+          "precise_rows_before": 4,
+          "query_rows": 22,
+          "requested_k": 16,
+          "selected_row_events": 21,
+          "status": "ok",
+          "suspect_full_row_events": 1,
+          "tie_full_row_events": 0
+        }
+      ],
+      "timings": {
+        "aggregate": {
+          "calls": 18,
+          "inclusive_seconds": 0.0008158910000020114,
+          "self_seconds": 0.0008158910000020114
+        },
+        "available_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.07209042800000276,
+          "self_seconds": 0.0022375890000034815
+        },
+        "direct_distance_kernel.full_suspect": {
+          "calls": 6,
+          "inclusive_seconds": 0.0025934799999873803,
+          "self_seconds": 0.0025934799999873803
+        },
+        "direct_distance_kernel.full_tie": {
+          "calls": 5,
+          "inclusive_seconds": 0.002092846000010695,
+          "self_seconds": 0.002092846000010695
+        },
+        "direct_distance_kernel.selected": {
+          "calls": 523,
+          "inclusive_seconds": 0.025994005999869785,
+          "self_seconds": 0.025994005999869785
+        },
+        "faiss_kmin": {
+          "calls": 3,
+          "inclusive_seconds": 0.0028668419999959838,
+          "self_seconds": 0.0028668419999959838
+        },
+        "full_direct_distances.suspect": {
+          "calls": 6,
+          "inclusive_seconds": 0.002649681999990605,
+          "self_seconds": 5.620200000322484e-05
+        },
+        "full_direct_distances.tie": {
+          "calls": 5,
+          "inclusive_seconds": 0.0021348539999905825,
+          "self_seconds": 4.2007999979887245e-05
+        },
+        "instrumented_transform": {
+          "calls": 1,
+          "inclusive_seconds": 0.07230828399999467,
+          "self_seconds": 0.00021785599999191163
+        },
+        "precise_topk": {
+          "calls": 11,
+          "inclusive_seconds": 0.00040214199999866196,
+          "self_seconds": 0.00040214199999866196
+        },
+        "prepare_search_matrix": {
+          "calls": 3,
+          "inclusive_seconds": 0.020340562000001228,
+          "self_seconds": 0.0038091090000023087
+        },
+        "prepared_matrix_distances": {
+          "calls": 3,
+          "inclusive_seconds": 0.01653145299999892,
+          "self_seconds": 0.01653145299999892
+        },
+        "search": {
+          "calls": 3,
+          "inclusive_seconds": 0.06903694799999727,
+          "self_seconds": 0.014648860000150421
+        }
+      },
+      "values": {
+        "aggregate_fraction": 0.0112835066035044,
+        "aggregate_seconds": 0.0008158910000020114,
+        "available_transform_self_fraction": 0.030945126563972206,
+        "available_transform_self_seconds": 0.0022375890000034815,
+        "expansion_search_calls": 0,
+        "faiss_kmin_fraction": 0.03964749045899354,
+        "faiss_kmin_seconds": 0.0028668419999959838,
+        "full_refinement_fraction": 0.06616857343733314,
+        "full_refinement_seconds": 0.004784535999981188,
+        "full_row_events": 11,
+        "full_suspect_row_events": 6,
+        "full_tie_row_events": 5,
+        "initial_batch_query_rows": 534,
+        "mae": 0.1817598460158545,
+        "matrix_fraction": 0.22862460682928304,
+        "matrix_prepare_self_fraction": 0.052678735952336936,
+        "matrix_prepare_self_seconds": 0.0038091090000023087,
+        "matrix_seconds": 0.01653145299999892,
+        "reference_transform_seconds": 0.06744972700000318,
+        "retain_calls": 0,
+        "rmse": 0.3106408858245694,
+        "scored_cells": 708,
+        "search_calls": 3,
+        "search_self_fraction": 0.20258895924222875,
+        "search_self_seconds": 0.014648860000150421,
+        "selected_donor_pair_events": 8368,
+        "selected_refinement_fraction": 0.35948863065083525,
+        "selected_refinement_seconds": 0.025994005999869785,
+        "selected_row_events": 523,
+        "transform_fraction": 1.0,
+        "transform_seconds": 0.07230828399999467
+      }
+    }
+  ],
+  "schema_version": 1,
+  "source_commit": "a25900033ab590ae8c8982e0d996f03cbc26591c",
+  "sources": [
+    {
+      "archive_sha256": "3681d8a34cdabeabbc8b531c68ca73cb92a755eae739a101eef4844bc7460526",
+      "dataset": "wine_quality_white",
+      "dataset_metadata": {
+        "citation": "Cortez et al. (2009). Wine Quality. https://doi.org/10.24432/C56S3T",
+        "dataset": "Wine Quality (white)",
+        "dataset_sha256": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+        "excluded_columns": [
+          "quality"
+        ],
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "features": 11,
+        "license": "CC BY 4.0",
+        "loader": "UCI ZIP archive with numpy.loadtxt",
+        "original_units": "Values as supplied in the source data file",
+        "rows": 4898,
+        "source": "https://archive.ics.uci.edu/dataset/186/wine+quality",
+        "source_archive_sha256": "3ed56667f4b828242bd732d7d1dd7f2861e54432239d7fa63877014cbb0304d4",
+        "source_file": "winequality-white.csv",
+        "source_file_sha256": "76c3f809815c17c07212622f776311faeb31e87610d52c26d87d6e361b169836",
+        "source_url": "https://archive.ics.uci.edu/static/public/186/wine%2Bquality.zip",
+        "target_used": false
+      },
+      "environment_sha256": "9c015877a1732302ea96661d9c1dc13b572d5dec5a3b81a65cf5571f1fe9b734",
+      "json_member": "available_transform_profile.json",
+      "json_sha256": "32c796d46ce3e234b17b786e4463ee981a3b6e1290fd88e97d62d9afdc14c2db",
+      "path": "benchmarks/results/available-transform-profile-a259000/wine-quality-white.zip",
+      "profile_script_sha256": "54da53ab5c424287df1f440da3ecf8845dd88e03e80b9e8e3193f2c80bfd8ae7",
+      "provenance": {
+        "declared_version": "0.3.21",
+        "github_run_attempt": "1",
+        "github_run_id": "36668061565",
+        "pinned_environment_archive": "benchmarks/results/released_versions_0.3.21.zip",
+        "pinned_environment_archive_sha256": "53ef359c45525b2fff05ea7a3cb9be685ba06c18ac742d68ba8882ad1377e229",
+        "recorded_dependencies_sha256": "2847dbadceaf133bbdb9a975f473986cb7b3918e2e928d0abb4e110654824b5d",
+        "source_commit": "a25900033ab590ae8c8982e0d996f03cbc26591c",
+        "version": "0.3.21+bench.a25900033ab5",
+        "wheel_filename": "faiss_imputer-0.3.21+bench.a25900033ab5-py3-none-any.whl",
+        "wheel_sha256": "c88c85ee05047ba0fd6a8bb73c6790d575cda6197d4134e96fe9651d13c4e792"
+      },
+      "recorded_dependencies_sha256": "2847dbadceaf133bbdb9a975f473986cb7b3918e2e928d0abb4e110654824b5d"
+    },
+    {
+      "archive_sha256": "a008d167e6e30d87de85e5a8576308c4a31819dc9046a8153e5f17e81976b342",
+      "dataset": "abalone",
+      "dataset_metadata": {
+        "citation": "Nash et al. (1994). Abalone. https://doi.org/10.24432/C55C7W",
+        "dataset": "Abalone (numerical features)",
+        "dataset_sha256": "6d71332f0d6a22320c7eff7b18909fab5565975da5a68e7ceef0b49f4572e1a4",
+        "excluded_columns": [
+          "Sex",
+          "Rings"
+        ],
+        "feature_names": [
+          "Length",
+          "Diameter",
+          "Height",
+          "Whole_weight",
+          "Shucked_weight",
+          "Viscera_weight",
+          "Shell_weight"
+        ],
+        "features": 7,
+        "license": "CC BY 4.0",
+        "loader": "UCI ZIP archive with numpy.loadtxt",
+        "original_units": "Values as supplied in the source data file",
+        "rows": 4177,
+        "source": "https://archive.ics.uci.edu/dataset/1/abalone",
+        "source_archive_sha256": "755a6a67c5b266961a3f149ea13be2cfb6e6c727e48cee3c83bc0b4526210ee4",
+        "source_file": "abalone.data",
+        "source_file_sha256": "de37cdcdcaaa50c309d514f248f7c2302a5f1f88c168905eba23fe2fbc78449f",
+        "source_url": "https://archive.ics.uci.edu/static/public/1/abalone.zip",
+        "target_used": false
+      },
+      "environment_sha256": "6ac8d6ad510ae46a1dcad1866a08a529a26d516f4c5eb4ef0abefc202c7d855f",
+      "json_member": "available_transform_profile.json",
+      "json_sha256": "c882f206997b8d48a6175e730a08161363892860b0597e0f52c67d1535faa979",
+      "path": "benchmarks/results/available-transform-profile-a259000/abalone.zip",
+      "profile_script_sha256": "54da53ab5c424287df1f440da3ecf8845dd88e03e80b9e8e3193f2c80bfd8ae7",
+      "provenance": {
+        "declared_version": "0.3.21",
+        "github_run_attempt": "1",
+        "github_run_id": "36669353522",
+        "pinned_environment_archive": "benchmarks/results/released_versions_0.3.21.zip",
+        "pinned_environment_archive_sha256": "53ef359c45525b2fff05ea7a3cb9be685ba06c18ac742d68ba8882ad1377e229",
+        "recorded_dependencies_sha256": "2847dbadceaf133bbdb9a975f473986cb7b3918e2e928d0abb4e110654824b5d",
+        "source_commit": "a25900033ab590ae8c8982e0d996f03cbc26591c",
+        "version": "0.3.21+bench.a25900033ab5",
+        "wheel_filename": "faiss_imputer-0.3.21+bench.a25900033ab5-py3-none-any.whl",
+        "wheel_sha256": "1b6e294cfa800ecbda359012e59223e59332d5c474b4f3a5a54f3fc136b6ffe4"
+      },
+      "recorded_dependencies_sha256": "2847dbadceaf133bbdb9a975f473986cb7b3918e2e928d0abb4e110654824b5d"
+    }
+  ]
+}
