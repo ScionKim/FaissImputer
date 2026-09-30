@@ -1,0 +1,58 @@
+name: Analyze available-transform profiles
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/analyze-available-transform-profile.yml"
+      - "benchmarks/analyze_available_transform_profile.py"
+      - "benchmarks/results/available-transform-profile-a259000/*.zip"
+      - "benchmarks/results/available-transform-profile-a259000-summary.json"
+      - "docs/benchmarks/available-transform-profile-a259000.md"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Regenerate archived transform diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Generate report and exact summary from the preserved ZIPs
+        run: |
+          python benchmarks/analyze_available_transform_profile.py \
+            --report benchmark_outputs/available-transform-profile-a259000.md \
+            --summary benchmark_outputs/available-transform-profile-a259000-summary.json
+
+      - name: Compare with committed analysis when present
+        shell: bash
+        run: |
+          report="docs/benchmarks/available-transform-profile-a259000.md"
+          summary="benchmarks/results/available-transform-profile-a259000-summary.json"
+          if [[ -e "$report" || -e "$summary" ]]; then
+            diff -u "$report" benchmark_outputs/available-transform-profile-a259000.md
+            diff -u "$summary" benchmark_outputs/available-transform-profile-a259000-summary.json
+          else
+            echo "Initial generation: report and summary are available in the analysis artifact."
+          fi
+
+      - name: Upload regenerated analysis
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: available-transform-profile-a259000-analysis-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmark_outputs/
+          if-no-files-found: error
+          retention-days: 30
