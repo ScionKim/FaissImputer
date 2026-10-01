@@ -133,6 +133,33 @@ class FakeModel:
             self.available_index_.clear_cache()
 
 
+class FakeBatchIndex(FakeIndex):
+    def __init__(self, clock, faiss):
+        super().__init__(clock, faiss)
+        self.fail_selected = False
+
+    def _selected_distances(self, queries, query_rows, donor_ids):
+        self.clock.advance(1)  # Gathering outside the distance kernel.
+        self.raise_in_kernel = self.fail_selected
+        try:
+            return self._distances_to(object(), Rows(len(donor_ids)), self.present)
+        finally:
+            self.raise_in_kernel = False
+
+    def search(self, queries, k):
+        if queries is not self.query_ref:
+            self.clear_cache()
+            self.matrix, _ = self._prepare_search_matrix(queries)
+            self.precise_rows[0] = self._direct_distances(object())
+            self.query_ref = queries
+        self.faiss.kmin(self.matrix, k)
+        if 1 not in self.precise_rows:
+            self.precise_rows[1] = self._direct_distances(object())
+        self._selected_distances(queries, [2, 2, 3, 3], [0, 1, 0, 1])
+        self.clock.advance(1)
+        return object(), object()
+
+
 def make_fake_case():
     clock = FakeClock()
 
@@ -288,6 +315,46 @@ class TestCandidateProvenance(unittest.TestCase):
             profile._validate_provenance(
                 {"version": version, "source_commit": commit[:12]}, version,
             )
+
+
+class TestSelectedBatchTrace(unittest.TestCase):
+    def test_batch_kernel_counts_rows_and_pairs_separately_from_calls(self):
+        clock, faiss, model, collector = make_fake_case()
+        model.available_index_ = FakeBatchIndex(clock, faiss)
+        original = model.available_index_._selected_distances
+        with profile.AvailableTrace(model, faiss, collector):
+            with collector.measure("instrumented_transform"):
+                model.transform(Rows(4))
+        result = collector.snapshot()
+        self.assertEqual(result["counters"]["selected_row_events"], 2)
+        self.assertEqual(result["counters"]["selected_donor_pair_events"], 4)
+        self.assertEqual(result["counters"]["selected_kernel_calls"], 1)
+        self.assertEqual(result["counters"]["selected_pair_batch_calls"], 1)
+        self.assertEqual(result["search_events"][0]["selected_row_events"], 2)
+        self.assertEqual(result["search_events"][0]["selected_kernel_calls"], 1)
+        self.assertEqual(result["timings"]["direct_distance_kernel.selected"]["calls"], 1)
+        self.assertEqual(result["timings"]["direct_distance_kernel.selected"]["inclusive_seconds"], 3)
+        self.assertEqual(result["timings"]["selected_distance_batch"]["inclusive_seconds"], 4)
+        self.assertEqual(result["accounting"]["root_minus_self_sum_seconds"], 0)
+        self.assertEqual(model.available_index_._selected_distances, original)
+
+    def test_batch_context_unwinds_and_restores_binding_after_kernel_failure(self):
+        clock, faiss, model, collector = make_fake_case()
+        index = model.available_index_ = FakeBatchIndex(clock, faiss)
+        index.fail_selected = True
+        original = index._selected_distances
+        before = set(index.__dict__)
+        trace = profile.AvailableTrace(model, faiss, collector)
+        with self.assertRaisesRegex(ValueError, "fake distance failure"):
+            with trace:
+                with collector.measure("instrumented_transform"):
+                    model.transform(Rows(4))
+        self.assertEqual(trace._selected_row_counts, [])
+        self.assertEqual(collector.stack, [])
+        self.assertEqual(index._selected_distances, original)
+        self.assertEqual(set(index.__dict__), before)
+        self.assertTrue(profile._cache_is_empty(index))
+        self.assertEqual(collector.search_events[0]["status"], "error")
 
 
 class TestOrchestration(unittest.TestCase):

@@ -6,6 +6,11 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.utils.extmath import row_norms
 
 
+# Conservative planning allowance for selected-pair arrays and kernel scratch.
+# This is not a process RSS limit; at least one pair is always permitted.
+SELECTED_DISTANCE_WORKSPACE_BYTES = 8 * 1024 * 1024
+
+
 class MatrixNaNIndex:
     def __init__(self, donors, *, n_features=None):
         source_dtype = np.asarray(donors).dtype
@@ -128,6 +133,57 @@ class MatrixNaNIndex:
 
     def _direct_distances(self, query):
         return self._distances_to(query, self.donors64, self.present)
+
+    def _selected_distances(self, queries, query_rows, donor_ids):
+        """Compute pair-aligned distances with the existing guarded kernel."""
+        return self._distances_to(
+            np.asarray(queries[query_rows], dtype=np.float64),
+            self.donors64[donor_ids],
+            self.present[donor_ids],
+        )
+
+    def _refine_selected(self, queries, values, ids):
+        """Refine selected pairs in bounded blocks, leaving precise rows intact.
+
+        Both row and candidate-column chunks are bounded. Wide candidate sets
+        therefore do not force an entire row of pair-by-feature temporaries.
+        Each gathered pair remains one row of the original distance kernel,
+        retaining its feature-axis reduction and numerical repair operations.
+        """
+        if not ids.size:
+            return
+        bytes_per_pair = 64 * self.donors64.shape[1] + 128
+        pair_budget = max(1, SELECTED_DISTANCE_WORKSPACE_BYTES // bytes_per_pair)
+        columns_per_chunk = min(ids.shape[1], pair_budget)
+        rows_per_chunk = max(1, pair_budget // columns_per_chunk)
+
+        for start in range(0, len(queries), rows_per_chunk):
+            rows = np.arange(start, min(start + rows_per_chunk, len(queries)))
+            if self.precise_rows:
+                rows = np.array(
+                    [row for row in rows if int(row) not in self.precise_rows],
+                    dtype=np.intp,
+                )
+            if not rows.size:
+                continue
+            for column_start in range(0, ids.shape[1], columns_per_chunk):
+                columns = np.arange(
+                    column_start,
+                    min(column_start + columns_per_chunk, ids.shape[1]),
+                )
+                positions = np.ix_(rows, columns)
+                selected = ids[positions]
+                valid = (selected >= 0) & (selected < len(self.donors64))
+                block = values[positions]
+                block[~valid] = np.inf
+                if valid.any():
+                    local_rows, local_columns = np.nonzero(valid)
+                    block[valid] = self._selected_distances(
+                        queries,
+                        rows[local_rows],
+                        selected[local_rows, local_columns],
+                    )
+                values[positions] = block
 
     @staticmethod
     def _precise_topk(distances, k):
@@ -259,17 +315,6 @@ class MatrixNaNIndex:
             values[row], ids[row] = self._precise_topk(exact, k)
 
         if preserve_float64:
-            for row in range(len(queries)):
-                if row in self.precise_rows:
-                    continue
-                valid = (ids[row] >= 0) & (ids[row] < len(self.donors64))
-                values[row, ~valid] = np.inf
-                if valid.any():
-                    selected = ids[row, valid]
-                    values[row, valid] = self._distances_to(
-                        np.asarray(queries[row], dtype=np.float64),
-                        self.donors64[selected],
-                        self.present[selected],
-                    )
+            self._refine_selected(queries, values, ids)
 
         return values, ids

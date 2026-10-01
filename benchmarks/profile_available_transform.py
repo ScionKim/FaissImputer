@@ -36,6 +36,7 @@ DTYPES = ("float32", "float64")
 SEEDS = (101, 202, 303)
 WORKER_TIMEOUT_SECONDS = 300
 SEARCH_CONTRACT = "available-search-query-cache-and-refinement-v1"
+BATCHED_SEARCH_CONTRACT = "available-search-query-cache-and-refinement-v2"
 
 
 class TimerCollector:
@@ -162,8 +163,34 @@ structure changes; the script's classification must then be reviewed.
     descriptor = inspect.getattr_static(type(index), "_precise_topk")
     if not isinstance(descriptor, staticmethod):
         raise RuntimeError("Unsupported _precise_topk binding; review the profiler")
+    selected = [node for node in ast.walk(function)
+                if _attribute_call(node, "_distances_to")]
+    batched = [node for node in ast.walk(function)
+               if _attribute_call(node, "_refine_selected")]
+    if len(selected) == 1 and not batched:
+        contract = SEARCH_CONTRACT
+        selected_definition = "Selected kernels process one query row per call. "
+    elif len(batched) == 1 and not selected:
+        refine = getattr(type(index), "_refine_selected", None)
+        pairs = getattr(type(index), "_selected_distances", None)
+        if refine is None or pairs is None:
+            raise RuntimeError("Unsupported selected batching; review the profiler")
+        refine_tree = ast.parse(textwrap.dedent(inspect.getsource(refine)))
+        pair_tree = ast.parse(textwrap.dedent(inspect.getsource(pairs)))
+        if (sum(_attribute_call(node, "_selected_distances") for node in ast.walk(refine_tree)) != 1
+                or sum(_attribute_call(node, "_distances_to") for node in ast.walk(pair_tree)) != 1):
+            raise RuntimeError("Unsupported selected batch kernel; review the profiler")
+        contract = BATCHED_SEARCH_CONTRACT
+        selected_definition = (
+            "Selected kernels process bounded pair blocks. selected_kernel_calls "
+            "counts invocations; selected_row_events counts unique query row IDs "
+            "within each block, so a row can repeat across candidate-column chunks. "
+            "selected_distance_batch includes gathering and the nested kernel. "
+        )
+    else:
+        raise RuntimeError("Unsupported selected refinement; review the profiler")
     return {
-        "name": SEARCH_CONTRACT,
+        "name": contract,
         "classification": (
             "During search, _direct_distances with query_ref=None is a "
             "new-matrix suspicion refinement; with query_ref set it is a "
@@ -171,7 +198,7 @@ structure changes; the script's classification must then be reviewed.
             "_direct_distances is a full-donor kernel; calls outside it are "
             "selected-candidate kernels, even when their donor count equals "
             "the full donor count. Counts are row events across calls, not "
-            "unique query rows."
+            "unique query rows. " + selected_definition
         ),
     }
 
@@ -186,6 +213,7 @@ class AvailableTrace:
         self.collector = collector
         self._search_stack = []
         self._full_reasons = []
+        self._selected_row_counts = []
         self._patches = ExitStack()
         self._originals = []
 
@@ -211,6 +239,8 @@ class AvailableTrace:
             self._patch(self.index, "_prepared_distances", self._prepared_distances)
             self._patch(self.index, "_direct_distances", self._full_distances)
             self._patch(self.index, "_distances_to", self._distance_kernel)
+            if hasattr(self.index, "_selected_distances"):
+                self._patch(self.index, "_selected_distances", self._selected_pairs)
             # This is the bound static function on the instance. Its wrapper
             # receives (distances, k), without introducing a self argument.
             self._patch(self.index, "_precise_topk", self._precise_topk)
@@ -223,7 +253,7 @@ class AvailableTrace:
 
     def __exit__(self, exc_type, exc, tb):
         self._patches.close()
-        if self._search_stack or self._full_reasons:
+        if self._search_stack or self._full_reasons or self._selected_row_counts:
             raise RuntimeError("Unbalanced instrumentation state")
         if any(getattr(owner, name) != original for owner, name, original in self._originals):
             raise RuntimeError("Instrumentation did not restore the original methods")
@@ -241,6 +271,8 @@ class AvailableTrace:
                 "suspect_full_row_events": 0,
                 "tie_full_row_events": 0,
                 "selected_row_events": 0,
+                "selected_kernel_calls": 0,
+                "selected_pair_batch_calls": 0,
             }
             self.collector.search_events.append(event)
             count = self.collector.counters
@@ -312,11 +344,29 @@ class AvailableTrace:
                 if not self._search_stack:
                     raise RuntimeError("Selected-candidate distances occurred outside search")
                 kind = "selected"
-                self._search_stack[-1]["selected_row_events"] += 1
-                self.collector.counters["selected_row_events"] += 1
+                row_events = self._selected_row_counts[-1] if self._selected_row_counts else 1
+                self._search_stack[-1]["selected_row_events"] += row_events
+                self._search_stack[-1]["selected_kernel_calls"] += 1
+                self.collector.counters["selected_row_events"] += row_events
+                self.collector.counters["selected_kernel_calls"] += 1
                 self.collector.counters["selected_donor_pair_events"] += len(donors)
             with self.collector.measure(f"direct_distance_kernel.{kind}"):
                 return original(query, donors, present)
+        return wrapped
+
+    def _selected_pairs(self, original):
+        def wrapped(queries, query_rows, donor_ids):
+            if not self._search_stack:
+                raise RuntimeError("Selected batching occurred outside search")
+            row_events = len(set(int(row) for row in query_rows))
+            self.collector.counters["selected_pair_batch_calls"] += 1
+            self._search_stack[-1]["selected_pair_batch_calls"] += 1
+            self._selected_row_counts.append(row_events)
+            try:
+                with self.collector.measure("selected_distance_batch"):
+                    return original(queries, query_rows, donor_ids)
+            finally:
+                self._selected_row_counts.pop()
         return wrapped
 
     def _precise_topk(self, original):
