@@ -21,6 +21,13 @@ These results do not establish performance on other workloads.
 
 ## Merged since 0.3.21
 
+- **Available-donor float64 refinement:** selected query/donor distances
+  are recomputed in bounded blocks using the existing guarded kernel.
+  The [source comparison and same-code control report](docs/benchmarks/available-selected-distances-c02b71d.md)
+  records matched timing ratios, observed baseline/candidate output
+  agreement, and whole-worker peak RSS. The complete float64 third-call
+  discrepancy also appears in the same-code control; its cause remains
+  unresolved.
 - **Complete-donor distance repair:** native Flat L2 searches selectively
   recompute neighbors in float64 for detected underflow, overflow, and
   invalid search results. Regression coverage includes aggregation,
