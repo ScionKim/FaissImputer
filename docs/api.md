@@ -389,6 +389,11 @@ counts reuse a work buffer. Search-preparation masks and tolerances are
 computed in groups of query rows, and temporary preparation arrays are
 released before precise distance refinement.
 
+For float64 training data or queries, selected query/donor distances are
+refined in blocks using the existing guarded kernel. Both query rows and
+candidate columns are chunked. The internal workspace budget guides
+block sizing; it is not a hard allocation limit.
+
 Distance matrices, the float32 selection cache, donor data, and cached
 refined distances still contribute to memory use. Internal batch limits
 do not bound total process memory.
