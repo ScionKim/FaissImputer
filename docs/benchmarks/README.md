@@ -52,6 +52,7 @@ only. Use same-run paired measurements for version-to-version claims.
 
 | Report | Focus |
 | --- | --- |
+| [Available float64 selected-distance batching](available-selected-distances-c02b71d.md) | Matched before/after timings, output agreement, worker peak RSS, and a same-code control examining the complete float64 third-call discrepancy. |
 | [Available-donor batching and threads](available-batching-90c8cfb8.md) | Batch memory budgets, thread counts, repeated 500,000-row measurements, and a million-row pilot. |
 | [Available-donor candidate expansion](available-expansion-0.3.8.md) | Comparison of 0.3.7 and 0.3.8 available-donor candidate expansion. |
 | [Complete-aggregation recovery](complete-aggregation-e5ef482.md) | Source comparison between 0.3.8 and the implementation prepared for 0.3.10, across query and feature shapes. |
