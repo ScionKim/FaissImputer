@@ -11,6 +11,14 @@ on:
         options:
           - candidate
           - released
+      workload:
+        description: Synthetic comparison or held-out Wine Quality White
+        type: choice
+        required: false
+        default: synthetic
+        options:
+          - synthetic
+          - wine_quality_white
       baseline_commit:
         description: Optional baseline commit for candidate mode; blank uses PyPI 0.3.22
         type: string
@@ -31,6 +39,8 @@ jobs:
 
     env:
       REQUESTED_MODE: ${{ inputs.mode }}
+      REQUESTED_WORKLOAD: ${{ inputs.workload }}
+      REQUESTED_BASELINE_COMMIT: ${{ inputs.baseline_commit }}
       PYTHONNOUSERSITE: "1"
       PYTHONHASHSEED: "0"
       PYTHONPATH: ""
@@ -65,8 +75,29 @@ jobs:
               ;;
           esac
 
+          benchmark_workload="${REQUESTED_WORKLOAD:-synthetic}"
+          case "$benchmark_workload" in
+            synthetic|wine_quality_white) ;;
+            *)
+              echo "Unknown benchmark workload: $benchmark_workload" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ "$benchmark_workload" == "wine_quality_white" ]]; then
+            if [[ "$comparison_mode" != "released" ]]; then
+              echo "Wine Quality White requires mode=released." >&2
+              exit 1
+            fi
+            if [[ -n "${REQUESTED_BASELINE_COMMIT:-}" ]]; then
+              echo "Wine Quality White requires an empty baseline_commit." >&2
+              exit 1
+            fi
+          fi
+
           {
             echo "COMPARISON_MODE=$comparison_mode"
+            echo "BENCHMARK_WORKLOAD=$benchmark_workload"
             echo "PREVIOUS_VERSION=$previous_version"
             echo "CURRENT_VERSION=0.3.22"
             echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current"
@@ -292,6 +323,7 @@ jobs:
           cp -R "$GITHUB_WORKSPACE/benchmarks" "$BENCHMARK_DIR/benchmarks"
 
       - name: Run sequential query-count comparison
+        if: env.BENCHMARK_WORKLOAD == 'synthetic'
         working-directory: ${{ env.BENCHMARK_DIR }}
         run: |
           set -euo pipefail
@@ -327,6 +359,22 @@ jobs:
               --budget-seconds "$remaining_seconds" \
               --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_q${query_count}.json"
           done
+
+      - name: Run sequential Wine Quality White comparison
+        if: env.BENCHMARK_WORKLOAD == 'wine_quality_white'
+        working-directory: ${{ env.BENCHMARK_DIR }}
+        run: |
+          set -euo pipefail
+
+          "$CURRENT_ENV/bin/python" -u \
+            -m benchmarks.benchmark_released_real_data \
+            --previous-python "$PREVIOUS_ENV/bin/python" \
+            --previous-version "$PREVIOUS_VERSION" \
+            --current-version "$CURRENT_VERSION" \
+            --data-home "$GITHUB_WORKSPACE/benchmark_outputs/datasets" \
+            --timeout-seconds 300 \
+            --budget-seconds 1200 \
+            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white.json"
 
       - name: Upload benchmark results
         if: always()
