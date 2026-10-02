@@ -4,30 +4,29 @@ This roadmap tracks released capabilities, merged changes, and remaining
 priorities. Supported API options do not imply numerical identity with
 KNNImputer.
 
-## Previous release: 0.3.20
+## Current release: 0.3.22
 
-Available-donor search with built-in L2 metrics reuses distance work
-buffers, batches preparation work, and releases temporary arrays before
-precision refinement.
+Available-donor float64 refinement recomputes selected query/donor
+distances in bounded blocks using the existing guarded kernel.
+The internal workspace allowance is a planning budget, not a limit
+on total process memory.
 
-The [published-package comparison](docs/benchmarks/released_versions_0.3.20.md)
-measured a 2.71–2.73× first-transform speedup over KNNImputer on one
-available-donor workload. Fit plus first transform was 2.44–2.49× as fast,
-although fit itself was slower.
+The [published-package comparison](docs/benchmarks/released_versions_0.3.22.md)
+compares 0.3.21, 0.3.22, and KNNImputer on one Intel Xeon Platinum
+8370C runner. For available-donor float64, the median matched
+0.3.21/0.3.22 timing ratio was 1.106× for the first transform and
+1.101× for fit plus first transform. All 108 workers passed their
+checks, and recorded output hashes matched in all 36 version pairs.
+These findings are limited to the tested workload.
 
-The report records both donor policies, float32/float64 inputs, timing
-variation, process memory, output agreement, and synthetic-data quality.
-These results do not establish performance on other workloads.
+The [source comparison and same-code control report](docs/benchmarks/available-selected-distances-c02b71d.md)
+records matched timing ratios, observed baseline/candidate output
+agreement, and whole-worker peak RSS. The complete float64 third-call
+discrepancy also appears in the same-code control; its cause remains
+unresolved.
 
-## Merged since 0.3.21
+## Previous release: 0.3.21
 
-- **Available-donor float64 refinement:** selected query/donor distances
-  are recomputed in bounded blocks using the existing guarded kernel.
-  The [source comparison and same-code control report](docs/benchmarks/available-selected-distances-c02b71d.md)
-  records matched timing ratios, observed baseline/candidate output
-  agreement, and whole-worker peak RSS. The complete float64 third-call
-  discrepancy also appears in the same-code control; its cause remains
-  unresolved.
 - **Complete-donor distance repair:** native Flat L2 searches selectively
   recompute neighbors in float64 for detected underflow, overflow, and
   invalid search results. Regression coverage includes aggregation,
@@ -41,8 +40,24 @@ These results do not establish performance on other workloads.
   observed-feature count, and donor count while preserving the original
   Faiss exception. See [index factory requirements](docs/api.md#complete-donors).
 
-The complete-donor correction is not included in the published 0.3.20
-package. It does not guarantee float64 neighbor ordering for every input.
+The complete-donor correction was introduced in 0.3.21 and is not
+included in 0.3.20. It does not guarantee float64 neighbor ordering
+for every input.
+
+## Earlier release: 0.3.20
+
+Available-donor search with built-in L2 metrics reuses distance work
+buffers, batches preparation work, and releases temporary arrays before
+precision refinement.
+
+The [published-package comparison](docs/benchmarks/released_versions_0.3.20.md)
+measured a 2.71–2.73× first-transform speedup over KNNImputer on one
+available-donor workload. Fit plus first transform was 2.44–2.49× as fast,
+although fit itself was slower.
+
+The report records both donor policies, float32/float64 inputs, timing
+variation, process memory, output agreement, and synthetic-data quality.
+These results do not establish performance on other workloads.
 
 ## Next priority: broader benchmark coverage
 
@@ -154,13 +169,13 @@ These findings apply to the diagnosed cases. They do not establish
 prediction equivalence or explain every disagreement in other cases.
 
 Remaining work:
+
 - Extend isolated held-out measurements to additional datasets and
   configurations, retaining simple baselines and separate reporting of
   reconstruction quality and agreement with another imputer.
 - Investigate additional output disagreements when warranted by evidence,
   distinguishing exact boundary ties, numerical distance ordering, and
   aggregation effects.
-
 
 Use published wheels for released-package claims and identify development
 measurements by source commit. Record matching inputs, hardware, thread
@@ -202,6 +217,8 @@ for one million queries.
 - [Release history](https://github.com/ScionKim/FaissImputer/releases)
 - [API reference](docs/api.md) and [usage examples](docs/usage.md)
 - [Benchmark index](docs/benchmarks/README.md)
+- [Published 0.3.22 comparison](docs/benchmarks/released_versions_0.3.22.md)
+- [Published 0.3.21 comparison](docs/benchmarks/released_versions_0.3.21.md)
 - [Published 0.3.20 comparison](docs/benchmarks/released_versions_0.3.20.md)
 - [Historical 0.3.19 comparison](docs/benchmarks/released_versions_0.3.19.md)
 

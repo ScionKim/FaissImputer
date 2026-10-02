@@ -1,10 +1,9 @@
 # FaissImputer
 
-**KNN imputation for incomplete numerical data with Faiss-backed neighbor search.**
+**Faiss-backed KNN imputation with control over donor eligibility.**
 
-FaissImputer fills missing values using nearby training rows, with a
-familiar scikit-learn interface. A *donor* is a training row used to
-supply a value for a missing feature.
+FaissImputer fills missing numerical values using nearby training rows.
+A *donor* is a training row used to supply a value for a missing feature.
 
 [![PyPI](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
 [![Python](https://img.shields.io/pypi/pyversions/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
@@ -16,24 +15,24 @@ supply a value for a missing feature.
 
 ## Why FaissImputer?
 
-As the donor pool grows, finding neighbors can become a major cost of
-KNN imputation. FaissImputer brings Faiss-backed search to this workload
-and provides options for choosing both the donors and the search method.
-Consider it when neighbor search is a bottleneck or when you need
-options beyond those exposed by scikit-learn's `KNNImputer`.
+As the donor pool grows, distance calculations can become a major cost
+of KNN imputation. FaissImputer combines Faiss-backed neighbor search
+with explicit donor control and configurable search options within
+familiar scikit-learn preprocessing workflows.
 
-- **Choose which rows can contribute.** Use fully observed training rows,
-  or draw from partially observed rows separately for each missing
+- **Fit into scikit-learn workflows.** Use `FaissImputer` with
+  `Pipeline` and `ColumnTransformer`, NumPy arrays, and numerical
+  pandas DataFrames.
+- **Control donor eligibility.** Use fully observed training rows,
+  or let partially observed rows contribute separately for each missing
   feature. Complete-donor filtering is an additional policy that
-  KNNImputer does not expose.
-- **Explore search options for larger donor pools.** Complete-donor mode
-  supports trainable or approximate Faiss indexes alongside the default
-  Flat index. Available-donor mode requires Flat.
+  `KNNImputer` does not expose.
+- **Configure neighbor search.** With complete donors and built-in
+  metrics, use the default Flat index or supported trainable and
+  approximate Faiss indexes. Available-donor mode requires
+  `index_factory="Flat"`.
 
-The benefit depends on your workload and configuration; a larger donor
-pool does not guarantee a speedup. See the
-[performance measurements](https://github.com/ScionKim/FaissImputer#performance)
-for measured examples and trade-offs.
+[See measured results and trade-offs](#performance).
 
 ## Installation
 
@@ -61,73 +60,76 @@ print(result)
 # [[ 1.8 20. ]]
 ```
 
-Work with NumPy arrays or pandas DataFrames, use scikit-learn pipelines,
-and retain feature names and optional missing-value indicators.
-[See more examples](https://github.com/ScionKim/FaissImputer/blob/main/docs/usage.md).
+[More examples](https://github.com/ScionKim/FaissImputer/blob/main/docs/usage.md)
+cover preprocessing pipelines, pandas output, missing-value indicators,
+custom metrics, and donor policies.
 
 ## Choose which rows can help
 
-Choose a donor policy to match your training data:
+A nearby row can fill a missing value only if it contains that value.
+
+Choose a donor policy to control which training rows can contribute:
 
 | Policy | Which rows contribute? |
 | --- | --- |
 | `complete` — default | Training rows observed in every non-empty feature. At least `n_neighbors` eligible complete rows are required when non-empty features exist. |
 | `available` | Partially observed rows can contribute to the features they contain. With built-in L2 metrics, they must also share an observed feature with the query. |
 
-For incomplete training data, start with available donors:
+For incomplete training data, you can allow partially observed donors:
 
 ```python
-imputer = FaissImputer(n_neighbors=5, donor_policy="available")
+imputer = FaissImputer(
+    n_neighbors=5,
+    donor_policy="available",
+)
 ```
 
 Available mode requires `index_factory="Flat"`, permits fewer than
 `n_neighbors` usable donors, and falls back to a fitted column statistic
-when no donor is usable. Changing the policy changes the donor pool and
-can change reconstruction quality.
+when no donor is usable. Changing the donor policy changes the candidate
+pool and can affect both reconstruction quality and runtime.
 
 You can also choose mean or median aggregation, configure weights, or
 provide a custom distance function. The
 [API reference](https://github.com/ScionKim/FaissImputer/blob/main/docs/api.md)
-explains the supported combinations, precision safeguards, and edge cases.
+documents supported combinations, numerical safeguards, memory
+considerations, and edge cases.
 
 ## Performance
 
+Performance varies with donor count, workload size, dtype, missingness,
+and configuration. The results below are measured examples, not a
+universal speed guarantee.
+
 ### Transform performance — published 0.3.21
 
-This benchmark compares the published **FaissImputer 0.3.21** release
-with **scikit-learn KNNImputer 1.9.1** on one available-donor workload.
+The chart compares the published **FaissImputer 0.3.21** release in
+available-donor mode with **scikit-learn KNNImputer 1.9.1**.
 
 ![Published FaissImputer 0.3.21 available-donor first-transform benchmark: float32 100.39 ms versus KNNImputer 274.60 ms, float64 119.33 ms versus 332.68 ms; median paired speedups 2.77x and 2.76x, excluding fit.](https://raw.githubusercontent.com/ScionKim/FaissImputer/main/docs/assets/available-transform-0.3.21.png)
 
 The workload used 20,000 training rows, 300 held-out queries, 20 features,
-five neighbors, and uniform-weight mean aggregation. Training data had
-10% MCAR missingness; each query had four missing features. Measurements
-used one native thread on an AMD EPYC 7763 runner.
+and five neighbors with uniform weights. Training missingness was 10%;
+each query had four missing features. The chart reports median
+first-transform latency in **milliseconds, excluding fit**. Speedups
+are medians of matched KNNImputer/FaissImputer timing ratios.
 
-The chart reports first-transform latency in **milliseconds, excluding
-fit**. Times summarize three seeds and three fresh workers per seed,
-with a small untimed warmup. Bars show medians and whiskers show the
-observed minimum and maximum. Speedups are medians of nine matched
-KNNImputer/FaissImputer timing ratios, not ratios of the displayed medians.
+Fitting itself took longer than KNNImputer. Including fit, the median
+paired speedup was **2.49×** for both tested dtypes. Whole-worker peak
+RSS was slightly higher than KNNImputer.
 
-Fitting took longer than KNNImputer. Including fit, the median paired
-speedup was **2.49×** for both dtypes. Whole-worker peak RSS was slightly
-higher than KNNImputer.
+In the archived real-data studies below, available mode was slower than
+KNNImputer on Wine Quality for both tested dtypes and on Abalone float64,
+but faster on Abalone float32.
 
-Performance varies with donor count, workload size, dtype, missingness,
-and configuration. In the archived real-data studies linked below,
-available mode was slower than KNNImputer on Wine Quality for both
-tested dtypes and on Abalone float64, but faster on Abalone float32.
-These studies identify the versions or source commits actually measured.
-
-[Full comparison and methodology](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.21.md)
+[Full results, environment, and methodology](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.21.md)
 · [Raw measurements](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21.zip)
 · [Unrounded summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21-summary.json)
 
 ### Explore other workloads
 
 Each report identifies the version or source commit actually measured
-and links to its raw evidence and reproduction instructions.
+and links to raw evidence and reproduction instructions.
 
 | Study | What it covers |
 | --- | --- |
@@ -135,26 +137,23 @@ and links to its raw evidence and reproduction instructions.
 | [Wine Quality and Abalone](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/real-data-datasets-ef04b1b.md) · `ef04b1b` | Held-out real-data comparisons covering speed, memory, reconstruction error, and donor counts. |
 | [Float64 refinement](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-selected-distances-c02b71d.md) · `c02b71d` | A source-build optimization comparison with matched timings and a separate same-code control. |
 
-Similar RMSE or MAE values describe similar aggregate reconstruction
+Similar RMSE or MAE values indicate similar aggregate reconstruction
 error on the tested data. They do not establish identical predictions
 or algorithmic equivalence.
 
-## Is it a fit for your project?
+## Compatibility notes
 
-Scale features appropriately before using distance-based imputation.
+Scale numerical features appropriately before distance-based imputation.
 
-FaissImputer is not a drop-in replacement for KNNImputer. Defaults,
-search precision, ties, and some edge cases differ. For KNNImputer
-comparisons, use `donor_policy="available"` and match the neighbor count,
-weights, and missing markers.
-
-KNNImputer remains a good choice when its behavior meets your needs and
-FaissImputer offers no measured advantage for your workload.
+FaissImputer is not a drop-in replacement for `KNNImputer`. Donor
+selection, defaults, search precision, tie handling, and some edge
+cases differ. For direct comparisons, use `donor_policy="available"`
+and match the neighbor count, weights, and missing-value markers.
 
 ## Learn more
 
-- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/main/docs/usage.md) — partial donors, indicators, custom metrics, and pandas pipelines.
-- [API reference](https://github.com/ScionKim/FaissImputer/blob/main/docs/api.md) — parameters, numerical behavior, and memory considerations.
+- [Usage examples](https://github.com/ScionKim/FaissImputer/blob/main/docs/usage.md) — donor policies, indicators, custom metrics, and pandas pipelines.
+- [API reference](https://github.com/ScionKim/FaissImputer/blob/main/docs/api.md) — parameters, supported combinations, numerical behavior, and memory considerations.
 - [Benchmark reports](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/README.md) — measurements, limitations, and reproducible evidence.
 - [Migration notes](https://github.com/ScionKim/FaissImputer/blob/main/docs/migration.md) — compatibility changes and historical correctness notes.
 - [Roadmap](https://github.com/ScionKim/FaissImputer/blob/main/ROADMAP.md) · [Release history](https://github.com/ScionKim/FaissImputer/releases).
