@@ -1,9 +1,8 @@
-"""Regenerate the archived 0.3.20/0.3.21 report without running imputers."""
+"""Regenerate archived published-release comparisons without running imputers."""
 
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
 from hashlib import sha256
 from io import BytesIO
 from itertools import product
@@ -16,25 +15,28 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = "benchmarks/results/released_versions_0.3.21.zip"
-REPORT = "docs/benchmarks/released_versions_0.3.21.md"
-SUMMARY = "benchmarks/results/released_versions_0.3.21-summary.json"
 MEMBER = "version_comparison_q300.json"
-ARCHIVE_SHA256 = "53ef359c45525b2fff05ea7a3cb9be685ba06c18ac742d68ba8882ad1377e229"
-JSON_SHA256 = "192ab6345645649e9a3587a50f82bd7a3359ab1de1e158414911172639354124"
-COMMIT = "693ce8ee0f9a44cdfe7aaab5d1af1233701eb0b1"
-RUN = "36645461314"
+RELEASES = {
+    "0.3.21": {
+        "previous": "0.3.20",
+        "archive_sha256": "53ef359c45525b2fff05ea7a3cb9be685ba06c18ac742d68ba8882ad1377e229",
+        "json_sha256": "192ab6345645649e9a3587a50f82bd7a3359ab1de1e158414911172639354124",
+        "commit": "693ce8ee0f9a44cdfe7aaab5d1af1233701eb0b1",
+        "run": "36645461314",
+    },
+    "0.3.22": {
+        "previous": "0.3.21",
+        "archive_sha256": "7a633e03bd86110380fae69d86713c420c1bfc3c81ccd61b95e56752c943532d",
+        "json_sha256": "f83c041b08242c64819707ccaf3052323d6404f0b465b9e9d8961577eb902bf5",
+        "commit": "4b5b9cbdc6d629ffa26fb2b6b47a24c268254b81",
+        "run": "36896955077",
+    },
+}
 POLICIES = ("complete", "available")
 DTYPES = ("float32", "float64")
 VARIANTS = ("knn", "previous", "current")
 SEEDS = (101, 202, 303)
 REPEATS = (1, 2, 3)
-VERSIONS = {"knn": "0.3.21", "previous": "0.3.20", "current": "0.3.21"}
-LABELS = {
-    "knn": "KNNImputer",
-    "previous": "FaissImputer 0.3.20",
-    "current": "FaissImputer 0.3.21",
-}
 TIMINGS = (
     "fit_seconds", "transform_seconds", "total_seconds",
     "repeated_transform_median_seconds",
@@ -69,6 +71,23 @@ COMMON_CONFIG = {
     "seeds": list(SEEDS), "repeats": 3, "repeated_transforms": 2,
     "sklearn_working_memory_mib": 256, "expected_workers": 108,
 }
+
+
+def release_profile(version):
+    evidence = RELEASES[version]
+    return {
+        **evidence,
+        "current": version,
+        "archive": f"benchmarks/results/released_versions_{version}.zip",
+        "report": f"docs/benchmarks/released_versions_{version}.md",
+        "summary": f"benchmarks/results/released_versions_{version}-summary.json",
+        "versions": {"knn": version, "previous": evidence["previous"], "current": version},
+        "labels": {
+            "knn": "KNNImputer",
+            "previous": f"FaissImputer {evidence['previous']}",
+            "current": f"FaissImputer {version}",
+        },
+    }
 
 
 def require(condition, message):
@@ -115,9 +134,9 @@ def parse_freeze(text):
     return result
 
 
-def read_archive(path):
+def read_archive(path, profile):
     raw = path.read_bytes()
-    require(sha256(raw).hexdigest() == ARCHIVE_SHA256, "Archive SHA-256 mismatch")
+    require(sha256(raw).hexdigest() == profile["archive_sha256"], "Archive SHA-256 mismatch")
     with ZipFile(BytesIO(raw)) as archive:
         expected = {
             MEMBER, "current-environment.txt", "previous-environment.txt",
@@ -127,7 +146,7 @@ def read_archive(path):
         require(len(names) == len(expected) and set(names) == expected,
                 "Unexpected or duplicate archive members")
         raw_json = archive.read(MEMBER)
-        require(sha256(raw_json).hexdigest() == JSON_SHA256,
+        require(sha256(raw_json).hexdigest() == profile["json_sha256"],
                 "Raw JSON SHA-256 mismatch")
         freezes = {
             name: parse_freeze(archive.read(name).decode("utf-8"))
@@ -151,22 +170,23 @@ def check_module(environment, variant):
     ), f"Unexpected installed module path for {variant}")
 
 
-def validate(data, freezes):
+def validate(data, freezes, profile):
+    versions, labels = profile["versions"], profile["labels"]
     require(data["schema_version"] == 1, "Unexpected raw schema")
     params, metadata, records = data["parameters"], data["metadata"], data["records"]
     for key, value in COMMON_CONFIG.items():
         require(params[key] == value, f"Unexpected parameter: {key}")
-    require(params["labels"] == LABELS, "Unexpected method labels")
-    require(params["faiss_imputer_environment_versions"] == VERSIONS,
+    require(params["labels"] == labels, "Unexpected method labels")
+    require(params["faiss_imputer_environment_versions"] == versions,
             "Unexpected package versions")
-    require(metadata["git_commit"] == COMMIT and metadata["github_run_id"] == RUN
+    require(metadata["git_commit"] == profile["commit"] and metadata["github_run_id"] == profile["run"]
             and metadata["github_run_attempt"] == "1", "Unexpected provenance")
-    require(metadata["faiss_imputer"] == "0.3.21", "Unexpected coordinator package")
+    require(metadata["faiss_imputer"] == profile["current"], "Unexpected coordinator package")
     check_module(metadata, "current")
     shared = freezes["shared-dependencies.txt"]
     for variant in ("previous", "current"):
         require(freezes[f"{variant}-environment.txt"] ==
-                {**shared, "faiss-imputer": VERSIONS[variant]},
+                {**shared, "faiss-imputer": versions[variant]},
                 f"Dependency mismatch in {variant} environment")
     for field, package in (("numpy", "numpy"), ("faiss", "faiss-cpu"),
                            ("scikit_learn", "scikit-learn")):
@@ -182,7 +202,7 @@ def validate(data, freezes):
         require(record["status"] == "ok" and record["checks_passed"] is True,
                 f"Failed worker: {key}")
         method = "KNNImputer" if variant == "knn" else f"FaissImputer[{policy}]"
-        require(record["method"] == method and record["expected_version"] == VERSIONS[variant],
+        require(record["method"] == method and record["expected_version"] == versions[variant],
                 f"Incorrect method/version: {key}")
         expected_record = {
             "size": 20000, "queries": 300, "pattern": "random", "threads": 1,
@@ -195,7 +215,7 @@ def validate(data, freezes):
         env = record["environment"]
         require(all(env[field] == metadata[field] for field in ENVIRONMENT_FIELDS),
                 f"Worker environment mismatch: {key}")
-        require(env["faiss_imputer"] == VERSIONS[variant], f"Installed version mismatch: {key}")
+        require(env["faiss_imputer"] == versions[variant], f"Installed version mismatch: {key}")
         check_module(env, variant)
         require(record["threadpools"] and all(pool["num_threads"] == 1
                 for pool in record["threadpools"]), f"Native thread count mismatch: {key}")
@@ -249,15 +269,15 @@ def validate(data, freezes):
         group = [indexed[key + (seed, repeat)] for seed, repeat in product(SEEDS, REPEATS)]
         require(summary["planned_workers"] == summary["successful_workers"] == 9,
                 f"Stored summary count mismatch: {key}")
-        require(summary["label"] == LABELS[key[2]], f"Stored summary label mismatch: {key}")
+        require(summary["label"] == labels[key[2]], f"Stored summary label mismatch: {key}")
         for field in SUMMARY_FIELDS:
             require(summary[field] == stats(record[field] for record in group),
                     f"Stored summary disagrees with raw records: {key}/{field}")
     return indexed, cases
 
 
-def analyze(data, freezes):
-    indexed, cases = validate(data, freezes)
+def analyze(data, freezes, profile):
+    indexed, cases = validate(data, freezes, profile)
     cells, comparisons, case_rows = [], [], []
     for policy, dtype, variant in product(POLICIES, DTYPES, VARIANTS):
         group = [indexed[(policy, dtype, variant, seed, repeat)]
@@ -270,7 +290,7 @@ def analyze(data, freezes):
                            for record in group if record["repeat"] == 1]
         cells.append({
             "training_policy": policy, "dtype": dtype, "variant": variant,
-            "label": LABELS[variant], "record_count": len(group),
+            "label": profile["labels"][variant], "record_count": len(group),
             "quality_seed_count": len(quality_samples),
             "timing": {field: stats(record[field] for record in group) for field in TIMINGS},
             "memory": {field: stats(record[field] for record in group) for field in MEMORY},
@@ -327,9 +347,9 @@ def analyze(data, freezes):
     return {
         "schema_version": 1,
         "source": {
-            "archive": ARCHIVE, "archive_sha256": ARCHIVE_SHA256,
-            "json_member": MEMBER, "json_sha256": JSON_SHA256,
-            "benchmark_commit": COMMIT, "github_run_id": RUN, "github_run_attempt": "1",
+            "archive": profile["archive"], "archive_sha256": profile["archive_sha256"],
+            "json_member": MEMBER, "json_sha256": profile["json_sha256"],
+            "benchmark_commit": profile["commit"], "github_run_id": profile["run"], "github_run_attempt": "1",
         },
         "configuration": COMMON_CONFIG,
         "environment": {field: data["metadata"][field] for field in ENVIRONMENT_FIELDS},
@@ -369,20 +389,117 @@ def table(headers, rows):
     return "\n".join(lines)
 
 
-def render_report(result):
-    cells, comparisons = result["cells"], result["comparisons"]
-    environment = result["environment"]
+def release_interpretation(result, profile):
+    """Keep the historical prose stable; derive new observations from records."""
+    comparisons = result["comparisons"]
     release_pairs = [c for c in comparisons if c["numerator_variant"] == "previous"]
     current_pairs = [c for c in comparisons if c["numerator_variant"] == "knn"
                      and c["denominator_variant"] == "current"]
-    complete32 = next(c for c in release_pairs if c["training_policy"] == "complete"
-                      and c["dtype"] == "float32")
-    available_pairs = [c for c in current_pairs if c["training_policy"] == "available"]
-    available_speedups = [c["speedup"]["transform_seconds"]["median"] for c in available_pairs]
     release_hash_matches = sum(c["matching_output_hashes"] for c in release_pairs)
     release_pair_count = sum(c["pair_count"] for c in release_pairs)
+    available_speedups = [c["speedup"]["transform_seconds"]["median"]
+                          for c in current_pairs if c["training_policy"] == "available"]
+    if profile["current"] == "0.3.21":
+        complete32 = next(c for c in release_pairs if c["training_policy"] == "complete"
+                          and c["dtype"] == "float32")
+        return [
+            f"- 0.3.21 and 0.3.20 have matching full-output hashes in {release_hash_matches}/{release_pair_count} "
+            "paired workers, with zero recorded scored-cell differences. This is evidence "
+            "for these measured cases, not a claim of equivalence for all inputs.",
+            f"- In the available regime, 0.3.21 first-transform paired speedup against KNN "
+            f"is {min(available_speedups):.3f}\u2013{max(available_speedups):.3f}\u00d7 across the two dtypes. "
+            "Its full-worker peak RSS is higher than the corresponding KNN baseline. "
+            "Timing improvements therefore do not imply a memory improvement for this workload.",
+            f"- Complete float32 0.3.21 total duration increased by a median "
+            f"{complete32['denominator_duration_change_percent']['total_seconds']['median']:.4f}% "
+            "in the matched pairs. The small release-to-release differences are reported "
+            "as observations from this run; no statistical significance or cause is established.",
+            "- Available-mode hashes differ from KNN despite close RMSE/MAE. Complete-mode "
+            "hash agreement here occurs with fully observed training data and does not "
+            "generalize to the incomplete-training OFAT setup.",
+            "- This general synthetic workload does not demonstrate that the 0.3.21 "
+            "precision-repair path was triggered. It is not a targeted underflow/overflow test.",
+        ]
+
+    available64 = next(c for c in release_pairs if c["training_policy"] == "available"
+                       and c["dtype"] == "float64")
+    other_speedups = [c["speedup"]["transform_seconds"]["median"]
+                      for c in release_pairs if c is not available64]
+    faster_first = sum(p["timing"]["transform_seconds"]["ratio"] > 1
+                       for p in available64["pairs"])
+    previous32 = next(c for c in result["cells"] if c["training_policy"] == "available"
+                      and c["dtype"] == "float32" and c["variant"] == "previous")
+    largest_fit = max(previous32["samples"], key=lambda sample: sample["fit_seconds"])
+    other_fits = [s["fit_seconds"] for s in previous32["samples"] if s is not largest_fit]
+    current, previous = profile["current"], profile["previous"]
+    max_release_difference = max(c["max_worker_scored_abs_difference"] for c in release_pairs)
+    return [
+        f"- {current} and {previous} have matching full-output hashes in "
+        f"{release_hash_matches}/{release_pair_count} paired workers. The maximum recorded "
+        f"scored-cell difference is {max_release_difference:.12g}. This is evidence for "
+        "these measured cases, not a claim of equivalence for all inputs.",
+        f"- Available float64 first-transform speedup ({previous}/{current}) is "
+        f"{available64['speedup']['transform_seconds']['median']:.4f}\u00d7; "
+        f"{faster_first}/{available64['pair_count']} matched first transforms favor {current}. "
+        "The median paired duration changes are "
+        f"{available64['denominator_duration_change_percent']['transform_seconds']['median']:+.4f}% "
+        "for first transform and "
+        f"{available64['denominator_duration_change_percent']['total_seconds']['median']:+.4f}% "
+        "for fit plus first transform; negative changes mean less time. "
+        "The additional-transform paired speedup is "
+        f"{available64['speedup']['repeated_transform_median_seconds']['median']:.4f}\u00d7.",
+        "- The other three policy/dtype cells have median release-to-release "
+        f"first-transform ratios of {min(other_speedups):.4f}\u2013{max(other_speedups):.4f}\u00d7. "
+        "These are descriptive observations; no statistical significance is established.",
+        f"- In the available regime, {current} first-transform paired speedup against KNN "
+        f"is {min(available_speedups):.3f}\u2013{max(available_speedups):.3f}\u00d7 across the two dtypes. "
+        "Its median full-worker peak RSS is higher than the corresponding KNN baseline "
+        "for both dtypes. Peak RSS does not isolate the selected-distance workspace.",
+        f"- Retained timing observation: {previous} available float32, "
+        f"seed {largest_fit['seed']}, repeat {largest_fit['repeat']}, has fit time "
+        f"{largest_fit['fit_seconds']:.6f} s. The other eight fits range from "
+        f"{min(other_fits):.6f} to {max(other_fits):.6f} s. This worker contributes "
+        "to the timing range and its matched total-time ratio; no samples are excluded.",
+        "- Available-mode full-output hashes differ from KNN despite close RMSE/MAE. "
+        "The maximum scored-cell differences and metric differences are reported above. "
+        "Complete-mode hash agreement here uses fully observed training data and does "
+        "not generalize to incomplete-training OFAT cases or other inputs.",
+        f"- This comparison uses {result['environment']['cpu_model']}. The "
+        "[earlier published 0.3.21 report](released_versions_0.3.21.md) used AMD EPYC 7763. "
+        "Cross-run changes in absolute times or KNN-relative speedups do not isolate "
+        "a package-version effect. Release comparisons in this report use matched "
+        "records from this one Intel run.",
+    ]
+
+
+def render_report(result, profile):
+    cells, comparisons = result["cells"], result["comparisons"]
+    environment = result["environment"]
+    current, previous, labels = profile["current"], profile["previous"], profile["labels"]
+    release_pairs = [c for c in comparisons if c["numerator_variant"] == "previous"]
+    reproduction = (
+        "The analysis uses only the Python standard library and the preserved ZIP; "
+        "it does not install or execute either imputer. The analysis workflow regenerates "
+        "this report and the full-precision JSON, compares them byte-for-byte with "
+        "the committed copies, and uploads the generated outputs. It runs for relevant "
+        "pull requests and can be dispatched manually once present on the default branch."
+    )
+    if current == "0.3.22":
+        reproduction = (
+            "The analysis uses only the Python standard library and the preserved ZIP; "
+            "it does not install or execute either imputer. The generator selects this "
+            "archive with `--release 0.3.22`; omitting `--release` retains the historical "
+            "0.3.21 output. The Analyze released-version benchmark results workflow "
+            "regenerates both releases and uploads their Markdown reports and full-precision "
+            "JSON summaries. Committed outputs are compared byte-for-byte. For initial "
+            "preservation, a push to `bench/released-0.3.22` or a manual run may generate "
+            "the 0.3.22 files when both are absent; "
+            "it still verifies the existing 0.3.21 files. Upload both new outputs, then "
+            "the pull-request check requires and verifies both releases. A partially "
+            "present output pair fails instead of silently skipping comparison."
+        )
     lines = [
-        "# Released-package comparison: 0.3.21 and 0.3.20",
+        f"# Released-package comparison: {current} and {previous}",
         "",
         "[Benchmark index](README.md) \u00b7 [Project README](../../README.md#performance)",
         "",
@@ -392,12 +509,12 @@ def render_report(result):
         "",
         "## Evidence and configuration",
         "",
-        f"- [Preserved original artifact](../../{ARCHIVE}) (uploaded without modification).",
-        f"- [Full-precision analysis](../../{SUMMARY}) and [generator](../../benchmarks/analyze_released_versions.py).",
-        f"- [GitHub Actions run](https://github.com/ScionKim/FaissImputer/actions/runs/{RUN}/attempts/1).",
-        f"- Benchmark source commit: `{COMMIT}`; this identifies the benchmark runner, not an editable package installation.",
-        f"- Archive SHA-256: `{ARCHIVE_SHA256}`.",
-        f"- `{MEMBER}` SHA-256: `{JSON_SHA256}`.",
+        f"- [Preserved original artifact](../../{profile['archive']}) (uploaded without modification).",
+        f"- [Full-precision analysis](../../{profile['summary']}) and [generator](../../benchmarks/analyze_released_versions.py).",
+        f"- [GitHub Actions run](https://github.com/ScionKim/FaissImputer/actions/runs/{profile['run']}/attempts/1).",
+        f"- Benchmark source commit: `{profile['commit']}`; this identifies the benchmark runner, not an editable package installation.",
+        f"- Archive SHA-256: `{profile['archive_sha256']}`.",
+        f"- `{MEMBER}` SHA-256: `{profile['json_sha256']}`.",
         f"- Runner: {environment['cpu_model']}; {environment['logical_cpus']} logical CPUs, "
         f"{environment['affinity_cpus']} CPUs in affinity; requested and recorded native thread counts are one.",
         f"- Python {environment['python']}; NumPy {environment['numpy']}; "
@@ -413,7 +530,7 @@ def render_report(result):
         "speed and quality differences do not isolate donor policy.",
         "",
         "The two environments have identical archived dependency freezes except for "
-        "faiss-imputer (0.3.20 versus 0.3.21). KNNImputer runs in the 0.3.21 environment. "
+        f"faiss-imputer ({previous} versus {current}). KNNImputer runs in the {current} environment. "
         "The analyzer checks package versions, installed site-packages locations, common "
         "environment metadata, full worker-grid coverage, input fingerprints, and all "
         "stored summary statistics against raw records.",
@@ -463,13 +580,13 @@ def render_report(result):
               "Each entry is median [min\u2013max] of nine paired ratios. KNN/Faiss uses the "
               "KNN baseline for the same training regime. First and additional transforms remain separate.", "", table(
         ["Regime", "dtype", "Denominator", "KNN/Faiss fit", "KNN/Faiss first transform", "KNN/Faiss total", "KNN/Faiss additional transform"],
-        [[c["training_policy"], c["dtype"], LABELS[c["denominator_variant"]],
+        [[c["training_policy"], c["dtype"], labels[c["denominator_variant"]],
           *(formatted(c["speedup"][f], 3) for f in TIMINGS)]
          for c in comparisons if c["numerator_variant"] == "knn"],
     ), "", "### Release-to-release comparison", "",
-              "Speedups use 0.3.20 time / 0.3.21 time. Total-duration change is calculated "
-              "per pair as `100 * (0.3.21 total / 0.3.20 total - 1)` and then summarized; "
-              "positive percentages mean 0.3.21 took longer.", "", table(
+              f"Speedups use {previous} time / {current} time. Total-duration change is calculated "
+              f"per pair as `100 * ({current} total / {previous} total - 1)` and then summarized; "
+              f"positive percentages mean {current} took longer.", "", table(
         ["Regime", "dtype", "Fit ratio", "First-transform ratio", "Total ratio", "Additional-transform ratio", "Total-duration change (%)"],
         [[c["training_policy"], c["dtype"], *(formatted(c["speedup"][f], 4) for f in TIMINGS),
           formatted(c["denominator_duration_change_percent"]["total_seconds"], 4)]
@@ -496,7 +613,7 @@ def render_report(result):
               "pairs, but only three distinct seed inputs. Differences are maxima over those pairs.", "", table(
         ["Regime", "dtype", "Comparison", "Matching full-output hashes", "Max scored-cell difference", "Max RMSE difference", "Max MAE difference"],
         [[c["training_policy"], c["dtype"],
-          "0.3.21 vs " + ("KNNImputer" if c["numerator_variant"] == "knn" else "0.3.20"),
+          f"{current} vs " + ("KNNImputer" if c["numerator_variant"] == "knn" else previous),
           f"{c['matching_output_hashes']}/{c['pair_count']}",
           f"{c['max_worker_scored_abs_difference']:.12g}",
           f"{c['max_absolute_rmse_difference']:.12g}", f"{c['max_absolute_mae_difference']:.12g}"]
@@ -512,51 +629,43 @@ def render_report(result):
           f"{100*c['train_missing_rate']:.4f}", c["query_patterns"], c["scored_cells"]]
          for c in result["cases"]],
     ), "", "## Interpretation and limits", "",
-              f"- 0.3.21 and 0.3.20 have matching full-output hashes in {release_hash_matches}/{release_pair_count} "
-              "paired workers, with zero recorded scored-cell differences. This is evidence "
-              "for these measured cases, not a claim of equivalence for all inputs.",
-              f"- In the available regime, 0.3.21 first-transform paired speedup against KNN "
-              f"is {min(available_speedups):.3f}\u2013{max(available_speedups):.3f}\u00d7 across the two dtypes. "
-              "Its full-worker peak RSS is higher than the corresponding KNN baseline. "
-              "Timing improvements therefore do not imply a memory improvement for this workload.",
-              f"- Complete float32 0.3.21 total duration increased by a median "
-              f"{complete32['denominator_duration_change_percent']['total_seconds']['median']:.4f}% "
-              "in the matched pairs. The small release-to-release differences are reported "
-              "as observations from this run; no statistical significance or cause is established.",
-              "- Available-mode hashes differ from KNN despite close RMSE/MAE. Complete-mode "
-              "hash agreement here occurs with fully observed training data and does not "
-              "generalize to the incomplete-training OFAT setup.",
-              "- This general synthetic workload does not demonstrate that the 0.3.21 "
-              "precision-repair path was triggered. It is not a targeted underflow/overflow test.",
+              *release_interpretation(result, profile),
               "- Startup, data generation, warmup, validation, RSS sampling, and garbage "
               "collection between timed phases are excluded from the measured timings. "
               "The additional transforms are warm calls on the already fitted model. "
               "These results do not establish behavior on all data sizes, hardware, or datasets.",
               "", "## Reproduction", "",
-              "The analysis uses only the Python standard library and the preserved ZIP; "
-              "it does not install or execute either imputer. The analysis workflow regenerates "
-              "this report and the full-precision JSON, compares them byte-for-byte with "
-              "the committed copies, and uploads the generated outputs. It runs for relevant "
-              "pull requests and can be dispatched manually once present on the default branch.",
+              reproduction,
               "", "[Analysis workflow](../../.github/workflows/analyze-released-versions.yml)", ""]
     return "\n".join(lines)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=ROOT / ARCHIVE)
-    parser.add_argument("--report", type=Path, default=ROOT / REPORT)
-    parser.add_argument("--summary", type=Path, default=ROOT / SUMMARY)
+    parser.add_argument("--release", choices=tuple(RELEASES), default="0.3.21")
+    parser.add_argument("--input", type=Path)
+    parser.add_argument("--report", type=Path)
+    parser.add_argument("--summary", type=Path)
     args = parser.parse_args()
-    data, freezes = read_archive(args.input)
-    result = analyze(data, freezes)
-    report_text = render_report(result)
+    profile = release_profile(args.release)
+    input_path = args.input if args.input is not None else ROOT / profile["archive"]
+    report_path = args.report if args.report is not None else ROOT / profile["report"]
+    summary_path = args.summary if args.summary is not None else ROOT / profile["summary"]
+    outputs = (report_path.resolve(), summary_path.resolve())
+    protected = {input_path.resolve()} | {
+        (ROOT / release_profile(version)["archive"]).resolve() for version in RELEASES
+    }
+    require(outputs[0] != outputs[1], "Report and summary must use different output paths")
+    require(not protected.intersection(outputs), "Output would overwrite a raw archive")
+    data, freezes = read_archive(input_path, profile)
+    result = analyze(data, freezes, profile)
+    report_text = render_report(result, profile)
     summary_text = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
-    for path, text in ((args.report, report_text), (args.summary, summary_text)):
-        require(path.resolve() != args.input.resolve(), "Output would overwrite raw archive")
+    for path, text in ((report_path, report_text), (summary_path, summary_text)):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(text.encode("utf-8"))
-    print("Validated 108 workers and 12 stored summaries; generated report and full-precision JSON.")
+    print(f"Validated {args.release}: 108 workers and 12 stored summaries; "
+          "generated report and full-precision JSON.")
 
 
 if __name__ == "__main__":

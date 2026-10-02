@@ -1,10 +1,10 @@
 # FaissImputer
 
-**Fast KNN imputation with control over which rows can help.**
+**KNN imputation for incomplete numerical data with Faiss-backed neighbor search.**
 
-A nearby row is useful only if it contains the value you need.
-FaissImputer lets you choose between complete donors and partially
-observed donors, with a familiar scikit-learn interface.
+FaissImputer fills missing values using nearby training rows, with a
+familiar scikit-learn interface. A *donor* is a training row used to
+supply a value for a missing feature.
 
 [![PyPI](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
 [![Python](https://img.shields.io/pypi/pyversions/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
@@ -16,21 +16,24 @@ observed donors, with a familiar scikit-learn interface.
 
 ## Why FaissImputer?
 
-- **Choose donors to suit your data.** Use fully observed training rows,
+As the donor pool grows, finding neighbors can become a major cost of
+KNN imputation. FaissImputer brings Faiss-backed search to this workload
+and provides options for choosing both the donors and the search method.
+Consider it when neighbor search is a bottleneck or when you need
+options beyond those exposed by scikit-learn's `KNNImputer`.
+
+- **Choose which rows can contribute.** Use fully observed training rows,
   or draw from partially observed rows separately for each missing
   feature. Complete-donor filtering is an additional policy that
   KNNImputer does not expose.
-- **Get more search options.** Complete-donor mode supports native
-  inner-product search and trainable or approximate Faiss indexes,
-  alongside the default Flat index.
-- **Account for numerical edge cases.** Distance search and aggregation
-  include targeted precision and overflow safeguards, backed by
-  regression tests. Their scope and limits are documented in the
-  [API reference](https://github.com/ScionKim/FaissImputer/blob/main/docs/api.md).
+- **Explore search options for larger donor pools.** Complete-donor mode
+  supports trainable or approximate Faiss indexes alongside the default
+  Flat index. Available-donor mode requires Flat.
 
-![Published FaissImputer 0.3.21 available-donor first-transform benchmark: float32 100.39 ms versus KNNImputer 274.60 ms, float64 119.33 ms versus 332.68 ms; median paired speedups 2.77x and 2.76x, excluding fit.](https://raw.githubusercontent.com/ScionKim/FaissImputer/main/docs/assets/available-transform-0.3.21.png)
-
-[See the benchmark conditions, results, and trade-offs](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.21.md).
+The benefit depends on your workload and configuration; a larger donor
+pool does not guarantee a speedup. See the
+[performance measurements](https://github.com/ScionKim/FaissImputer#performance)
+for measured examples and trade-offs.
 
 ## Installation
 
@@ -64,8 +67,7 @@ and retain feature names and optional missing-value indicators.
 
 ## Choose which rows can help
 
-A nearby row can fill a missing value only if it contains that value.
-FaissImputer gives you two ways to choose those *donors*:
+Choose a donor policy to match your training data:
 
 | Policy | Which rows contribute? |
 | --- | --- |
@@ -90,33 +92,33 @@ explains the supported combinations, precision safeguards, and edge cases.
 
 ## Performance
 
-### Published 0.3.21: a separate-query comparison
+### Transform performance — published 0.3.21
 
-**2.76–2.77× the first-transform speed of KNNImputer on one
-available-donor workload.** These measurements are from the published
-FaissImputer **0.3.21** package.
+This benchmark compares the published **FaissImputer 0.3.21** release
+with **scikit-learn KNNImputer 1.9.1** on one available-donor workload.
+
+![Published FaissImputer 0.3.21 available-donor first-transform benchmark: float32 100.39 ms versus KNNImputer 274.60 ms, float64 119.33 ms versus 332.68 ms; median paired speedups 2.77x and 2.76x, excluding fit.](https://raw.githubusercontent.com/ScionKim/FaissImputer/main/docs/assets/available-transform-0.3.21.png)
 
 The workload used 20,000 training rows, 300 held-out queries, 20 features,
 five neighbors, and uniform-weight mean aggregation. Training data had
 10% MCAR missingness; each query had four missing features. Measurements
 used one native thread on an AMD EPYC 7763 runner.
 
-First-transform times in milliseconds, **excluding fit**:
-
-| Input | KNNImputer 1.9.1 | FaissImputer 0.3.21 | Paired speedup |
-| --- | ---: | ---: | ---: |
-| float32 | 274.60 [272.58–282.91] | 100.39 [97.96–104.07] | 2.77× |
-| float64 | 332.68 [320.05–341.91] | 119.33 [117.30–126.13] | 2.76× |
-
-Times are median [min–max] across three seeds and three fresh workers per
-seed, with a small untimed warmup. Speedups are medians of the nine matched
+The chart reports first-transform latency in **milliseconds, excluding
+fit**. Times summarize three seeds and three fresh workers per seed,
+with a small untimed warmup. Bars show medians and whiskers show the
+observed minimum and maximum. Speedups are medians of nine matched
 KNNImputer/FaissImputer timing ratios, not ratios of the displayed medians.
 
-Fitting took longer than KNNImputer. Fit plus first transform was **2.49×**
-as fast for both dtypes, while whole-worker peak RSS was slightly higher.
-Performance depends on the workload: available mode was slower than
-KNNImputer on Wine Quality for both tested dtypes and on Abalone for
-float64 in the real-data study linked below.
+Fitting took longer than KNNImputer. Including fit, the median paired
+speedup was **2.49×** for both dtypes. Whole-worker peak RSS was slightly
+higher than KNNImputer.
+
+Performance varies with donor count, workload size, dtype, missingness,
+and configuration. In the archived real-data studies linked below,
+available mode was slower than KNNImputer on Wine Quality for both
+tested dtypes and on Abalone float64, but faster on Abalone float32.
+These studies identify the versions or source commits actually measured.
 
 [Full comparison and methodology](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.21.md)
 · [Raw measurements](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21.zip)
@@ -139,14 +141,13 @@ or algorithmic equivalence.
 
 ## Is it a fit for your project?
 
-Use FaissImputer when nearest-neighbor imputation suits your numerical
-data and you want control over donor eligibility, aggregation, or Faiss
-search options. Scale features appropriately before using distances.
+Scale features appropriately before using distance-based imputation.
 
 FaissImputer is not a drop-in replacement for KNNImputer. Defaults,
 search precision, ties, and some edge cases differ. For KNNImputer
 comparisons, use `donor_policy="available"` and match the neighbor count,
 weights, and missing markers.
+
 KNNImputer remains a good choice when its behavior meets your needs and
 FaissImputer offers no measured advantage for your workload.
 
