@@ -1,4 +1,4 @@
-"""Compare installed releases on one held-out Wine Quality White case."""
+"""Compare installed releases on one held-out dataset and dtype per run."""
 
 import argparse
 import json
@@ -15,8 +15,10 @@ import numpy as np
 
 from benchmarks.benchmark_real_data_cases import (
     DATASET_DEFAULTS,
+    DTYPES,
     MISSING_RATE,
     N_NEIGHBORS,
+    UCI_DATASETS,
     load_dataset,
 )
 from benchmarks.benchmark_released_versions import COMMON_ENVIRONMENT, VARIANTS
@@ -29,6 +31,7 @@ from benchmarks.benchmark_scaling_threads import (
 
 
 DATASET_ID = "wine_quality_white"
+DATASETS = (DATASET_ID, "abalone")
 SEEDS = (101, 202, 303)
 REPEATS = 3
 TIMINGS = ("fit_seconds", "transform_seconds", "total_seconds")
@@ -43,8 +46,16 @@ FINGERPRINTS = (
 )
 
 
-def build_configs(previous_version, current_version, data_home):
-    defaults = DATASET_DEFAULTS[DATASET_ID]
+def build_configs(
+    previous_version, current_version, data_home, *,
+    dataset_id=DATASET_ID, dtype="float64",
+):
+    if dataset_id not in DATASETS:
+        raise ValueError(f"Unsupported dataset: {dataset_id}")
+    if dtype not in DTYPES:
+        raise ValueError(f"Unsupported dtype: {dtype}")
+    defaults = DATASET_DEFAULTS[dataset_id]
+    features = len(UCI_DATASETS[dataset_id]["feature_names"])
     configs = []
     for seed_index, seed in enumerate(SEEDS):
         for repeat in range(1, REPEATS + 1):
@@ -60,15 +71,15 @@ def build_configs(previous_version, current_version, data_home):
                         previous_version if variant == "previous"
                         else current_version
                     ),
-                    "dataset_id": DATASET_ID,
+                    "dataset_id": dataset_id,
                     "data_home": str(data_home),
                     "api": "fit_then_transform",
                     "training_policy": "available",
                     "train_size": 3000,
                     "query_size": 1000,
-                    "features": 11,
+                    "features": features,
                     "n_neighbors": N_NEIGHBORS,
-                    "dtype": "float64",
+                    "dtype": dtype,
                     "mechanism": "MCAR",
                     "missing_rate": MISSING_RATE,
                     "mar_reference_rows": defaults["mar_reference_rows"],
@@ -139,7 +150,10 @@ def validate_record(record, config, environment, dataset):
         raise ValueError("Unexpected installed package version")
     if record["dataset"] != dataset:
         raise ValueError("Dataset provenance differs from the parent")
-    if record["input_dtype"] != "float64" or record["output_dtype"] != "float64":
+    if (
+        record["input_dtype"] != config["dtype"]
+        or record["output_dtype"] != config["dtype"]
+    ):
         raise ValueError("Unexpected input or output dtype")
     if record["threads"] != 1 or record["faiss_omp_threads"] != 1:
         raise ValueError("Unexpected thread count")
@@ -224,11 +238,20 @@ def distribution(values):
     )
 
 
+def require_single_configuration(records):
+    """Reject pooled workloads while allowing multiple seeds and repeats."""
+    fields = [name for name in MATCH_FIELDS if name not in ("seed", "repeat")]
+    identities = {tuple(row[name] for name in fields) for row in records}
+    if len(identities) > 1:
+        raise ValueError("Cannot pool multiple benchmark configurations")
+
+
 def summarize(records):
     successful = [
         row for row in records
         if row["status"] == "ok" and row.get("checks_passed") is True
     ]
+    require_single_configuration(successful)
     summaries = []
     for variant in VARIANTS:
         rows = [row for row in successful if row["variant"] == variant]
@@ -295,6 +318,7 @@ def compare_records(records):
                     np.max(np.abs(left_values - right_values))
                 ),
             })
+        require_single_configuration(pair["match"] for pair in pairs)
         comparisons.append({
             "numerator_variant": numerator,
             "denominator_variant": denominator,
@@ -316,6 +340,8 @@ def main():
     parser.add_argument("--previous-version", required=True)
     parser.add_argument("--current-version", required=True)
     parser.add_argument("--data-home", type=Path, required=True)
+    parser.add_argument("--dataset", choices=DATASETS, default=DATASET_ID)
+    parser.add_argument("--dtype", choices=DTYPES, default="float64")
     parser.add_argument("--timeout-seconds", type=int, default=300)
     parser.add_argument("--budget-seconds", type=int, default=1200)
     parser.add_argument("--output", type=Path, required=True)
@@ -332,10 +358,13 @@ def main():
     data_home = args.data_home.absolute()
     # Preserve the validated source ZIP; workers only read the local cache.
     data, names, dataset = load_dataset(
-        data_home, dataset_id=DATASET_ID, download_if_missing=True
+        data_home, dataset_id=args.dataset, download_if_missing=True
     )
     del data, names
-    configs = build_configs(args.previous_version, args.current_version, data_home)
+    configs = build_configs(
+        args.previous_version, args.current_version, data_home,
+        dataset_id=args.dataset, dtype=args.dtype,
+    )
     interpreters = {
         "knn": sys.executable, "current": sys.executable,
         # Do not resolve the venv interpreter's executable symlink.
@@ -350,6 +379,7 @@ def main():
             "previous_version": args.previous_version,
             "current_version": args.current_version,
             "interpreters": interpreters,
+            "dataset_id": args.dataset, "dtype": args.dtype,
             "seeds": list(SEEDS), "repeats": REPEATS,
             "expected_workers": len(configs),
             "worker_timeout_seconds": args.timeout_seconds,
@@ -358,11 +388,13 @@ def main():
         },
         "planned_configs": configs,
         "notes": [
-            "One fixed Wine Quality White configuration; not a dataset sweep.",
+            f"One fixed {dataset['dataset']} {args.dtype} configuration per JSON.",
+            "Different datasets and dtypes are never pooled in summaries or paired ratios.",
             "Installed releases and KNN run in fresh sequential workers; order rotates.",
             "KNN uses the current-release environment; dependencies are shared.",
             "All variants and repeats for a seed must have identical prepared cases.",
-            "The alcohol feature stays observed; nominal overall missingness is 10%.",
+            f"The {DATASET_DEFAULTS[args.dataset]['mar_driver']} feature stays observed; "
+            "nominal overall missingness is 10%.",
             "Scaling uses observed training values only; scoring truth is float64.",
             "Fit and first transform are consecutive, without GC or RSS sampling between.",
             "Timing excludes preparation, warmup, validation and worker startup.",

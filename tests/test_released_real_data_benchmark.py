@@ -9,10 +9,13 @@ import pytest
 from benchmarks import benchmark_released_real_data as benchmark
 
 
-def make_records():
+def make_records(*, dataset_id="wine_quality_white", dtype="float64"):
     records = []
     for index, config in enumerate(
-        benchmark.build_configs("0.3.21", "0.3.22", "unused-data-cache")
+        benchmark.build_configs(
+            "0.3.21", "0.3.22", "unused-data-cache",
+            dataset_id=dataset_id, dtype=dtype,
+        )
     ):
         seed = config["seed"]
         records.append({
@@ -31,7 +34,9 @@ def make_records():
             "output_sha256": f"{seed:064x}",
             "case": {
                 "seed": seed,
-                "query_mask": {"missing_per_feature": [2] + [0] * 10},
+                "query_mask": {
+                    "missing_per_feature": [0, 2] + [0] * (config["features"] - 2),
+                },
                 "fingerprints": {
                     name: (
                         "a" * 64 if name == "dataset"
@@ -60,8 +65,85 @@ def comparison(records, numerator="previous", denominator="current"):
     )
 
 
-def test_planned_grid_has_balanced_order_and_correct_installed_versions():
-    configs = benchmark.build_configs("0.3.21", "0.3.22", "unused-data-cache")
+def validation_inputs(dataset_id, dtype):
+    config = next(
+        row for row in benchmark.build_configs(
+            "0.3.21", "0.3.22", "unused-data-cache",
+            dataset_id=dataset_id, dtype=dtype,
+        )
+        if row["variant"] == "current"
+    )
+    record = next(
+        row for row in make_records(dataset_id=dataset_id, dtype=dtype)
+        if row["variant"] == "current"
+    )
+    environment = {
+        name: "offline-test"
+        for name in (
+            *benchmark.COMMON_ENVIRONMENT, "platform", "cpu_model", "git_commit",
+        )
+    }
+    environment["faiss_imputer"] = config["expected_version"]
+    names = list(benchmark.UCI_DATASETS[dataset_id]["feature_names"])
+    dataset = {"feature_names": names, "dataset_sha256": "a" * 64}
+    record.update({
+        "environment": deepcopy(environment),
+        "dataset": deepcopy(dataset),
+        "input_dtype": dtype,
+        "output_dtype": dtype,
+        "faiss_omp_threads": 1,
+        "threadpools": [{"num_threads": 1}],
+        "sklearn_working_memory_mib": benchmark.WORKING_MEMORY_MIB,
+        "model_parameters": {
+            "n_neighbors": 5, "weights": "uniform", "copy": True,
+            "metric": "l2", "strategy": "mean",
+            "donor_policy": "available", "index_factory": "Flat",
+        },
+    })
+    record["case"].update({
+        "mechanism": "MCAR", "input_dtype": dtype, "truth_dtype": "float64",
+        "n_train": 3000, "n_query": 1000,
+        "nominal_overall_missing_rate": 0.10,
+        "feature_names": names,
+        "always_observed": [config["mar_driver"]],
+    })
+    record["feature_quality"] = [
+        {
+            "feature": name,
+            "scored_cells": count,
+            "rmse_standardized": 0.1 if count else None,
+            "mae_standardized": 0.1 if count else None,
+            "rmse_original_units": 0.1 if count else None,
+            "mae_original_units": 0.1 if count else None,
+        }
+        for name, count in zip(
+            names, record["case"]["query_mask"]["missing_per_feature"],
+        )
+    ]
+    return record, config, environment, dataset
+
+
+def test_default_configuration_remains_wine_float64():
+    assert benchmark.build_configs("0.3.21", "0.3.22", "unused-data-cache") == (
+        benchmark.build_configs(
+            "0.3.21", "0.3.22", "unused-data-cache",
+            dataset_id="wine_quality_white", dtype="float64",
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "dataset_id, features, mar_driver",
+    [("wine_quality_white", 11, "alcohol"), ("abalone", 7, "Length")],
+)
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_planned_grid_has_balanced_order_and_correct_installed_versions(
+    dataset_id, features, mar_driver, dtype
+):
+    configs = benchmark.build_configs(
+        "0.3.21", "0.3.22", "unused-data-cache",
+        dataset_id=dataset_id, dtype=dtype,
+    )
     assert len(configs) == 27
     assert Counter(row["variant"] for row in configs) == {
         "previous": 9, "current": 9, "knn": 9,
@@ -77,16 +159,18 @@ def test_planned_grid_has_balanced_order_and_correct_installed_versions():
             else "FaissImputer[available]"
         )
         for name, value in {
-            "dataset_id": "wine_quality_white",
+            "dataset_id": dataset_id,
             "api": "fit_then_transform",
             "training_policy": "available",
             "train_size": 3000,
             "query_size": 1000,
-            "features": 11,
+            "features": features,
             "n_neighbors": 5,
             "missing_rate": 0.10,
             "mechanism": "MCAR",
-            "dtype": "float64",
+            "dtype": dtype,
+            "mar_reference_rows": 1000,
+            "mar_driver": mar_driver,
             "threads": 1,
         }.items():
             assert config[name] == value
@@ -102,8 +186,37 @@ def test_planned_grid_has_balanced_order_and_correct_installed_versions():
         }
 
 
-def test_speedup_uses_matched_ratios_not_ratio_of_medians():
-    records = make_records()
+@pytest.mark.parametrize(
+    "overrides", [{"dataset_id": "california_housing"}, {"dtype": "float16"}],
+)
+def test_unsupported_dataset_or_dtype_is_rejected(overrides):
+    with pytest.raises(ValueError):
+        benchmark.build_configs("0.3.21", "0.3.22", "unused-data-cache", **overrides)
+
+
+@pytest.mark.parametrize("dataset_id", ["wine_quality_white", "abalone"])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_validate_record_accepts_configured_dtype_with_float64_truth(
+    dataset_id, dtype
+):
+    benchmark.validate_record(*validation_inputs(dataset_id, dtype))
+
+
+@pytest.mark.parametrize(
+    "dtype, wrong_dtype", [("float32", "float64"), ("float64", "float32")],
+)
+@pytest.mark.parametrize("field", ["input_dtype", "output_dtype"])
+def test_validate_record_rejects_wrong_input_or_output_dtype(dtype, wrong_dtype, field):
+    record, config, environment, dataset = validation_inputs("abalone", dtype)
+    record[field] = wrong_dtype
+    with pytest.raises(ValueError, match="Unexpected input or output dtype"):
+        benchmark.validate_record(record, config, environment, dataset)
+
+
+@pytest.mark.parametrize("dataset_id", ["wine_quality_white", "abalone"])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_speedup_uses_matched_ratios_not_ratio_of_medians(dataset_id, dtype):
+    records = make_records(dataset_id=dataset_id, dtype=dtype)
     durations = {
         "previous": {101: 1.0, 202: 10.0, 303: 100.0},
         "current": {101: 2.0, 202: 10.0, 303: 1.0},
@@ -154,6 +267,47 @@ def test_matching_does_not_cross_inputs_or_configuration(field, other_value):
     assert result["matched_pairs"] == 0
     assert not result["complete"]
     assert result["timing_ratios"]["total_seconds"]["median"] is None
+
+
+@pytest.mark.parametrize(
+    "other_configuration", [{"dataset_id": "abalone"}, {"dtype": "float32"}],
+    ids=["different-dataset", "different-dtype"],
+)
+@pytest.mark.parametrize(
+    "partial", [False, True], ids=["complete-inputs", "nine-mixed-pairs"],
+)
+@pytest.mark.parametrize("aggregate", [benchmark.summarize, benchmark.compare_records])
+def test_aggregates_reject_mixed_configurations(
+    other_configuration, partial, aggregate
+):
+    original = make_records()
+    other = make_records(**other_configuration)
+    if partial:
+        # These incomplete inputs total nine records/pairs per variant,
+        # so a count-only completeness check would accept the mixture.
+        original = [row for row in original if row["seed"] == 101]
+        other = [row for row in other if row["seed"] in (202, 303)]
+    records = original + other
+    for index, row in enumerate(records):
+        row["record_index"] = index
+    with pytest.raises(
+        ValueError, match="Cannot pool multiple benchmark configurations",
+    ):
+        aggregate(records)
+
+
+def test_failed_and_unchecked_other_configurations_do_not_poison_aggregates():
+    records = make_records()
+    other = make_records(dataset_id="abalone", dtype="float32")
+    for index, row in enumerate(other):
+        row["record_index"] += len(records)
+        if index % 2:
+            row["status"] = "validation_error"
+        else:
+            row["checks_passed"] = False
+    mixed = records + other
+    assert benchmark.summarize(mixed) == benchmark.summarize(records)
+    assert benchmark.compare_records(mixed) == benchmark.compare_records(records)
 
 
 def test_equal_configuration_with_different_input_fingerprint_is_rejected():
@@ -208,8 +362,12 @@ def test_missing_worker_cannot_be_reported_as_a_complete_comparison():
     assert not result["complete"]
 
 
-def test_quality_summarizes_seed_datasets_without_counting_timing_repeats():
-    records = make_records()
+@pytest.mark.parametrize("dataset_id", ["wine_quality_white", "abalone"])
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_quality_summarizes_seed_datasets_without_counting_timing_repeats(
+    dataset_id, dtype
+):
+    records = make_records(dataset_id=dataset_id, dtype=dtype)
     by_index = {row["record_index"]: row for row in records}
     for summary in benchmark.summarize(records):
         assert summary["complete"]
