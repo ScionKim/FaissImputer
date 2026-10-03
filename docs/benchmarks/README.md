@@ -44,6 +44,41 @@ version-to-version performance change.
 · [Original benchmark evidence](../../benchmarks/results/released_versions_0.3.22.zip)
 · [Full-precision summary](../../benchmarks/results/released_versions_0.3.22-summary.json)
 
+### Wine Quality White — published 0.3.22
+
+Comparison of published FaissImputer 0.3.21, FaissImputer 0.3.22,
+and KNNImputer on one AMD EPYC 9V74 runner, using 3,000 training rows,
+1,000 held-out queries, 11 features, five neighbors, and uniform weights.
+This case uses available donors, float64, and 10% target MCAR missingness.
+
+The median matched 0.3.21/0.3.22 timing ratio was 1.133× for the first
+transform and 1.132× for fit plus first transform. Version 0.3.22 was
+faster in all nine pairs for both measures. KNNImputer remained faster:
+the median matched KNNImputer/0.3.22 fit-plus-first-transform ratio was
+0.409×.
+
+All 27 workers passed their checks. Full-output hashes matched between
+the two FaissImputer releases in all nine pairs. RMSE and MAE against
+held-out ground truth matched across all three methods at the recorded
+precision, while individual imputed values differed from KNNImputer by
+up to 4.44e-16. These observations apply to this measured case and do
+not establish general prediction or algorithmic equivalence.
+
+Timings and whole-worker peak RSS use median [min–max] across nine
+records per method: three seeds and three repeats. Timing ratios are
+medians of nine matched record-level ratios, not ratios of method-level
+medians. Quality summaries use three seed datasets after verifying
+consistency across repeats.
+
+A standard-library analysis script regenerates the report and
+full-precision summary from the preserved ZIP. This Wine Quality run
+and the synthetic release comparison above are separate experiments.
+
+[Read the report](released_wine_quality_0.3.22.md)
+· [Original benchmark evidence](../../benchmarks/results/released_wine_quality_0.3.22.zip)
+· [Full-precision summary](../../benchmarks/results/released_wine_quality_0.3.22-summary.json)
+· [Analysis script](../../benchmarks/analyze_released_real_data.py)
+
 ## Historical version comparisons
 
 | Report | Coverage |

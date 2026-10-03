@@ -7,6 +7,7 @@ A *donor* is a training row used to supply a value for a missing feature.
 
 [![PyPI](https://img.shields.io/pypi/v/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
 [![Python](https://img.shields.io/pypi/pyversions/faiss-imputer.svg)](https://pypi.org/project/faiss-imputer/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ScionKim/FaissImputer/blob/main/LICENSE)
 [![Tests](https://github.com/ScionKim/FaissImputer/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ScionKim/FaissImputer/actions/workflows/tests.yml)
 
 [Examples](https://github.com/ScionKim/FaissImputer/blob/main/docs/usage.md)
@@ -135,6 +136,7 @@ and links to raw evidence and reproduction instructions.
 | --- | --- |
 | [Scaling and missingness](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/fit-transform-ofat-9683d03.md) · `9683d03` | A 12-run same-data sweep across rows, features, missingness, and neighbors. APIs and dtypes are reported separately. |
 | [Wine Quality and Abalone](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/real-data-datasets-ef04b1b.md) · `ef04b1b` | Held-out real-data comparisons covering speed, memory, reconstruction error, and donor counts. |
+| [Wine Quality — published 0.3.22](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_wine_quality_0.3.22.md) | Published 0.3.21, 0.3.22, and KNNImputer on 3,000 training rows and 1,000 held-out queries, using available donors, float64, and MCAR. Version 0.3.22 was faster than 0.3.21; KNNImputer remained faster in this case. |
 | [Float64 refinement](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/available-selected-distances-c02b71d.md) · `c02b71d` | A source-build optimization comparison with matched timings and a separate same-code control. |
 
 Similar RMSE or MAE values indicate similar aggregate reconstruction
