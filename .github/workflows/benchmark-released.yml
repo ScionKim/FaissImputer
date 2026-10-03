@@ -12,13 +12,14 @@ on:
           - candidate
           - released
       workload:
-        description: Synthetic comparison or held-out Wine Quality White
+        description: Synthetic, Wine Quality White, or Abalone comparison
         type: choice
         required: false
         default: synthetic
         options:
           - synthetic
           - wine_quality_white
+          - abalone
       baseline_commit:
         description: Optional baseline commit for candidate mode; blank uses PyPI 0.3.22
         type: string
@@ -77,20 +78,20 @@ jobs:
 
           benchmark_workload="${REQUESTED_WORKLOAD:-synthetic}"
           case "$benchmark_workload" in
-            synthetic|wine_quality_white) ;;
+            synthetic|wine_quality_white|abalone) ;;
             *)
               echo "Unknown benchmark workload: $benchmark_workload" >&2
               exit 1
               ;;
           esac
 
-          if [[ "$benchmark_workload" == "wine_quality_white" ]]; then
+          if [[ "$benchmark_workload" != "synthetic" ]]; then
             if [[ "$comparison_mode" != "released" ]]; then
-              echo "Wine Quality White requires mode=released." >&2
+              echo "Real-data workloads require mode=released." >&2
               exit 1
             fi
             if [[ -n "${REQUESTED_BASELINE_COMMIT:-}" ]]; then
-              echo "Wine Quality White requires an empty baseline_commit." >&2
+              echo "Real-data workloads require an empty baseline_commit." >&2
               exit 1
             fi
           fi
@@ -375,6 +376,39 @@ jobs:
             --timeout-seconds 300 \
             --budget-seconds 1200 \
             --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white.json"
+
+      - name: Run sequential Abalone comparisons
+        if: env.BENCHMARK_WORKLOAD == 'abalone'
+        working-directory: ${{ env.BENCHMARK_DIR }}
+        run: |
+          set -euo pipefail
+          comparison_started_at=$SECONDS
+          comparison_failed=0
+
+          for dtype in float32 float64; do
+            remaining_seconds=$((1200 - (SECONDS - comparison_started_at)))
+            if (( remaining_seconds <= 0 )); then
+              echo "Benchmark budget exhausted before Abalone ${dtype}." >&2
+              exit 1
+            fi
+
+            echo "Comparing Abalone ${dtype}; ${remaining_seconds}s remaining."
+            if ! "$CURRENT_ENV/bin/python" -u \
+              -m benchmarks.benchmark_released_real_data \
+              --previous-python "$PREVIOUS_ENV/bin/python" \
+              --previous-version "$PREVIOUS_VERSION" \
+              --current-version "$CURRENT_VERSION" \
+              --dataset abalone \
+              --dtype "$dtype" \
+              --data-home "$GITHUB_WORKSPACE/benchmark_outputs/datasets" \
+              --timeout-seconds 300 \
+              --budget-seconds "$remaining_seconds" \
+              --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_abalone_${dtype}.json"; then
+              comparison_failed=1
+            fi
+          done
+
+          exit "$comparison_failed"
 
       - name: Upload benchmark results
         if: always()
