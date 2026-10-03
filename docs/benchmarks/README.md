@@ -79,6 +79,40 @@ and the synthetic release comparison above are separate experiments.
 · [Full-precision summary](../../benchmarks/results/released_wine_quality_0.3.22-summary.json)
 · [Analysis script](../../benchmarks/analyze_released_real_data.py)
 
+### Abalone — published 0.3.22
+
+Comparison of published FaissImputer 0.3.21, FaissImputer 0.3.22,
+and KNNImputer on one Intel Xeon Platinum 8573C runner, using 3,000
+training rows, 1,000 held-out queries, seven numerical features,
+five neighbors, and uniform weights. This case uses available donors
+and 10% target MCAR missingness, with float32 and float64 reported
+separately.
+
+Median matched 0.3.21/0.3.22 fit-plus-first-transform timing ratios
+were 1.002× for float32 and 1.472× for float64. Float32 timings
+were similar; float64 was faster in 0.3.22 in all nine pairs.
+KNNImputer/0.3.22 ratios were 1.235× and 1.118× respectively,
+with 0.3.22 faster in all nine pairs for each dtype.
+
+All 54 workers passed their checks. Recorded output hashes matched
+between the two releases in all 18 version pairs. Differences from
+KNNImputer remain: for seed 101, two float32 and four float64 hidden
+entries differed by more than 1e-5. Reconstruction error against ground
+truth and agreement between outputs are reported separately.
+
+Timing and whole-worker peak RSS use median [min–max] across nine
+records per method and dtype: three seeds × three repeats. Ratios
+are medians of matched record-level ratios. Quality summaries use
+three seed datasets after verifying consistency across repeats.
+The report and full-precision summary regenerate from the preserved
+ZIP. These measurements are separate from earlier real-data studies
+and the Wine Quality and synthetic release comparisons.
+
+[Read the report](released_abalone_0.3.22.md)
+· [Original benchmark evidence](../../benchmarks/results/released_abalone_0.3.22.zip)
+· [Full-precision summary](../../benchmarks/results/released_abalone_0.3.22-summary.json)
+· [Analysis script](../../benchmarks/analyze_released_real_data.py)
+
 ## Historical version comparisons
 
 | Report | Coverage |
