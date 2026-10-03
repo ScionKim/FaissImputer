@@ -6,6 +6,7 @@ on:
     branches:
       - "bench/released-0.3.22"
       - "bench/released-wine-quality-0.3.22"
+      - "bench/released-abalone-results-0.3.22"
     paths:
       - ".github/workflows/analyze-released-versions.yml"
       - "benchmarks/analyze_released_versions.py"
@@ -20,6 +21,9 @@ on:
       - "benchmarks/results/released_wine_quality_0.3.22.zip"
       - "benchmarks/results/released_wine_quality_0.3.22-summary.json"
       - "docs/benchmarks/released_wine_quality_0.3.22.md"
+      - "benchmarks/results/released_abalone_0.3.22.zip"
+      - "benchmarks/results/released_abalone_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_0.3.22.md"
   pull_request:
     paths:
       - ".github/workflows/analyze-released-versions.yml"
@@ -35,6 +39,9 @@ on:
       - "benchmarks/results/released_wine_quality_0.3.22.zip"
       - "benchmarks/results/released_wine_quality_0.3.22-summary.json"
       - "docs/benchmarks/released_wine_quality_0.3.22.md"
+      - "benchmarks/results/released_abalone_0.3.22.zip"
+      - "benchmarks/results/released_abalone_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_0.3.22.md"
 
 permissions:
   contents: read
@@ -60,6 +67,11 @@ jobs:
             release: "0.3.22"
             generator: benchmarks/analyze_released_real_data.py
             stem: released_wine_quality_0.3.22
+          - id: released-abalone-0.3.22
+            release: "0.3.22"
+            generator: benchmarks/analyze_released_real_data.py
+            dataset: abalone
+            stem: released_abalone_0.3.22
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -75,9 +87,14 @@ jobs:
         env:
           RELEASE: ${{ matrix.release }}
           GENERATOR: ${{ matrix.generator }}
+          DATASET: ${{ matrix.dataset }}
           STEM: ${{ matrix.stem }}
         run: |
-          python "$GENERATOR" \
+          dataset_args=()
+          if [[ -n "$DATASET" ]]; then
+            dataset_args=(--dataset "$DATASET")
+          fi
+          python "$GENERATOR" "${dataset_args[@]}" \
             --release "$RELEASE" \
             --report "benchmark_outputs/${STEM}.md" \
             --summary "benchmark_outputs/${STEM}-summary.json"
@@ -104,6 +121,10 @@ jobs:
                   "$REF_NAME" == "bench/released-wine-quality-0.3.22" &&
                   ( "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "push" ) ]]; then
             echo "::notice::Generation only: the first Wine Quality report and summary are not committed yet. Commit both outputs together on this branch before opening a pull request."
+          elif [[ "$PROFILE_ID" == "released-abalone-0.3.22" &&
+                  "$REF_NAME" == "bench/released-abalone-results-0.3.22" &&
+                  ( "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "push" ) ]]; then
+            echo "::notice::Generation only: the first Abalone report and summary are not committed yet. Commit both outputs together on this branch before opening a pull request."
           else
             echo "::error::Committed report and summary are required for ${PROFILE_ID}."
             exit 1
