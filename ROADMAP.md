@@ -158,6 +158,17 @@ remained faster in this case. The preserved ZIP and analysis script
 reproduce the report and full-precision summary, with timing, memory,
 reconstruction quality, and output agreement reported separately.
 
+The [published Abalone comparison](docs/benchmarks/released_abalone_0.3.22.md)
+is complete for available-donor MCAR with 3,000 training rows,
+1,000 held-out queries, seven numerical features, and separate float32
+and float64 results on one Intel Xeon Platinum 8573C runner. All 54
+workers passed their checks. Median matched 0.3.21/0.3.22
+fit-plus-first-transform ratios were 1.002× for float32 and 1.472×
+for float64. Version 0.3.22 was faster than KNNImputer in all nine
+pairs per dtype for this measure. The preserved ZIP and shared
+real-data analysis script reproduce timing, memory, donor counts,
+reconstruction quality, and output agreement separately.
+
 The following output diagnostics are complete for their selected cases:
 
 - [Abalone float64](docs/benchmarks/abalone-output-1969f4b.md):
@@ -229,6 +240,7 @@ for one million queries.
 - [Benchmark index](docs/benchmarks/README.md)
 - [Published 0.3.22 comparison](docs/benchmarks/released_versions_0.3.22.md)
 - [Published Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_0.3.22.md)
+- [Published Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_0.3.22.md)
 - [Published 0.3.21 comparison](docs/benchmarks/released_versions_0.3.21.md)
 - [Published 0.3.20 comparison](docs/benchmarks/released_versions_0.3.20.md)
 - [Historical 0.3.19 comparison](docs/benchmarks/released_versions_0.3.19.md)
