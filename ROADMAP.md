@@ -148,6 +148,16 @@ actual missingness, and output differences from KNNImputer. Per-feature
 errors in standardized and source units are preserved in the
 full-precision summary.
 
+The [published Wine Quality comparison](docs/benchmarks/released_wine_quality_0.3.22.md)
+is also complete for one available-donor float64 MCAR case: 3,000 training
+rows and 1,000 held-out queries. Published 0.3.21, 0.3.22, and KNNImputer
+were measured on one AMD EPYC 9V74 runner; all 27 workers passed their
+checks. Median matched 0.3.21/0.3.22 timing ratios were 1.133× for the
+first transform and 1.132× for fit plus first transform. KNNImputer
+remained faster in this case. The preserved ZIP and analysis script
+reproduce the report and full-precision summary, with timing, memory,
+reconstruction quality, and output agreement reported separately.
+
 The following output diagnostics are complete for their selected cases:
 
 - [Abalone float64](docs/benchmarks/abalone-output-1969f4b.md):
@@ -218,6 +228,7 @@ for one million queries.
 - [API reference](docs/api.md) and [usage examples](docs/usage.md)
 - [Benchmark index](docs/benchmarks/README.md)
 - [Published 0.3.22 comparison](docs/benchmarks/released_versions_0.3.22.md)
+- [Published Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_0.3.22.md)
 - [Published 0.3.21 comparison](docs/benchmarks/released_versions_0.3.21.md)
 - [Published 0.3.20 comparison](docs/benchmarks/released_versions_0.3.20.md)
 - [Historical 0.3.19 comparison](docs/benchmarks/released_versions_0.3.19.md)
