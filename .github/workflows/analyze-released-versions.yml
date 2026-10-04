@@ -7,11 +7,13 @@ on:
       - "bench/released-0.3.22"
       - "bench/released-wine-quality-0.3.22"
       - "bench/released-abalone-results-0.3.22"
+      - "bench/released-distance-weights"
     paths:
       - ".github/workflows/analyze-released-versions.yml"
       - "benchmarks/analyze_released_versions.py"
       - "benchmarks/analyze_released_real_data.py"
       - "tests/test_released_real_data_analysis.py"
+      - "tests/test_released_distance_analysis.py"
       - "benchmarks/results/released_versions_0.3.21.zip"
       - "benchmarks/results/released_versions_0.3.21-summary.json"
       - "docs/benchmarks/released_versions_0.3.21.md"
@@ -24,12 +26,19 @@ on:
       - "benchmarks/results/released_abalone_0.3.22.zip"
       - "benchmarks/results/released_abalone_0.3.22-summary.json"
       - "docs/benchmarks/released_abalone_0.3.22.md"
+      - "benchmarks/results/released_wine_quality_distance_0.3.22.zip"
+      - "benchmarks/results/released_wine_quality_distance_0.3.22-summary.json"
+      - "docs/benchmarks/released_wine_quality_distance_0.3.22.md"
+      - "benchmarks/results/released_abalone_distance_0.3.22.zip"
+      - "benchmarks/results/released_abalone_distance_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_distance_0.3.22.md"
   pull_request:
     paths:
       - ".github/workflows/analyze-released-versions.yml"
       - "benchmarks/analyze_released_versions.py"
       - "benchmarks/analyze_released_real_data.py"
       - "tests/test_released_real_data_analysis.py"
+      - "tests/test_released_distance_analysis.py"
       - "benchmarks/results/released_versions_0.3.21.zip"
       - "benchmarks/results/released_versions_0.3.21-summary.json"
       - "docs/benchmarks/released_versions_0.3.21.md"
@@ -42,6 +51,12 @@ on:
       - "benchmarks/results/released_abalone_0.3.22.zip"
       - "benchmarks/results/released_abalone_0.3.22-summary.json"
       - "docs/benchmarks/released_abalone_0.3.22.md"
+      - "benchmarks/results/released_wine_quality_distance_0.3.22.zip"
+      - "benchmarks/results/released_wine_quality_distance_0.3.22-summary.json"
+      - "docs/benchmarks/released_wine_quality_distance_0.3.22.md"
+      - "benchmarks/results/released_abalone_distance_0.3.22.zip"
+      - "benchmarks/results/released_abalone_distance_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_distance_0.3.22.md"
 
 permissions:
   contents: read
@@ -72,6 +87,18 @@ jobs:
             generator: benchmarks/analyze_released_real_data.py
             dataset: abalone
             stem: released_abalone_0.3.22
+          - id: released-wine-quality-distance-0.3.22
+            release: "0.3.22"
+            generator: benchmarks/analyze_released_real_data.py
+            dataset: wine_quality_white
+            weights: distance
+            stem: released_wine_quality_distance_0.3.22
+          - id: released-abalone-distance-0.3.22
+            release: "0.3.22"
+            generator: benchmarks/analyze_released_real_data.py
+            dataset: abalone
+            weights: distance
+            stem: released_abalone_distance_0.3.22
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -88,13 +115,17 @@ jobs:
           RELEASE: ${{ matrix.release }}
           GENERATOR: ${{ matrix.generator }}
           DATASET: ${{ matrix.dataset }}
+          WEIGHTS: ${{ matrix.weights }}
           STEM: ${{ matrix.stem }}
         run: |
-          dataset_args=()
+          analysis_args=()
           if [[ -n "$DATASET" ]]; then
-            dataset_args=(--dataset "$DATASET")
+            analysis_args+=(--dataset "$DATASET")
           fi
-          python "$GENERATOR" "${dataset_args[@]}" \
+          if [[ -n "$WEIGHTS" ]]; then
+            analysis_args+=(--weights "$WEIGHTS")
+          fi
+          python "$GENERATOR" "${analysis_args[@]}" \
             --release "$RELEASE" \
             --report "benchmark_outputs/${STEM}.md" \
             --summary "benchmark_outputs/${STEM}-summary.json"
@@ -125,6 +156,11 @@ jobs:
                   "$REF_NAME" == "bench/released-abalone-results-0.3.22" &&
                   ( "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "push" ) ]]; then
             echo "::notice::Generation only: the first Abalone report and summary are not committed yet. Commit both outputs together on this branch before opening a pull request."
+          elif [[ ( "$PROFILE_ID" == "released-wine-quality-distance-0.3.22" ||
+                    "$PROFILE_ID" == "released-abalone-distance-0.3.22" ) &&
+                  "$REF_NAME" == "bench/released-distance-weights" &&
+                  ( "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "push" ) ]]; then
+            echo "::notice::Generation only: the first distance-weighted report and summary are not committed yet. Commit both outputs together on this branch before opening a pull request."
           else
             echo "::error::Committed report and summary are required for ${PROFILE_ID}."
             exit 1
