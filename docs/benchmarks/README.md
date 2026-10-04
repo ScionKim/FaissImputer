@@ -120,6 +120,44 @@ and the Wine Quality and synthetic release comparisons.
 · [Full-precision summary](../../benchmarks/results/released_abalone_0.3.22-summary.json)
 · [Analysis script](../../benchmarks/analyze_released_real_data.py)
 
+### Distance-weighted real-data comparisons — published 0.3.22
+
+Published FaissImputer 0.3.21, 0.3.22, and KNNImputer compared with available donors,
+`weights="distance"`, five neighbors, 3,000 training rows, 1,000 held-out
+queries, and 10% target MCAR missingness. Wine Quality White uses 11
+features and float64; Abalone uses seven numerical features with float32
+and float64 reported separately. The two datasets ran in separate
+GitHub Actions runs on AMD EPYC 7763 runners.
+
+The table reports median matched **fit-plus-first-transform** timing
+ratios across nine pairs per dataset and dtype: three seeds × three
+repeats. Ratios above one favor 0.3.22; they are not ratios of separately
+reported median times.
+
+| Report | Dtype | 0.3.21 / 0.3.22 | KNNImputer / 0.3.22 |
+| --- | --- | --- | --- |
+| [Wine Quality White](released_wine_quality_distance_0.3.22.md) | float64 | 1.163× | 0.378× |
+| [Abalone](released_abalone_distance_0.3.22.md) | float32 | 1.002× | 1.312× |
+| [Abalone](released_abalone_distance_0.3.22.md) | float64 | 1.799× | 1.087× |
+
+FaissImputer 0.3.22 remained slower than KNNImputer on Wine Quality.
+Abalone float32 timings were similar between releases; float64 was
+faster in 0.3.22.
+All 81 workers passed their checks. Recorded full-output hashes matched
+between the releases in all 27 version pairs, limited to the tested inputs.
+Quality summaries use three seeds and measure reconstruction error against
+ground truth; similar errors do not establish prediction equivalence.
+Earlier uniform-weight runs are separate experiments, and their output
+diagnostics do not establish the causes of these distance-weighted differences.
+
+The reports and full-precision summaries regenerate from the preserved ZIPs:
+
+- Wine Quality: [Original evidence](../../benchmarks/results/released_wine_quality_distance_0.3.22.zip)
+  · [Full-precision summary](../../benchmarks/results/released_wine_quality_distance_0.3.22-summary.json).
+- Abalone: [Original evidence](../../benchmarks/results/released_abalone_distance_0.3.22.zip)
+  · [Full-precision summary](../../benchmarks/results/released_abalone_distance_0.3.22-summary.json).
+- [Shared analysis script](../../benchmarks/analyze_released_real_data.py).
+
 ## Historical version comparisons
 
 | Report | Coverage |
