@@ -1,6 +1,7 @@
-"""Diagnose the archived Abalone float64 case without timing measurements."""
+"""Diagnose archived Abalone outputs without timing measurements."""
 
 import argparse
+from email.parser import BytesParser
 from fractions import Fraction
 from hashlib import sha256
 from importlib.metadata import version
@@ -10,6 +11,7 @@ from pathlib import Path
 import sys
 import traceback
 from unittest.mock import patch
+from zipfile import ZipFile
 
 import faiss
 import numpy as np
@@ -47,6 +49,127 @@ TARGET = {
 METHODS = {"knn": "KNNImputer", "faiss": "FaissImputer[available]"}
 K = 5
 
+RELEASE_VERSION = "0.3.22"
+RELEASE_SOURCE = "4acd09dfa1aca339f38d401bdb2a1076bf3abe8c"
+RELEASE_RUN = "37099197073"
+RELEASE_ARCHIVE_SHA256 = (
+    "8d2e491b9f066312627e5ea8ad6b955269c1634e7ae059b71d1aecac8579b638"
+)
+RELEASE_JSON_SHA256 = {
+    "float32": "50d92bbc54652408795939f377f862a191a1a4919bd27418e3caf9f76b347bea",
+    "float64": "d4e5814a2fd5b773f0d268e940fddeccc67fdf0e459edd2dc678a43a94d089ef",
+}
+RELEASE_DEPENDENCIES = {
+    **DEPENDENCIES,
+    "cloudpickle": "3.1.2", "narwhals": "2.26.0", "packaging": "26.3",
+}
+CASES = ("historical", "released_float32", "released_float64")
+
+
+def diagnostic_profile(name):
+    if name == "historical":
+        return {
+            "name": name, "published": False,
+            "target": dict(TARGET), "baseline_sha256": BASELINE_SHA256,
+        }
+    if name not in CASES:
+        raise ValueError(f"Unknown Abalone diagnostic case: {name}")
+    dtype = name.removeprefix("released_")
+    return {
+        "name": name, "published": True,
+        "target": {**TARGET, "mechanism": "MCAR", "dtype": dtype, "seed": 101},
+        "baseline_sha256": RELEASE_JSON_SHA256[dtype],
+    }
+
+
+def read_baseline(path, profile):
+    raw = path.read_bytes()
+    require(sha256(raw).hexdigest() == profile["baseline_sha256"],
+            "Archived JSON checksum mismatch")
+    return json.loads(raw)
+
+
+def select_records(baseline, profile):
+    target = profile["target"]
+    if profile["published"]:
+        require(baseline.get("schema_version") == 1
+                and baseline.get("benchmark") == "released_real_data"
+                and baseline.get("complete") is True,
+                "Expected a complete released real-data benchmark")
+        environment = baseline["metadata"]
+        require(environment["git_commit"] == RELEASE_SOURCE
+                and environment["github_run_id"] == RELEASE_RUN
+                and environment["github_run_attempt"] == "1",
+                "Unexpected published benchmark provenance")
+        parameters = baseline["parameters"]
+        require(parameters["previous_version"] == "0.3.21"
+                and parameters["current_version"] == RELEASE_VERSION
+                and parameters["dtype"] == target["dtype"]
+                and parameters["dataset_id"] == "abalone",
+                "Unexpected published benchmark configuration")
+    chosen = {}
+    for label, method in METHODS.items():
+        variant = "current" if label == "faiss" else "knn"
+        matches = [
+            (index, row) for index, row in enumerate(baseline["records"])
+            if row["method"] == method and row["repeat"] == 1
+            and all(row.get(field) == value for field, value in target.items())
+            and (not profile["published"] or row.get("variant") == variant)
+        ]
+        require(len(matches) == 1, "Archived target record is missing or duplicated")
+        chosen[label] = matches[0]
+        record = matches[0][1]
+        require(record["status"] == "ok" and record["checks_passed"] is True,
+                "Archived worker failed")
+        if profile["published"]:
+            expected = {
+                "expected_version": RELEASE_VERSION,
+                "api": "fit_then_transform", "training_policy": "available",
+                "features": 7, "n_neighbors": K, "missing_rate": 0.1,
+                "mar_reference_rows": 1000, "mar_driver": "Length", "threads": 1,
+                "sklearn_working_memory_mib": 256,
+                "input_dtype": target["dtype"], "output_dtype": target["dtype"],
+            }
+            require(all(record.get(key) == value for key, value in expected.items()),
+                    "Archived worker configuration differs from the diagnostic")
+            require(record["environment"]["faiss_imputer"] == RELEASE_VERSION,
+                    "Archived worker used a different package release")
+            require(len(record["imputed_values"]) == record["scored_cells"],
+                    "Archived hidden-value count mismatch")
+    if profile["published"]:
+        require(chosen["knn"][1]["case"] == chosen["faiss"][1]["case"],
+                "Archived methods used different prepared cases")
+    return chosen
+
+
+def verify_published_wheel(provenance_path, provenance, package):
+    require(provenance.get("kind") == "published-wheel"
+            and provenance.get("version") == RELEASE_VERSION
+            and provenance.get("archive_sha256") == RELEASE_ARCHIVE_SHA256,
+            "Expected published-wheel provenance for the preserved release run")
+    filename = provenance.get("wheel_filename", "")
+    require(filename and Path(filename).name == filename
+            and "\\" not in filename and filename.endswith(".whl"),
+            "Invalid wheel filename in provenance")
+    wheel = provenance_path.parent / "wheels" / filename
+    require(sha256(wheel.read_bytes()).hexdigest() == provenance["wheel_sha256"],
+            "Published wheel checksum mismatch")
+    with ZipFile(wheel) as archive:
+        candidates = [name for name in archive.namelist()
+                      if name.endswith(".dist-info/METADATA")]
+        require(len(candidates) == 1, "Expected one wheel METADATA file")
+        wheel_metadata = BytesParser().parsebytes(archive.read(candidates[0]))
+        require(wheel_metadata["Name"] == "faiss-imputer"
+                and wheel_metadata["Version"] == RELEASE_VERSION,
+                "Downloaded wheel is not faiss-imputer 0.3.22")
+        hashes = {}
+        for name in CORE_SHA256:
+            installed_bytes = (package / name).read_bytes()
+            require(installed_bytes == archive.read(f"faiss_imputer/{name}"),
+                    f"Installed core file differs from the published wheel: {name}")
+            hashes[name] = sha256(installed_bytes).hexdigest()
+    return hashes
+
 
 def require(condition, message):
     if not condition:
@@ -62,7 +185,7 @@ def rational(value):
 
 
 def exact_distances(train_fractions, query_row):
-    """Exact squared distances for the represented binary64 inputs."""
+    """Exact squared distances for the represented binary32 or binary64 inputs."""
     query = [
         None if np.isnan(value) else Fraction.from_float(float(value))
         for value in query_row
@@ -124,7 +247,7 @@ def selection_details(train, column, ids, distances, reference, observed_output)
         "target_values": train[ids, column],
         "exact_squared_distances": [rational(distances[index]) for index in ids],
         "exact_mean": rational(mean),
-        "this_query_output_minus_rounded_exact_mean": float(observed_output - float(mean)),
+        "this_query_output_minus_rounded_exact_mean": float(observed_output) - float(mean),
         "admissible_exact_top_k": not omitted and not farther,
         "omitted_strictly_closer_ids": omitted,
         "selected_strictly_farther_ids": farther,
@@ -227,31 +350,51 @@ def trace_knn_selections(model, train, query, wanted_rows):
 
 def diagnose(args, report):
     check_released_package(args.expected_version)
-    raw = args.baseline.read_bytes()
-    require(sha256(raw).hexdigest() == BASELINE_SHA256, "Archived JSON checksum mismatch")
-    baseline = json.loads(raw)
+    profile = diagnostic_profile(getattr(args, "case", "historical"))
+    target = profile["target"]
+    baseline = read_baseline(args.baseline, profile)
+    chosen = select_records(baseline, profile)
     provenance = json.loads(args.provenance.read_text(encoding="utf-8"))
-    require(provenance["source_commit"] == baseline["provenance"]["source_commit"] == SOURCE,
-            "Expected the original benchmark library source")
-    require(provenance["version"] == args.expected_version
-            == baseline["provenance"]["version"], "Library version mismatch")
-    require(sys.version.split()[0] == baseline["metadata"]["python"], "Python version mismatch")
-    installed = {name: version(name) for name in DEPENDENCIES}
-    require(installed == DEPENDENCIES, "Numerical dependency version mismatch")
-
+    require(sys.version.split()[0] == baseline["metadata"]["python"],
+            "Python version mismatch")
+    dependencies = RELEASE_DEPENDENCIES if profile["published"] else DEPENDENCIES
+    installed = {name: version(name) for name in dependencies}
+    require(installed == dependencies, "Numerical dependency version mismatch")
     package = Path(inspect.getfile(type(make_model("faiss")))).parent
-    core_hashes = {name: sha256((package / name).read_bytes()).hexdigest() for name in CORE_SHA256}
-    require(core_hashes == CORE_SHA256, "Installed library code differs from archived wheel")
+    if profile["published"]:
+        require(args.expected_version == RELEASE_VERSION,
+                "The published diagnostic requires faiss-imputer 0.3.22")
+        core_hashes = verify_published_wheel(args.provenance, provenance, package)
+        baseline_provenance = {
+            "benchmark_source_commit": RELEASE_SOURCE,
+            "github_run_id": RELEASE_RUN, "github_run_attempt": "1",
+            "package_version": RELEASE_VERSION,
+            "archive_sha256": RELEASE_ARCHIVE_SHA256,
+        }
+    else:
+        require(provenance["source_commit"]
+                == baseline["provenance"]["source_commit"] == SOURCE,
+                "Expected the original benchmark library source")
+        require(provenance["version"] == args.expected_version
+                == baseline["provenance"]["version"], "Library version mismatch")
+        core_hashes = {
+            name: sha256((package / name).read_bytes()).hexdigest()
+            for name in CORE_SHA256
+        }
+        require(core_hashes == CORE_SHA256,
+                "Installed library code differs from archived wheel")
+        baseline_provenance = baseline["provenance"]
     report.update({
         "environment": metadata(), "provenance": provenance,
-        "baseline_provenance": baseline["provenance"],
-        "baseline_sha256": BASELINE_SHA256, "core_sha256": core_hashes,
-        "dependencies": installed, "target": TARGET, "threshold": args.threshold,
+        "baseline_provenance": baseline_provenance,
+        "baseline_sha256": profile["baseline_sha256"], "core_sha256": core_hashes,
+        "diagnostic_case": profile["name"],
+        "dependencies": installed, "target": target, "threshold": args.threshold,
         "knn_source_sha256": sha256(Path(inspect.getfile(KNNImputer)).read_bytes()).hexdigest(),
         "notes": [
             "No timing measurements are taken.",
-            "The original binary64 prepared inputs are used without downcasting.",
-            "Exact rational distances describe represented binary64 values, not ideal pre-scaling data.",
+            f"Original {target['dtype']} prepared inputs are used without changing dtype.",
+            "Exact rational distances describe represented input values, not ideal pre-scaling data.",
             "Eligibility requires an observed target and at least one shared observed feature.",
             "Exact boundary ties can admit multiple valid neighbor sets.",
             "Float64 direct distances and captured KNN distances have separate floating-point tie summaries.",
@@ -263,30 +406,30 @@ def diagnose(args, report):
             "An output hash mismatch prevents claiming reproduction of the archived outputs.",
         ],
     })
-    chosen = {}
-    for label, method in METHODS.items():
-        matches = [
-            (index, row) for index, row in enumerate(baseline["records"])
-            if row["method"] == method and row["repeat"] == 1
-            and all(row.get(field) == value for field, value in TARGET.items())
-        ]
-        require(len(matches) == 1, "Archived target record is missing or duplicated")
-        chosen[label] = matches[0]
-        require(matches[0][1]["status"] == "ok"
-                and matches[0][1]["checks_passed"] is True, "Archived worker failed")
-
+    if profile["published"]:
+        report["notes"].extend([
+            "The benchmark source commit identifies scripts, not the published library source.",
+            "Installed core files are checked against the retained published wheel.",
+            "The original run did not preserve its wheel hash; binary artifact identity is not claimed.",
+            "Float32 output differences are computed after exact promotion to float64.",
+        ])
     data, names, dataset = load_dataset(
         args.data_home, dataset_id="abalone", download_if_missing=False
     )
     require(dataset == baseline["dataset"], "Source dataset metadata mismatch")
     train, query, truth, missing, case = prepare_case(
-        data, names, seed=303, mechanism="MAR", train_size=3000,
-        query_size=1000, dtype="float64", missing_rate=0.1,
+        data, names, seed=target["seed"], mechanism=target["mechanism"],
+        train_size=target["train_size"], query_size=target["query_size"],
+        dtype=target["dtype"], missing_rate=0.1,
         mar_reference_rows=1000, mar_driver="Length",
     )
     for _, record in chosen.values():
-        require(case["fingerprints"] == record["case"]["fingerprints"],
-                "Prepared inputs differ from the archived case")
+        if profile["published"]:
+            require(case == record["case"],
+                    "Prepared inputs or metadata differ from the archived case")
+        else:
+            require(case["fingerprints"] == record["case"]["fingerprints"],
+                    "Prepared inputs differ from the archived case")
     require(not np.isnan(train[:, 0]).any() and not np.isnan(query[:, 0]).any(),
             "Expected an always-observed shared Length feature")
     report.update(dataset=dataset, case=case, inputs_reproduced=True,
@@ -300,7 +443,7 @@ def diagnose(args, report):
                 "Model configuration differs from the benchmark")
         models[label] = model.fit(train)
         outputs[label] = model.transform(query)
-        require(outputs[label].shape == query.shape and outputs[label].dtype == np.float64
+        require(outputs[label].shape == query.shape and outputs[label].dtype == np.dtype(target["dtype"])
                 and np.isfinite(outputs[label]).all(), "Invalid model output")
         np.testing.assert_array_equal(outputs[label][~missing], query[~missing])
         require((array_digest(train), array_digest(query)) == input_hashes, "Input was modified")
@@ -311,7 +454,30 @@ def diagnose(args, report):
         for label, pair in chosen.items()
     }
     report["original_reproduced"] = all(report["baseline_output_hashes_match"].values())
-    difference = np.abs(outputs["faiss"] - outputs["knn"])
+    if profile["published"]:
+        report["baseline_imputed_values_match"] = {
+            label: np.array_equal(
+                outputs[label][missing].astype(np.float64),
+                np.asarray(record["imputed_values"], dtype=np.float64),
+            )
+            for label, (_, record) in chosen.items()
+        }
+        report["original_reproduced"] = (
+            report["original_reproduced"]
+            and all(report["baseline_imputed_values_match"].values())
+        )
+        archived_difference = np.abs(
+            np.asarray(chosen["faiss"][1]["imputed_values"], dtype=np.float64)
+            - np.asarray(chosen["knn"][1]["imputed_values"], dtype=np.float64)
+        )
+        report["archived_output_comparison"] = {
+            "scored_cells": int(archived_difference.size),
+            "max_abs_difference": float(archived_difference.max()),
+            "cells_above_threshold": int((archived_difference > args.threshold).sum()),
+        }
+    difference = np.abs(
+        outputs["faiss"].astype(np.float64) - outputs["knn"].astype(np.float64)
+    )
     row_maxima = np.where(missing, difference, 0.0).max(axis=1)
     affected = np.flatnonzero(row_maxima > args.threshold)
     ordered = affected[np.argsort(-row_maxima[affected], kind="stable")]
@@ -338,6 +504,12 @@ def diagnose(args, report):
     report["arrays"] = {
         "file": arrays_path.name, "sha256": sha256(arrays_path.read_bytes()).hexdigest(),
     }
+    if profile["published"] and not report["original_reproduced"]:
+        report["status"] = "baseline_output_mismatch"
+        report["notes"].append(
+            "Tracing was skipped because the archived outputs were not reproduced."
+        )
+        return
     captured, selections, searches, matching_rows = {}, {}, {}, {}
     if wanted:
         traced_knn, captured, selections = trace_knn_selections(models["knn"], train, query, wanted)
@@ -415,24 +587,36 @@ def diagnose(args, report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--case", choices=CASES, default="historical")
     parser.add_argument("--expected-version", required=True)
     parser.add_argument("--provenance", type=Path, required=True)
     parser.add_argument("--data-home", type=Path, required=True)
-    parser.add_argument("--baseline", type=Path, default=(
-        ROOT / "benchmarks/results/real-data-datasets-ef04b1b/abalone.json"
-    ))
+    parser.add_argument("--baseline", type=Path)
     parser.add_argument("--threshold", type=float, default=1e-5)
     parser.add_argument("--max-rows", type=int, default=20)
-    parser.add_argument("--output", type=Path, default=(
-        ROOT / "benchmark_outputs/abalone_output_diagnostic.json"
-    ))
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    profile = diagnostic_profile(args.case)
+    if args.baseline is None:
+        if profile["published"]:
+            parser.error("--baseline must identify the extracted published JSON")
+        args.baseline = ROOT / "benchmarks/results/real-data-datasets-ef04b1b/abalone.json"
+    if args.output is None:
+        filename = (
+            f"abalone_released_0.3.22_{profile['target']['dtype']}_diagnostic.json"
+            if profile["published"] else "abalone_output_diagnostic.json"
+        )
+        args.output = ROOT / "benchmark_outputs" / filename
+    protected = {args.baseline.resolve(), args.provenance.resolve()}
+    if {args.output.resolve(), args.output.with_suffix(".npz").resolve()} & protected:
+        parser.error("Diagnostic output must not overwrite input evidence")
     if not np.isfinite(args.threshold) or args.threshold <= 0 or args.max_rows < 1:
         parser.error("Use a positive finite threshold and positive max-rows")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     report = {"status": "error", "original_reproduced": False, "inputs_reproduced": False}
     try:
-        with threadpool_limits(limits=1), config_context(working_memory=WORKING_MEMORY_MIB):
+        memory_mib = 256 if profile["published"] else WORKING_MEMORY_MIB
+        with threadpool_limits(limits=1), config_context(working_memory=memory_mib):
             faiss.omp_set_num_threads(1)
             diagnose(args, report)
     except Exception as error:

@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       diagnostic:
-        description: Case to diagnose
+        description: Case to diagnose (abalone_released_* uses published PyPI 0.3.22)
         required: true
         type: choice
         default: wine_quality_float32
@@ -13,6 +13,8 @@ on:
           - wine_quality_float32
           - abalone_float64
           - california_float32
+          - abalone_released_float32
+          - abalone_released_float64
 
 permissions:
   contents: read
@@ -62,6 +64,10 @@ jobs:
           source_dir="$GITHUB_WORKSPACE/_diagnostic_library_source"
           source_commit="ef04b1b0274d3abdd977440dd61e7d91e328c64d"
           evidence="$GITHUB_WORKSPACE/benchmarks/results/real-data-datasets-ef04b1b"
+          released_case=""
+          baseline_member=""
+          baseline_sha256=""
+          provenance="$GITHUB_WORKSPACE/diagnostic_outputs/candidate-build.json"
 
           case "$DIAG_CASE" in
             wine_quality_float32)
@@ -87,6 +93,25 @@ jobs:
               baseline="$GITHUB_WORKSPACE/benchmarks/results/real-data-coverage-8f289647.json"
               archive_name=""
               ;;
+            abalone_released_float32|abalone_released_float64)
+              source_dir=""
+              source_commit=""
+              dtype="${DIAG_CASE#abalone_released_}"
+              released_case="released_$dtype"
+              module="benchmarks.diagnose_abalone_output"
+              output_name="abalone_released_0.3.22_${dtype}_diagnostic.json"
+              dataset_id="abalone"
+              baseline="$GITHUB_WORKSPACE/diagnostic_outputs/reference-benchmark.json"
+              archive_name="abalone.zip"
+              baseline_member="version_comparison_abalone_${dtype}.json"
+              provenance="$GITHUB_WORKSPACE/diagnostic_outputs/published-wheel.json"
+              if [[ "$dtype" == "float32" ]]; then
+                baseline_sha256="50d92bbc54652408795939f377f862a191a1a4919bd27418e3caf9f76b347bea"
+              else
+                baseline_sha256="d4e5814a2fd5b773f0d268e940fddeccc67fdf0e459edd2dc678a43a94d089ef"
+              fi
+              echo "DIAG_EXPECTED_VERSION=0.3.22" >> "$GITHUB_ENV"
+              ;;
             *)
               echo "Unsupported diagnostic: $DIAG_CASE" >&2
               exit 1
@@ -107,11 +132,18 @@ jobs:
             echo "DIAG_DATASET_ID=$dataset_id"
             echo "DIAG_BASELINE=$baseline"
             echo "DIAG_ARCHIVE_NAME=$archive_name"
+            echo "DIAG_RELEASED_CASE=$released_case"
+            echo "DIAG_BASELINE_MEMBER=$baseline_member"
+            echo "DIAG_BASELINE_SHA256=$baseline_sha256"
+            echo "DIAG_PROVENANCE=$provenance"
+            echo "DIAG_RELEASED_ARCHIVE=$GITHUB_WORKSPACE/benchmarks/results/released_abalone_0.3.22.zip"
+            echo "DIAG_RELEASED_ARCHIVE_SHA256=8d2e491b9f066312627e5ea8ad6b955269c1634e7ae059b71d1aecac8579b638"
           } >> "$GITHUB_ENV"
 
           mkdir -p "$GITHUB_WORKSPACE/diagnostic_outputs/wheels"
 
       - name: Build and fingerprint the selected library
+        if: env.DIAG_RELEASED_CASE == ''
         run: |
           python -m venv "$DIAG_BUILD_ENV"
           "$DIAG_BUILD_ENV/bin/python" -m pip install \
@@ -216,8 +248,85 @@ jobs:
           print(f"Wheel SHA256: {provenance['wheel_sha256']}")
           PY
 
+      - name: Download and fingerprint the published PyPI 0.3.22 wheel
+        if: env.DIAG_RELEASED_CASE != ''
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -m pip --isolated download \
+            --only-binary=:all: \
+            --no-deps \
+            --index-url https://pypi.org/simple \
+            --dest "$DIAG_OUTPUT_DIR/wheels" \
+            "faiss-imputer==0.3.22"
+
+          python - <<'PY'
+          from email.parser import BytesParser
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import zipfile
+
+          output_directory = Path(os.environ["DIAG_OUTPUT_DIR"])
+          wheels = list((output_directory / "wheels").glob("*.whl"))
+          if len(wheels) != 1:
+              raise RuntimeError("Expected exactly one published wheel")
+          wheel = wheels[0]
+          with zipfile.ZipFile(wheel) as archive:
+              metadata_names = [
+                  name for name in archive.namelist()
+                  if name.endswith(".dist-info/METADATA")
+              ]
+              if len(metadata_names) != 1:
+                  raise RuntimeError("Expected exactly one wheel metadata member")
+              metadata = BytesParser().parsebytes(archive.read(metadata_names[0]))
+          normalized_name = metadata["Name"].lower().replace("_", "-")
+          if normalized_name != "faiss-imputer" or metadata["Version"] != "0.3.22":
+              raise RuntimeError("Downloaded wheel is not faiss-imputer 0.3.22")
+
+          diagnostic_commit = subprocess.check_output(
+              ["git", "-C", os.environ["GITHUB_WORKSPACE"], "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          if diagnostic_commit != os.environ["GITHUB_SHA"]:
+              raise RuntimeError("Diagnostic checkout differs from the workflow commit")
+
+          archive_path = Path(os.environ["DIAG_RELEASED_ARCHIVE"])
+          archive_sha256 = hashlib.sha256(archive_path.read_bytes()).hexdigest()
+          if archive_sha256 != os.environ["DIAG_RELEASED_ARCHIVE_SHA256"]:
+              raise RuntimeError("Released benchmark archive SHA256 mismatch")
+          wheel_sha256 = hashlib.sha256(wheel.read_bytes()).hexdigest()
+          provenance = {
+              "kind": "published-wheel",
+              "version": "0.3.22",
+              "diagnostic_commit": diagnostic_commit,
+              "diagnostic_case": os.environ["DIAG_CASE"],
+              "wheel_filename": wheel.name,
+              "wheel_sha256": wheel_sha256,
+              "archive_sha256": archive_sha256,
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+          }
+          Path(os.environ["DIAG_PROVENANCE"]).write_text(
+              json.dumps(provenance, indent=2) + "\n", encoding="utf-8",
+          )
+          (output_directory / "SHA256SUMS.txt").write_text(
+              f"{wheel_sha256}  wheels/{wheel.name}\n"
+              f"{archive_sha256}  {archive_path.name}\n",
+              encoding="utf-8",
+          )
+          print("Published version: 0.3.22")
+          print(f"Diagnostic source: {diagnostic_commit}")
+          print(f"Wheel SHA256: {wheel_sha256}")
+          print(f"Released benchmark archive SHA256: {archive_sha256}")
+          PY
+
       - name: Install recorded numerical library versions
         run: |
+          if [[ -n "$DIAG_RELEASED_CASE" ]]; then
+            cd "$RUNNER_TEMP"
+          fi
           python -m venv "$DIAG_RUN_ENV"
 
           libraries=(
@@ -253,14 +362,71 @@ jobs:
         run: |
           mkdir -p "$DIAG_RUN_DIR" "$DIAG_DATA_HOME"
           cp -R "$GITHUB_WORKSPACE/benchmarks" "$DIAG_RUN_DIR/benchmarks"
-          cp "$DIAG_BASELINE" "$DIAG_OUTPUT_DIR/reference-benchmark.json"
 
-          if [[ -n "$DIAG_ARCHIVE_NAME" ]]; then
-            evidence="$GITHUB_WORKSPACE/benchmarks/results/real-data-datasets-ef04b1b"
-            archive="$evidence/source-data/$DIAG_ARCHIVE_NAME"
-            cp "$archive" "$DIAG_DATA_HOME/$DIAG_ARCHIVE_NAME"
-            mkdir -p "$DIAG_OUTPUT_DIR/source-data"
-            cp "$archive" "$DIAG_OUTPUT_DIR/source-data/$DIAG_ARCHIVE_NAME"
+          if [[ -n "$DIAG_RELEASED_CASE" ]]; then
+            "$DIAG_RUN_ENV/bin/python" - <<'PY'
+          import hashlib
+          import io
+          import os
+          from pathlib import Path
+          import zipfile
+
+          output_directory = Path(os.environ["DIAG_OUTPUT_DIR"])
+          archive_path = Path(os.environ["DIAG_RELEASED_ARCHIVE"])
+          archive_bytes = archive_path.read_bytes()
+          if hashlib.sha256(archive_bytes).hexdigest() != os.environ["DIAG_RELEASED_ARCHIVE_SHA256"]:
+              raise RuntimeError("Released benchmark archive SHA256 mismatch")
+          (output_directory / archive_path.name).write_bytes(archive_bytes)
+
+          baseline_name = os.environ["DIAG_BASELINE_MEMBER"]
+          dataset_name = "datasets/abalone.zip"
+          environment_names = (
+              "current-environment.txt",
+              "previous-environment.txt",
+              "shared-dependencies.txt",
+          )
+          with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
+              names = archive.namelist()
+              required_names = (baseline_name, dataset_name, *environment_names)
+              for name in required_names:
+                  if names.count(name) != 1:
+                      raise RuntimeError(f"Expected exactly one archived member: {name}")
+              baseline_bytes = archive.read(baseline_name)
+              dataset_bytes = archive.read(dataset_name)
+              environments = {name: archive.read(name) for name in environment_names}
+
+          if hashlib.sha256(baseline_bytes).hexdigest() != os.environ["DIAG_BASELINE_SHA256"]:
+              raise RuntimeError("Selected reference JSON SHA256 mismatch")
+          dataset_sha256 = "755a6a67c5b266961a3f149ea13be2cfb6e6c727e48cee3c83bc0b4526210ee4"
+          if hashlib.sha256(dataset_bytes).hexdigest() != dataset_sha256:
+              raise RuntimeError("Archived Abalone dataset SHA256 mismatch")
+
+          Path(os.environ["DIAG_BASELINE"]).write_bytes(baseline_bytes)
+          (Path(os.environ["DIAG_DATA_HOME"]) / "abalone.zip").write_bytes(dataset_bytes)
+          source_data = output_directory / "source-data"
+          source_data.mkdir(exist_ok=True)
+          (source_data / "abalone.zip").write_bytes(dataset_bytes)
+          environment_directory = output_directory / "archived-environments"
+          environment_directory.mkdir(exist_ok=True)
+          for name, content in environments.items():
+              (environment_directory / name).write_bytes(content)
+          with (output_directory / "SHA256SUMS.txt").open("a", encoding="utf-8") as stream:
+              stream.write(f"{os.environ['DIAG_BASELINE_SHA256']}  reference-benchmark.json\n")
+              stream.write(f"{dataset_sha256}  source-data/abalone.zip\n")
+              for name, content in environments.items():
+                  stream.write(f"{hashlib.sha256(content).hexdigest()}  archived-environments/{name}\n")
+          print(f"Reference member: {baseline_name}")
+          print(f"Dataset archive SHA256: {dataset_sha256}")
+          PY
+          else
+            cp "$DIAG_BASELINE" "$DIAG_OUTPUT_DIR/reference-benchmark.json"
+            if [[ -n "$DIAG_ARCHIVE_NAME" ]]; then
+              evidence="$GITHUB_WORKSPACE/benchmarks/results/real-data-datasets-ef04b1b"
+              archive="$evidence/source-data/$DIAG_ARCHIVE_NAME"
+              cp "$archive" "$DIAG_DATA_HOME/$DIAG_ARCHIVE_NAME"
+              mkdir -p "$DIAG_OUTPUT_DIR/source-data"
+              cp "$archive" "$DIAG_OUTPUT_DIR/source-data/$DIAG_ARCHIVE_NAME"
+            fi
           fi
 
       - name: Load and fingerprint the selected dataset
@@ -296,10 +462,15 @@ jobs:
         timeout-minutes: 10
         working-directory: ${{ env.DIAG_RUN_DIR }}
         run: |
+          case_arguments=()
+          if [[ -n "$DIAG_RELEASED_CASE" ]]; then
+            case_arguments+=(--case "$DIAG_RELEASED_CASE")
+          fi
           "$DIAG_RUN_ENV/bin/python" -u \
             -m "$DIAG_MODULE" \
+            "${case_arguments[@]}" \
             --expected-version "$DIAG_EXPECTED_VERSION" \
-            --provenance "$DIAG_OUTPUT_DIR/candidate-build.json" \
+            --provenance "$DIAG_PROVENANCE" \
             --data-home "$DIAG_DATA_HOME" \
             --baseline "$DIAG_OUTPUT_DIR/reference-benchmark.json" \
             --threshold 1e-5 \
