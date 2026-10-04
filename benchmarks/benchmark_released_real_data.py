@@ -34,7 +34,10 @@ DATASET_ID = "wine_quality_white"
 DATASETS = (DATASET_ID, "abalone")
 SEEDS = (101, 202, 303)
 REPEATS = 3
+WEIGHTS = ("uniform", "distance")
 TIMINGS = ("fit_seconds", "transform_seconds", "total_seconds")
+# Keep legacy uniform-weight match dictionaries unchanged. Non-default
+# weights are included by match_configuration below.
 MATCH_FIELDS = (
     "dataset_id", "api", "training_policy", "train_size", "query_size",
     "features", "n_neighbors", "missing_rate", "mechanism", "dtype",
@@ -46,14 +49,32 @@ FINGERPRINTS = (
 )
 
 
+def record_weights(record):
+    """Interpret legacy records without a weights field as uniform."""
+    weights = record.get("weights", "uniform")
+    if weights not in WEIGHTS:
+        raise ValueError(f"Unsupported weights: {weights!r}")
+    return weights
+
+
+def match_configuration(record):
+    """Include weights in identity without changing archived uniform pairs."""
+    weights = record_weights(record)
+    match = {name: record[name] for name in MATCH_FIELDS}
+    if weights != "uniform":
+        match["weights"] = weights
+    return match
+
+
 def build_configs(
     previous_version, current_version, data_home, *,
-    dataset_id=DATASET_ID, dtype="float64",
+    dataset_id=DATASET_ID, dtype="float64", weights="uniform",
 ):
     if dataset_id not in DATASETS:
         raise ValueError(f"Unsupported dataset: {dataset_id}")
     if dtype not in DTYPES:
         raise ValueError(f"Unsupported dtype: {dtype}")
+    record_weights({"weights": weights})
     defaults = DATASET_DEFAULTS[dataset_id]
     features = len(UCI_DATASETS[dataset_id]["feature_names"])
     configs = []
@@ -79,6 +100,8 @@ def build_configs(
                     "query_size": 1000,
                     "features": features,
                     "n_neighbors": N_NEIGHBORS,
+                    # Preserve the shape of historical uniform configurations.
+                    **({"weights": weights} if weights != "uniform" else {}),
                     "dtype": dtype,
                     "mechanism": "MCAR",
                     "missing_rate": MISSING_RATE,
@@ -143,6 +166,9 @@ def require_number(value, name, *, positive=False):
 def validate_record(record, config, environment, dataset):
     if record.get("checks_passed") is not True:
         raise ValueError("Worker checks did not pass")
+    weights = record_weights(config)
+    if record_weights(record) != weights:
+        raise ValueError("Worker weights differ from the requested configuration")
     for name in (*COMMON_ENVIRONMENT, "platform", "cpu_model", "git_commit"):
         if record["environment"][name] != environment[name]:
             raise ValueError(f"Environment mismatch: {name}")
@@ -165,7 +191,7 @@ def validate_record(record, config, environment, dataset):
         raise ValueError("Unexpected sklearn working-memory setting")
 
     expected_model = {
-        "n_neighbors": N_NEIGHBORS, "weights": "uniform", "copy": True,
+        "n_neighbors": N_NEIGHBORS, "weights": weights, "copy": True,
         "metric": "nan_euclidean" if config["variant"] == "knn" else "l2",
     }
     if config["variant"] != "knn":
@@ -240,8 +266,13 @@ def distribution(values):
 
 def require_single_configuration(records):
     """Reject pooled workloads while allowing multiple seeds and repeats."""
-    fields = [name for name in MATCH_FIELDS if name not in ("seed", "repeat")]
-    identities = {tuple(row[name] for name in fields) for row in records}
+    identities = {
+        tuple(
+            (name, value) for name, value in match_configuration(row).items()
+            if name not in ("seed", "repeat")
+        )
+        for row in records
+    }
     if len(identities) > 1:
         raise ValueError("Cannot pool multiple benchmark configurations")
 
@@ -281,7 +312,7 @@ def compare_records(records):
     for row in records:
         if row["status"] != "ok" or row.get("checks_passed") is not True:
             continue
-        key = tuple(row[name] for name in MATCH_FIELDS)
+        key = tuple(match_configuration(row).items())
         identity = (key, row["variant"])
         if identity in lookup:
             raise ValueError("Duplicate successful configuration/variant record")
@@ -309,7 +340,7 @@ def compare_records(records):
                 require_number(ratio, "timing ratio", positive=True)
                 ratios[name] = ratio
             pairs.append({
-                "match": dict(zip(MATCH_FIELDS, key)),
+                "match": dict(key),
                 "numerator_record_index": left["record_index"],
                 "denominator_record_index": right["record_index"],
                 "timing_ratios": ratios,
@@ -342,6 +373,7 @@ def main():
     parser.add_argument("--data-home", type=Path, required=True)
     parser.add_argument("--dataset", choices=DATASETS, default=DATASET_ID)
     parser.add_argument("--dtype", choices=DTYPES, default="float64")
+    parser.add_argument("--weights", choices=WEIGHTS, default="uniform")
     parser.add_argument("--timeout-seconds", type=int, default=300)
     parser.add_argument("--budget-seconds", type=int, default=1200)
     parser.add_argument("--output", type=Path, required=True)
@@ -363,7 +395,7 @@ def main():
     del data, names
     configs = build_configs(
         args.previous_version, args.current_version, data_home,
-        dataset_id=args.dataset, dtype=args.dtype,
+        dataset_id=args.dataset, dtype=args.dtype, weights=args.weights,
     )
     interpreters = {
         "knn": sys.executable, "current": sys.executable,
@@ -380,6 +412,7 @@ def main():
             "current_version": args.current_version,
             "interpreters": interpreters,
             "dataset_id": args.dataset, "dtype": args.dtype,
+            "weights": args.weights,
             "seeds": list(SEEDS), "repeats": REPEATS,
             "expected_workers": len(configs),
             "worker_timeout_seconds": args.timeout_seconds,
@@ -388,8 +421,10 @@ def main():
         },
         "planned_configs": configs,
         "notes": [
-            f"One fixed {dataset['dataset']} {args.dtype} configuration per JSON.",
-            "Different datasets and dtypes are never pooled in summaries or paired ratios.",
+            f"One fixed {dataset['dataset']} {args.dtype} {args.weights}-weighted "
+            "configuration per JSON.",
+            "Different datasets, dtypes and weights are never pooled in summaries or paired ratios.",
+            "A missing record-level weights field means uniform for archive compatibility.",
             "Installed releases and KNN run in fresh sequential workers; order rotates.",
             "KNN uses the current-release environment; dependencies are shared.",
             "All variants and repeats for a seed must have identical prepared cases.",
@@ -450,7 +485,7 @@ def main():
                 seed = config["seed"]
                 if seed in case_references and record["case"] != case_references[seed]:
                     raise ValueError("Prepared inputs differ between workers")
-                repeat_key = (seed, config["variant"])
+                repeat_key = (seed, config["variant"], record_weights(config))
                 signature = {
                     name: record[name] for name in (
                         "output_sha256", "imputed_values", "rmse", "mae", "feature_quality"

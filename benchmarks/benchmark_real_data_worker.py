@@ -38,10 +38,21 @@ METHODS = (
     "FaissImputer[available]",
 )
 
+WEIGHTS = ("uniform", "distance")
 
-def make_model(method):
+
+def validate_weights(method, weights):
+    if weights not in WEIGHTS:
+        raise ValueError(f"Unsupported weights: {weights!r}")
+    if method.startswith("SimpleImputer[") and weights != "uniform":
+        raise ValueError("SimpleImputer baselines do not support neighbor weights")
+
+
+def make_model(method, *, weights="uniform"):
     if method not in METHODS:
         raise ValueError(f"Unknown method: {method}")
+
+    validate_weights(method, weights)
 
     if method == "SimpleImputer[mean]":
         return SimpleImputer(strategy="mean", copy=True)
@@ -52,7 +63,7 @@ def make_model(method):
     if method == "KNNImputer":
         return KNNImputer(
             n_neighbors=N_NEIGHBORS,
-            weights="uniform",
+            weights=weights,
             metric="nan_euclidean",
             copy=True,
         )
@@ -62,7 +73,7 @@ def make_model(method):
         n_neighbors=N_NEIGHBORS,
         metric="l2",
         strategy="mean",
-        weights="uniform",
+        weights=weights,
         index_factory="Flat",
         donor_policy=policy,
         copy=True,
@@ -125,6 +136,11 @@ def worker(config):
     if method not in METHODS:
         raise ValueError(f"Unknown method: {method}")
 
+    weights = config.get("weights", "uniform")
+    validate_weights(method, weights)
+    # Preserve calls made by legacy callers and their single-argument factories.
+    model_options = {"weights": weights} if "weights" in config else {}
+
     check_released_package(config.get("expected_version"))
 
     with threadpool_limits(limits=1), config_context(
@@ -159,6 +175,7 @@ def worker(config):
             "environment": metadata(),
             "dataset": dataset_metadata,
             "case": case,
+            **({"weights": weights} if "weights" in config else {}),
         }
 
         if (
@@ -186,7 +203,7 @@ def worker(config):
         warm_train[::4, 1] = np.nan
         warm_query[:, 1:] = np.nan
 
-        warm_model = make_model(method)
+        warm_model = make_model(method, **model_options)
         warm_model.fit(warm_train)
         warm_model.transform(warm_query)
         del warm_model, warm_train, warm_query
@@ -205,7 +222,7 @@ def worker(config):
             for pool in threadpool_info()
         ]
 
-        model = make_model(method)
+        model = make_model(method, **model_options)
         recorded_parameters = {
             name: value
             for name, value in model.get_params(deep=False).items()

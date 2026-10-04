@@ -20,6 +20,14 @@ on:
           - synthetic
           - wine_quality_white
           - abalone
+      weights:
+        description: Neighbor weights for real data; synthetic requires uniform
+        type: choice
+        required: false
+        default: uniform
+        options:
+          - uniform
+          - distance
       baseline_commit:
         description: Optional baseline commit for candidate mode; blank uses PyPI 0.3.22
         type: string
@@ -41,6 +49,7 @@ jobs:
     env:
       REQUESTED_MODE: ${{ inputs.mode }}
       REQUESTED_WORKLOAD: ${{ inputs.workload }}
+      REQUESTED_WEIGHTS: ${{ inputs.weights }}
       REQUESTED_BASELINE_COMMIT: ${{ inputs.baseline_commit }}
       PYTHONNOUSERSITE: "1"
       PYTHONHASHSEED: "0"
@@ -85,6 +94,22 @@ jobs:
               ;;
           esac
 
+          benchmark_weights="${REQUESTED_WEIGHTS:-uniform}"
+          case "$benchmark_weights" in
+            uniform) weights_suffix="" ;;
+            distance) weights_suffix="_distance" ;;
+            *)
+              echo "Unknown neighbor weights: $benchmark_weights" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ "$benchmark_workload" == "synthetic" &&
+                "$benchmark_weights" != "uniform" ]]; then
+            echo "Synthetic workloads require weights=uniform." >&2
+            exit 1
+          fi
+
           if [[ "$benchmark_workload" != "synthetic" ]]; then
             if [[ "$comparison_mode" != "released" ]]; then
               echo "Real-data workloads require mode=released." >&2
@@ -99,6 +124,8 @@ jobs:
           {
             echo "COMPARISON_MODE=$comparison_mode"
             echo "BENCHMARK_WORKLOAD=$benchmark_workload"
+            echo "BENCHMARK_WEIGHTS=$benchmark_weights"
+            echo "BENCHMARK_WEIGHTS_SUFFIX=$weights_suffix"
             echo "PREVIOUS_VERSION=$previous_version"
             echo "CURRENT_VERSION=0.3.22"
             echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current"
@@ -372,10 +399,11 @@ jobs:
             --previous-python "$PREVIOUS_ENV/bin/python" \
             --previous-version "$PREVIOUS_VERSION" \
             --current-version "$CURRENT_VERSION" \
+            --weights "$BENCHMARK_WEIGHTS" \
             --data-home "$GITHUB_WORKSPACE/benchmark_outputs/datasets" \
             --timeout-seconds 300 \
             --budget-seconds 1200 \
-            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white.json"
+            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white${BENCHMARK_WEIGHTS_SUFFIX}.json"
 
       - name: Run sequential Abalone comparisons
         if: env.BENCHMARK_WORKLOAD == 'abalone'
@@ -400,10 +428,11 @@ jobs:
               --current-version "$CURRENT_VERSION" \
               --dataset abalone \
               --dtype "$dtype" \
+              --weights "$BENCHMARK_WEIGHTS" \
               --data-home "$GITHUB_WORKSPACE/benchmark_outputs/datasets" \
               --timeout-seconds 300 \
               --budget-seconds "$remaining_seconds" \
-              --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_abalone_${dtype}.json"; then
+              --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_abalone_${dtype}${BENCHMARK_WEIGHTS_SUFFIX}.json"; then
               comparison_failed=1
             fi
           done

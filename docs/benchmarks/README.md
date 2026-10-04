@@ -100,6 +100,13 @@ KNNImputer remain: for seed 101, two float32 and four float64 hidden
 entries differed by more than 1e-5. Reconstruction error against ground
 truth and agreement between outputs are reported separately.
 
+A [published-output diagnostic](abalone-released-output-f5ccff9.md)
+reproduces the seed-101 outputs for both dtypes. Exact boundary ties
+and ordering reversals in the captured KNN distances explain all entries
+above that threshold. Faiss donor selections are admissible under exact
+arithmetic for the examined entries; reconstruction quality is assessed
+separately.
+
 Timing and whole-worker peak RSS use median [min–max] across nine
 records per method and dtype: three seeds × three repeats. Ratios
 are medians of matched record-level ratios. Quality summaries use

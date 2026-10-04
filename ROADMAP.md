@@ -180,8 +180,14 @@ The following output diagnostics are complete for their selected cases:
   3,000 training rows, 1,000 held-out queries, MCAR, seed 101.
   Both large output differences involve near-equal distance ordering
   reversals in the captured KNNImputer calculation.
+- [Published Abalone 0.3.22](docs/benchmarks/abalone-released-output-f5ccff9.md):
+  3,000 training rows, 1,000 held-out queries, MCAR, seed 101,
+  float32 and float64. Exact boundary ties and captured KNN distance
+  ordering reversals explain all entries differing by more than 1e-5:
+  two for float32 and four for float64. Faiss donor selections are
+  admissible under exact arithmetic for those examined entries.
 
-Both diagnostics reproduce the original output fingerprints and preserve
+These diagnostics reproduce the original output fingerprints and preserve
 prepared inputs, outputs, actual neighbor traces, and exact rational
 distance references. Their reports separate neighbor-selection agreement
 from reconstruction quality against held-out ground truth.
