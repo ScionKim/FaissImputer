@@ -117,8 +117,67 @@ WORKLOADS = {
 }
 
 
-def read_dataset_archive(path, dataset_id):
-    spec = WORKLOADS[dataset_id]
+WINE_DISTANCE_PROFILE = {
+    **PROFILE,
+    "archive": "benchmarks/results/released_wine_quality_distance_0.3.22.zip",
+    "report": "docs/benchmarks/released_wine_quality_distance_0.3.22.md",
+    "summary": "benchmarks/results/released_wine_quality_distance_0.3.22-summary.json",
+    "archive_sha256": "abb7f9001e9542f4a6cb3e99ca6c2aa8bcf3b218f246c4af6f1cdfec397cf76b",
+    "json_sha256": "fa36d2fd18d972d13affa43dcf3aa8d33f82f7b689025f4506b647dfee7010cb",
+    "commit": "cd8117708f0bb43a2f79e15adf1e2e543ec6cda3",
+    "run": "37241173388",
+}
+ABALONE_DISTANCE_PROFILE = {
+    **ABALONE_PROFILE,
+    "archive": "benchmarks/results/released_abalone_distance_0.3.22.zip",
+    "report": "docs/benchmarks/released_abalone_distance_0.3.22.md",
+    "summary": "benchmarks/results/released_abalone_distance_0.3.22-summary.json",
+    "archive_sha256": "c9239069766885e67b3c11c8f56d4a6268f9d1c9b1d27c431ea56d35f6dca3c0",
+    "commit": "cd8117708f0bb43a2f79e15adf1e2e543ec6cda3",
+    "run": "37241332456",
+}
+DISTANCE_WORKLOADS = {
+    "wine_quality_white": {
+        **WORKLOADS["wine_quality_white"],
+        "profile": WINE_DISTANCE_PROFILE,
+        "configuration": {**COMMON_CONFIG, "weights": "distance"},
+        "json_members": {
+            "float64": {
+                "member": "version_comparison_wine_quality_white_distance.json",
+                "sha256": WINE_DISTANCE_PROFILE["json_sha256"],
+                "worker_run_budget_seconds": 1200,
+            },
+        },
+    },
+    "abalone": {
+        **WORKLOADS["abalone"],
+        "profile": ABALONE_DISTANCE_PROFILE,
+        "configuration": {**WORKLOADS["abalone"]["configuration"], "weights": "distance"},
+        "json_members": {
+            "float32": {
+                "member": "version_comparison_abalone_float32_distance.json",
+                "sha256": "41297a57f6d7a101527f731efb9c6571f90b706da810e5ec3f2d42af590959d5",
+                "worker_run_budget_seconds": 1200,
+            },
+            "float64": {
+                "member": "version_comparison_abalone_float64_distance.json",
+                "sha256": "c908b062021185483b6f72551d264c96c77290a97bebed93144bbda7c8f87a7f",
+                "worker_run_budget_seconds": 1165,
+            },
+        },
+    },
+}
+WEIGHTS = ("uniform", "distance")
+
+
+def workload_spec(dataset_id, weights="uniform"):
+    require(dataset_id in WORKLOADS, "Unknown archived dataset")
+    require(weights in WEIGHTS, "Unknown archived weights")
+    return (WORKLOADS if weights == "uniform" else DISTANCE_WORKLOADS)[dataset_id]
+
+
+def read_dataset_archive(path, dataset_id, *, weights="uniform"):
+    spec = workload_spec(dataset_id, weights)
     profile = spec["profile"]
     raw = path.read_bytes()
     require(sha256(raw).hexdigest() == profile["archive_sha256"],
@@ -173,9 +232,9 @@ def read_abalone_archive(path):
     return read_dataset_archive(path, "abalone")
 
 
-def archived_configuration(dataset_id, dtype):
+def archived_configuration(dataset_id, dtype, *, weights="uniform"):
     require(dataset_id in WORKLOADS, "Unknown archived dataset")
-    spec = WORKLOADS[dataset_id]
+    spec = workload_spec(dataset_id, weights)
     require(dtype in spec["json_members"], "Unexpected archived dtype")
     return spec, {**spec["configuration"], "dtype": dtype}
 
@@ -185,13 +244,16 @@ def counted_stats(values):
     return {"count": len(values), **stats(values)}
 
 
-def validate(data, freezes, *, dataset_id="wine_quality_white", dtype="float64"):
-    spec, common_config = archived_configuration(dataset_id, dtype)
+def validate(
+    data, freezes, *, dataset_id="wine_quality_white", dtype="float64", weights="uniform",
+):
+    spec, common_config = archived_configuration(dataset_id, dtype, weights=weights)
     profile = spec["profile"]
     feature_count = common_config["features"]
     require(data["schema_version"] == 1 and data["benchmark"] == "released_real_data"
             and data["complete"] is True, "Unexpected or incomplete raw result")
     params, environment, dataset = data["parameters"], data["metadata"], data["dataset"]
+    require(params.get("weights", "uniform") == weights, "Unexpected parameter: weights")
     require(params["previous_version"] == profile["previous"]
             and params["current_version"] == profile["current"], "Unexpected release versions")
     for key, value in {
@@ -201,7 +263,7 @@ def validate(data, freezes, *, dataset_id="wine_quality_white", dtype="float64")
         "sklearn_working_memory_mib": 256,
     }.items():
         require(params[key] == value, f"Unexpected parameter: {key}")
-    if dataset_id == "abalone":
+    if dataset_id == "abalone" or weights == "distance":
         require(params["dataset_id"] == dataset_id and params["dtype"] == dtype,
                 "Parameter dataset/dtype mismatch")
     require(environment["git_commit"] == profile["commit"]
@@ -239,6 +301,8 @@ def validate(data, freezes, *, dataset_id="wine_quality_white", dtype="float64")
         require(key == expected_order[index] and key not in indexed, "Worker order/key mismatch")
         indexed[key] = record
         seed, repeat, variant = key
+        require(record.get("weights", "uniform") == config.get("weights", "uniform") == weights,
+                f"Weights mismatch: {key}")
         require(record["record_index"] == index and all(record[k] == v for k, v in config.items()),
                 f"Plan or index mismatch: {key}")
         require(record["status"] == "ok" and record["checks_passed"] is True,
@@ -263,7 +327,7 @@ def validate(data, freezes, *, dataset_id="wine_quality_white", dtype="float64")
         require(record["sklearn_working_memory_mib"] == 256,
                 f"Working-memory setting mismatch: {key}")
         expected_model = {
-            "n_neighbors": 5, "weights": "uniform", "copy": True,
+            "n_neighbors": 5, "weights": weights, "copy": True,
             "metric": "nan_euclidean" if variant == "knn" else "l2",
         }
         if variant != "knn":
@@ -368,11 +432,16 @@ def validate(data, freezes, *, dataset_id="wine_quality_white", dtype="float64")
     return indexed, cases
 
 
-def analyze(data, freezes, *, dataset_id="wine_quality_white", dtype="float64"):
-    spec, common_config = archived_configuration(dataset_id, dtype)
+def analyze(
+    data, freezes, *, dataset_id="wine_quality_white", dtype="float64", weights="uniform",
+):
+    spec, common_config = archived_configuration(dataset_id, dtype, weights=weights)
     profile = spec["profile"]
     member = spec["json_members"][dtype]
-    indexed, cases = validate(data, freezes, dataset_id=dataset_id, dtype=dtype)
+    indexed, cases = validate(
+        data, freezes, dataset_id=dataset_id, dtype=dtype, weights=weights,
+    )
+    match_fields = tuple(common_config) + ("seed", "repeat")
     cells, comparisons = [], []
     for variant in VARIANTS:
         group = [indexed[(seed, repeat, variant)] for seed, repeat in product(SEEDS, REPEATS)]
@@ -402,7 +471,7 @@ def analyze(data, freezes, *, dataset_id="wine_quality_white", dtype="float64"):
         pairs, raw_pairs = [], []
         for seed, repeat in product(SEEDS, REPEATS):
             left, right = indexed[(seed, repeat, numerator)], indexed[(seed, repeat, denominator)]
-            require(all(left[field] == right[field] for field in MATCH_FIELDS)
+            require(all(left[field] == right[field] for field in match_fields)
                     and left["case"] == right["case"], "Mismatched pair inputs/configuration")
             difference = max(abs(a - b) for a, b in zip(left["imputed_values"], right["imputed_values"]))
             finite(difference, "hidden-entry difference")
@@ -415,7 +484,7 @@ def analyze(data, freezes, *, dataset_id="wine_quality_white", dtype="float64"):
                 finite(timing[field]["ratio"], "paired timing ratio", positive=True)
             hashes_match = left["output_sha256"] == right["output_sha256"]
             pairs.append({
-                "match": {field: left[field] for field in MATCH_FIELDS},
+                "match": {field: left[field] for field in match_fields},
                 "numerator_record_index": left["record_index"],
                 "denominator_record_index": right["record_index"],
                 "timing": timing,
@@ -427,7 +496,7 @@ def analyze(data, freezes, *, dataset_id="wine_quality_white", dtype="float64"):
                 "absolute_mae_difference": abs(left["mae"] - right["mae"]),
             })
             raw_pairs.append({
-                "match": {field: left[field] for field in MATCH_FIELDS},
+                "match": {field: left[field] for field in match_fields},
                 "numerator_record_index": left["record_index"],
                 "denominator_record_index": right["record_index"],
                 "timing_ratios": {field: timing[field]["ratio"] for field in TIMINGS},
@@ -468,7 +537,7 @@ def analyze(data, freezes, *, dataset_id="wine_quality_white", dtype="float64"):
             "dataset_source_sha256": data["dataset"]["source_file_sha256"],
         },
         "configuration": {**common_config, "seeds": list(SEEDS), "repeats": len(REPEATS),
-                          "weights": "uniform", "strategy": "mean", "index_factory": "Flat",
+                          "weights": weights, "strategy": "mean", "index_factory": "Flat",
                           "sklearn_working_memory_mib": 256},
         "environment": {field: data["metadata"][field] for field in ENVIRONMENT_FIELDS},
         "dataset": data["dataset"], "dependency_freezes": freezes,
@@ -477,7 +546,7 @@ def analyze(data, freezes, *, dataset_id="wine_quality_white", dtype="float64"):
             "quality": "Repeat 1 for each of 3 seeds after exact repeat quality/hash/imputed-value checks.",
             "total_seconds": "Consecutive fit plus first held-out transform; no additional transforms.",
             "speedup": "Median [min, max] of 9 matched numerator/denominator timing ratios; not ratio of medians.",
-            "matching": list(MATCH_FIELDS),
+            "matching": list(match_fields),
             "additional_matching": "Same archived run, prepared case/fingerprints, validated model parameters and native thread settings.",
             "duration_change": "Median [min, max] of 100 * (denominator/numerator time - 1) for matched records.",
             "output_agreement": "Recompute hidden-entry differences from saved imputed_values; compare recorded full-output hashes.",
@@ -725,24 +794,36 @@ def render_report(result):
 
 
 def analyze_abalone(documents, freezes):
+    """Preserve the historical Abalone result structure and defaults."""
     require(set(documents) == set(ABALONE_DTYPES),
             "Both Abalone dtype documents are required")
+    return analyze_dataset(documents, freezes, dataset_id="abalone")
+
+
+def analyze_dataset(documents, freezes, *, dataset_id, weights="uniform"):
+    spec = workload_spec(dataset_id, weights)
+    dtypes = tuple(spec["json_members"])
+    require(set(documents) == set(dtypes), "All archived dtype documents are required")
     by_dtype = {
-        dtype: analyze(documents[dtype], freezes, dataset_id="abalone", dtype=dtype)
-        for dtype in ABALONE_DTYPES
+        dtype: analyze(
+            documents[dtype], freezes, dataset_id=dataset_id, dtype=dtype, weights=weights,
+        )
+        for dtype in dtypes
     }
-    left, right = (documents[dtype] for dtype in ABALONE_DTYPES)
-    require({k: v for k, v in left["metadata"].items() if k != "created_at_utc"} ==
-            {k: v for k, v in right["metadata"].items() if k != "created_at_utc"},
-            "Cross-dtype environment mismatch")
-    require(left["dataset"] == right["dataset"], "Cross-dtype dataset mismatch")
-    for first, second in zip(by_dtype["float32"]["cases"], by_dtype["float64"]["cases"]):
-        require({k: v for k, v in first.items() if k not in ("input_dtype", "fingerprints")} ==
-                {k: v for k, v in second.items() if k not in ("input_dtype", "fingerprints")},
-                "Cross-dtype prepared inputs or scaler mismatch")
-        require({k: v for k, v in first["fingerprints"].items() if k not in ("train", "query")} ==
-                {k: v for k, v in second["fingerprints"].items() if k not in ("train", "query")},
-                "Cross-dtype row/mask/truth fingerprint mismatch")
+    left = documents[dtypes[0]]
+    for dtype in dtypes[1:]:
+        right = documents[dtype]
+        require({k: v for k, v in left["metadata"].items() if k != "created_at_utc"} ==
+                {k: v for k, v in right["metadata"].items() if k != "created_at_utc"},
+                "Cross-dtype environment mismatch")
+        require(left["dataset"] == right["dataset"], "Cross-dtype dataset mismatch")
+        for first, second in zip(by_dtype[dtypes[0]]["cases"], by_dtype[dtype]["cases"]):
+            require({k: v for k, v in first.items() if k not in ("input_dtype", "fingerprints")} ==
+                    {k: v for k, v in second.items() if k not in ("input_dtype", "fingerprints")},
+                    "Cross-dtype prepared inputs or scaler mismatch")
+            require({k: v for k, v in first["fingerprints"].items() if k not in ("train", "query")} ==
+                    {k: v for k, v in second["fingerprints"].items() if k not in ("train", "query")},
+                    "Cross-dtype row/mask/truth fingerprint mismatch")
     for dtype, result in by_dtype.items():
         indexed = {(r["seed"], r["repeat"], r["variant"]): r
                    for r in documents[dtype]["records"]}
@@ -767,9 +848,10 @@ def analyze_abalone(documents, freezes):
                     "denominator_minus_numerator_mae": denominator["mae"] - numerator["mae"],
                 })
             comparison["seed_output_agreement"] = seed_agreement
-    profile = ABALONE_PROFILE
+    profile = spec["profile"]
     return {
-        "schema_version": 1, "dataset_id": "abalone", "dtypes": list(ABALONE_DTYPES),
+        "schema_version": 1, "dataset_id": dataset_id, "dtypes": list(dtypes),
+        **({"weights": weights} if weights != "uniform" else {}),
         "source": {
             "archive": profile["archive"], "archive_sha256": profile["archive_sha256"],
             "benchmark_commit": profile["commit"], "github_run_id": profile["run"],
@@ -780,30 +862,56 @@ def analyze_abalone(documents, freezes):
                 for dtype, result in by_dtype.items()
             },
         },
-        "environment": by_dtype["float32"]["environment"],
+        "environment": by_dtype[dtypes[0]]["environment"],
         "dataset": left["dataset"], "dependency_freezes": freezes,
         "aggregation": {
             "dtype_separation": "Each dtype is analyzed separately; no pooled timing, memory, quality or speedup.",
             "configuration": "One available-donor, fit-then-transform MCAR configuration per dtype.",
             "per_dtype_definitions": "See aggregation in each by_dtype entry for matching and full-precision arithmetic.",
-            "cross_dtype_inputs": "Same source rows, masks, float64 truth and fitted scaler; training/query arrays use the selected dtype.",
+            "cross_dtype_inputs": (
+                "Same source rows, masks, float64 truth and fitted scaler; training/query arrays use the selected dtype."
+                if len(dtypes) > 1 else "One dtype is present; no cross-dtype check applies."
+            ),
             "seed_output_agreement": "Repeat 1 per seed after repeat-consistency checks; count absolute hidden-entry differences above 1e-5 standardized units without repeating timing trials.",
         },
         "validation": {
             "successful_records": sum(r["validation"]["successful_records"] for r in by_dtype.values()),
-            "expected_records": 54,
-            "cross_dtype_environment_identical_except_creation_time": True,
-            "cross_dtype_source_rows_masks_truth_and_scalers_identical": True,
+            "expected_records": len(dtypes) * len(SEEDS) * len(REPEATS) * len(VARIANTS),
+            **({
+                "cross_dtype_environment_identical_except_creation_time": True,
+                "cross_dtype_source_rows_masks_truth_and_scalers_identical": True,
+            } if len(dtypes) > 1 else {}),
         },
         "by_dtype": by_dtype,
     }
 
 
 def render_abalone_report(result):
-    profile = ABALONE_PROFILE
-    environment, dataset = result["environment"], result["dataset"]
-    first = result["by_dtype"][ABALONE_DTYPES[0]]
+    """Keep the existing uniform Abalone Markdown unchanged."""
+    return render_dataset_report(result)
+
+
+def render_dataset_report(result):
+    dataset_id, dtypes = result["dataset_id"], result["dtypes"]
+    first = result["by_dtype"][dtypes[0]]
     cases, config = first["cases"], first["configuration"]
+    weights = config["weights"]
+    profile = workload_spec(dataset_id, weights)["profile"]
+    environment, dataset = result["environment"], result["dataset"]
+    dataset_label = "Abalone" if dataset_id == "abalone" else "Wine Quality White"
+    title_suffix = " — distance weights" if weights == "distance" else ""
+    dtype_run_note = (
+        "Float32 and float64 run sequentially as separate invocations on the same runner."
+        if len(dtypes) > 1 else "Only float64 is measured in this run."
+    )
+    input_agreement = (
+        "Source rows, masks, scaler parameters and float64 scoring truth match across dtypes. "
+        "Within each dtype, prepared cases match across variants and repeats. "
+        "Scaling uses observed training values only."
+        if len(dtypes) > 1 else
+        "Prepared cases, source rows, masks, scaler parameters and float64 scoring truth "
+        "match across variants and repeats. Scaling uses observed training values only."
+    )
     current, previous, labels = profile["current"], profile["previous"], profile["labels"]
 
     def milliseconds(value):
@@ -814,13 +922,20 @@ def render_abalone_report(result):
                 f"{labels[comparison['denominator_variant']]}")
 
     lines = [
-        f"# Abalone: released {current} and {previous}", "",
+        f"# {dataset_label}: released {current} and {previous}{title_suffix}", "",
         "[Benchmark index](README.md) · [Project README](../../README.md#performance)", "",
-        "This report compares installed FaissImputer releases and KNNImputer on "
-        "held-out Abalone numerical data. Float32 and float64 use separate records "
-        "and tables. Each worker measures consecutive `fit(train)` and first "
-        "`transform(query)` calls with available donors. No same-data API or "
-        "complete-donor measurements are included.", "",
+        (
+            "This report compares installed FaissImputer releases and KNNImputer on "
+            "held-out Abalone numerical data. Float32 and float64 use separate records "
+            "and tables. Each worker measures consecutive `fit(train)` and first "
+            "`transform(query)` calls with available donors. No same-data API or "
+            "complete-donor measurements are included."
+            if dataset_id == "abalone" and weights == "uniform" else
+            f"This report compares installed FaissImputer releases and KNNImputer on "
+            f"held-out {dataset_label} data with `weights=\"{weights}\"`. Each worker "
+            "measures consecutive `fit(train)` and first `transform(query)` calls "
+            "with available donors. Each dtype has its own records and tables."
+        ), "",
         "## Evidence and configuration", "",
         f"- [Preserved original artifact](../../{profile['archive']}).",
         f"- [Full-precision summary](../../{profile['summary']}) and "
@@ -837,19 +952,16 @@ def render_abalone_report(result):
         f"scikit-learn {environment['scikit_learn']}; Faiss {environment['faiss']}.",
         f"- {config['train_size']:,} training rows; {config['query_size']:,} held-out "
         f"queries; {config['features']} numerical features; k={config['n_neighbors']}; "
-        'uniform weights; mean aggregation; `donor_policy="available"`; `index_factory="Flat"`.',
+        f'{weights} weights; mean aggregation; `donor_policy="available"`; `index_factory="Flat"`.',
         f"- {100 * config['missing_rate']:.0f}% target overall MCAR missingness in "
         f"training and query inputs. `{config['mar_driver']}` stays observed; "
         "the other features are eligible for masking.",
         f"- {result['validation']['successful_records']} successful workers: "
         f"{len(SEEDS)} seeds × {len(REPEATS)} repeats × {len(VARIANTS)} methods × "
-        f"{len(ABALONE_DTYPES)} dtypes. Variants rotate within each seed/repeat. "
-        "Float32 and float64 run sequentially as separate invocations on the same runner.", "",
+        f"{len(dtypes)} {'dtype' if len(dtypes) == 1 else 'dtypes'}. "
+        f"Variants rotate within each seed/repeat. {dtype_run_note}", "",
         "The environment freezes differ only in the FaissImputer release. "
-        f"KNNImputer uses the {current} environment. Source rows, masks, scaler "
-        "parameters and float64 scoring truth match across dtypes. Within each "
-        "dtype, prepared cases match across variants and repeats. Scaling uses "
-        "observed training values only.", "",
+        f"KNNImputer uses the {current} environment. {input_agreement}", "",
         "## Aggregation methodology", "",
         "All timing and memory cells are **median [min–max] across nine records "
         "per method and dtype: three seeds × three repeats**. `total_seconds` "
@@ -881,7 +993,7 @@ def render_abalone_report(result):
         "numerators, denominators, ratios, percentage changes, feature errors "
         "and fingerprints; only Markdown is rounded.", "",
     ]
-    for dtype in ABALONE_DTYPES:
+    for dtype in dtypes:
         section = result["by_dtype"][dtype]
         cells, comparisons = section["cells"], section["comparisons"]
         release = next(c for c in comparisons if c["numerator_variant"] == "previous")
@@ -959,10 +1071,16 @@ def render_abalone_report(result):
         ])
     lines.extend([
         "## Donor counts and observed missingness", "",
-        "These counts are shared across dtypes; the analyzer verifies identical "
-        "source rows, masks and scaler metadata. Complete donors are fully "
-        "observed training rows. Available mode also uses partially observed "
-        "rows separately for each missing feature.", "",
+        (
+            "These counts are shared across dtypes; the analyzer verifies identical "
+            "source rows, masks and scaler metadata. Complete donors are fully "
+            "observed training rows. Available mode also uses partially observed "
+            "rows separately for each missing feature."
+            if len(dtypes) > 1 else
+            "One observation per seed after input consistency checks across variants "
+            "and repeats. Complete donors are fully observed training rows. Available "
+            "mode also uses partially observed rows separately for each missing feature."
+        ), "",
         table(
             ["Seed", "Complete donors", "Training missing (%)", "Query missing (%)",
              "Queries with missing values", "Scored cells"],
@@ -984,11 +1102,19 @@ def render_abalone_report(result):
         "equivalence is established. Output differences alone do not identify "
         "their numerical or neighbor-selection cause. Earlier diagnostics on "
         "other seeds or missingness mechanisms do not establish the cause here.", "",
-        "The [Wine Quality release comparison](released_wine_quality_0.3.22.md), "
-        "[synthetic release comparison](released_versions_0.3.22.md) and "
-        "[earlier real-data coverage](real-data-datasets-ef04b1b.md) are separate "
-        "experiments. Cross-run absolute timing differences do not isolate a "
-        "release effect.", "", "## Dataset provenance", "",
+        (
+            "The [Wine Quality release comparison](released_wine_quality_0.3.22.md), "
+            "[synthetic release comparison](released_versions_0.3.22.md) and "
+            "[earlier real-data coverage](real-data-datasets-ef04b1b.md) are separate "
+            "experiments. Cross-run absolute timing differences do not isolate a "
+            "release effect."
+            if weights == "uniform" else
+            "The earlier uniform-weight comparisons and the other dataset run are "
+            "separate experiments. A matching CPU model does not make them a single "
+            "controlled run. Cross-run timing differences do not isolate a weights "
+            "or release effect. Uniform-weight output diagnostics do not establish "
+            "the cause of the distance-weighted differences reported here."
+        ), "", "## Dataset provenance", "",
         f"[{dataset['dataset']}]({dataset['source']}). {dataset['citation']}", "",
         f"The source file `{dataset['source_file']}` contains {dataset['rows']:,} rows. "
         f"Excluded columns: {', '.join(dataset['excluded_columns'])}. The original "
@@ -1003,14 +1129,25 @@ def render_abalone_report(result):
         "freezes, repeated outputs and all stored aggregates. It recomputes "
         "every displayed statistic from the saved records without installing "
         "or running imputers.", "",
-        "In the [Analyze released-version benchmark results workflow]"
-        "(../../.github/workflows/analyze-released-versions.yml), the Abalone "
-        "matrix entry uses `--dataset abalone`. It produces this Markdown "
-        "report and the full-precision summary. On the first push or manual "
-        "analysis run on `bench/released-abalone-results-0.3.22`, both outputs "
-        "may initially be absent. Commit them together; subsequent runs compare "
-        "them byte-for-byte. Pull requests require the output pair, and a "
-        "partially present pair fails. This is saved-data analysis, not a new benchmark.", "",
+        (
+            "In the [Analyze released-version benchmark results workflow]"
+            "(../../.github/workflows/analyze-released-versions.yml), the Abalone "
+            "matrix entry uses `--dataset abalone`. It produces this Markdown "
+            "report and the full-precision summary. On the first push or manual "
+            "analysis run on `bench/released-abalone-results-0.3.22`, both outputs "
+            "may initially be absent. Commit them together; subsequent runs compare "
+            "them byte-for-byte. Pull requests require the output pair, and a "
+            "partially present pair fails. This is saved-data analysis, not a new benchmark."
+            if weights == "uniform" else
+            "In the [Analyze released-version benchmark results workflow]"
+            "(../../.github/workflows/analyze-released-versions.yml), the corresponding "
+            f"matrix entry uses `--dataset {dataset_id} --weights distance`. It produces "
+            "this Markdown report and the full-precision summary. On the first push "
+            "or manual analysis run on `bench/released-distance-weights`, both outputs "
+            "may initially be absent. Commit them together; subsequent runs compare "
+            "them byte-for-byte. Pull requests require both files; a partially "
+            "present pair fails. This is saved-data analysis, not a new benchmark."
+        ), "",
     ])
     return "\n".join(lines)
 
@@ -1022,24 +1159,34 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", choices=(PROFILE["current"],), default=PROFILE["current"])
     parser.add_argument("--dataset", choices=tuple(WORKLOADS), default="wine_quality_white")
+    parser.add_argument("--weights", choices=WEIGHTS, default="uniform")
     parser.add_argument("--input", type=Path)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--summary", type=Path)
     args = parser.parse_args()
-    profile = WORKLOADS[args.dataset]["profile"]
+    profile = workload_spec(args.dataset, args.weights)["profile"]
     input_path = args.input if args.input is not None else ROOT / profile["archive"]
     report_path = args.report if args.report is not None else ROOT / profile["report"]
     summary_path = args.summary if args.summary is not None else ROOT / profile["summary"]
     outputs = (report_path.resolve(), summary_path.resolve())
     protected = {
         input_path.resolve(),
-        *((ROOT / item["profile"]["archive"]).resolve() for item in WORKLOADS.values()),
+        *((ROOT / item["profile"]["archive"]).resolve()
+          for item in (*WORKLOADS.values(), *DISTANCE_WORKLOADS.values())),
         (ROOT / "benchmarks/results/released_versions_0.3.21.zip").resolve(),
         (ROOT / "benchmarks/results/released_versions_0.3.22.zip").resolve(),
     }
     require(outputs[0] != outputs[1], "Report and summary need different paths")
     require(not protected.intersection(outputs), "Output would overwrite a raw archive")
-    if args.dataset == "abalone":
+    if args.weights == "distance":
+        documents, freezes = read_dataset_archive(
+            input_path, args.dataset, weights=args.weights,
+        )
+        result = analyze_dataset(
+            documents, freezes, dataset_id=args.dataset, weights=args.weights,
+        )
+        report = render_dataset_report(result)
+    elif args.dataset == "abalone":
         data, freezes = read_abalone_archive(input_path)
         result = analyze_abalone(data, freezes)
         report = render_abalone_report(result)

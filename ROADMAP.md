@@ -169,6 +169,18 @@ pairs per dtype for this measure. The preserved ZIP and shared
 real-data analysis script reproduce timing, memory, donor counts,
 reconstruction quality, and output agreement separately.
 
+Published-release comparisons with `weights="distance"` are complete for
+[Wine Quality White float64](docs/benchmarks/released_wine_quality_distance_0.3.22.md)
+and [Abalone float32/float64](docs/benchmarks/released_abalone_distance_0.3.22.md).
+The two runs cover available donors, five neighbors, 3,000 training rows,
+1,000 held-out queries, and 10% target MCAR missingness; all 81 workers
+passed their checks. Each dataset and dtype retains separate timing,
+whole-worker memory, reconstruction-error, and output-agreement results.
+The preserved ZIPs and shared analysis script reproduce both reports and
+full-precision summaries. These are separate from the uniform-weight
+experiments; earlier diagnostics do not establish the causes of these
+output differences.
+
 The following output diagnostics are complete for their selected cases:
 
 - [Abalone float64](docs/benchmarks/abalone-output-1969f4b.md):
@@ -180,8 +192,14 @@ The following output diagnostics are complete for their selected cases:
   3,000 training rows, 1,000 held-out queries, MCAR, seed 101.
   Both large output differences involve near-equal distance ordering
   reversals in the captured KNNImputer calculation.
+- [Published Abalone 0.3.22](docs/benchmarks/abalone-released-output-f5ccff9.md):
+  3,000 training rows, 1,000 held-out queries, MCAR, seed 101,
+  uniform weights, float32 and float64. Exact boundary ties and captured
+  KNN distance ordering reversals explain all entries differing by more than 1e-5:
+  two for float32 and four for float64. Faiss donor selections are
+  admissible under exact arithmetic for those examined entries.
 
-Both diagnostics reproduce the original output fingerprints and preserve
+These diagnostics reproduce the original output fingerprints and preserve
 prepared inputs, outputs, actual neighbor traces, and exact rational
 distance references. Their reports separate neighbor-selection agreement
 from reconstruction quality against held-out ground truth.
@@ -241,6 +259,8 @@ for one million queries.
 - [Published 0.3.22 comparison](docs/benchmarks/released_versions_0.3.22.md)
 - [Published Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_0.3.22.md)
 - [Published Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_0.3.22.md)
+- [Distance-weighted Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_distance_0.3.22.md)
+- [Distance-weighted Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_distance_0.3.22.md)
 - [Published 0.3.21 comparison](docs/benchmarks/released_versions_0.3.21.md)
 - [Published 0.3.20 comparison](docs/benchmarks/released_versions_0.3.20.md)
 - [Historical 0.3.19 comparison](docs/benchmarks/released_versions_0.3.19.md)
