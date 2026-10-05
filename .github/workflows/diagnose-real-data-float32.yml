@@ -15,6 +15,8 @@ on:
           - california_float32
           - abalone_released_float32
           - abalone_released_float64
+          - abalone_released_distance_float32
+          - abalone_released_distance_float64
 
 permissions:
   contents: read
@@ -67,6 +69,9 @@ jobs:
           released_case=""
           baseline_member=""
           baseline_sha256=""
+          max_rows="20"
+          released_archive="$GITHUB_WORKSPACE/benchmarks/results/released_abalone_0.3.22.zip"
+          released_archive_sha256="8d2e491b9f066312627e5ea8ad6b955269c1634e7ae059b71d1aecac8579b638"
           provenance="$GITHUB_WORKSPACE/diagnostic_outputs/candidate-build.json"
 
           case "$DIAG_CASE" in
@@ -112,6 +117,28 @@ jobs:
               fi
               echo "DIAG_EXPECTED_VERSION=0.3.22" >> "$GITHUB_ENV"
               ;;
+            abalone_released_distance_float32|abalone_released_distance_float64)
+              source_dir=""
+              source_commit=""
+              dtype="${DIAG_CASE#abalone_released_distance_}"
+              max_rows="100"
+              released_case="released_distance_$dtype"
+              module="benchmarks.diagnose_abalone_output"
+              output_name="abalone_released_0.3.22_distance_${dtype}_diagnostic.json"
+              dataset_id="abalone"
+              baseline="$GITHUB_WORKSPACE/diagnostic_outputs/reference-benchmark.json"
+              archive_name="abalone.zip"
+              baseline_member="version_comparison_abalone_${dtype}_distance.json"
+              provenance="$GITHUB_WORKSPACE/diagnostic_outputs/published-wheel.json"
+              released_archive="$GITHUB_WORKSPACE/benchmarks/results/released_abalone_distance_0.3.22.zip"
+              released_archive_sha256="c9239069766885e67b3c11c8f56d4a6268f9d1c9b1d27c431ea56d35f6dca3c0"
+              if [[ "$dtype" == "float32" ]]; then
+                baseline_sha256="41297a57f6d7a101527f731efb9c6571f90b706da810e5ec3f2d42af590959d5"
+              else
+                baseline_sha256="c908b062021185483b6f72551d264c96c77290a97bebed93144bbda7c8f87a7f"
+              fi
+              echo "DIAG_EXPECTED_VERSION=0.3.22" >> "$GITHUB_ENV"
+              ;;
             *)
               echo "Unsupported diagnostic: $DIAG_CASE" >&2
               exit 1
@@ -129,6 +156,7 @@ jobs:
             echo "DIAG_SOURCE_COMMIT=$source_commit"
             echo "DIAG_MODULE=$module"
             echo "DIAG_OUTPUT_NAME=$output_name"
+            echo "DIAG_MAX_ROWS=$max_rows"
             echo "DIAG_DATASET_ID=$dataset_id"
             echo "DIAG_BASELINE=$baseline"
             echo "DIAG_ARCHIVE_NAME=$archive_name"
@@ -136,8 +164,8 @@ jobs:
             echo "DIAG_BASELINE_MEMBER=$baseline_member"
             echo "DIAG_BASELINE_SHA256=$baseline_sha256"
             echo "DIAG_PROVENANCE=$provenance"
-            echo "DIAG_RELEASED_ARCHIVE=$GITHUB_WORKSPACE/benchmarks/results/released_abalone_0.3.22.zip"
-            echo "DIAG_RELEASED_ARCHIVE_SHA256=8d2e491b9f066312627e5ea8ad6b955269c1634e7ae059b71d1aecac8579b638"
+            echo "DIAG_RELEASED_ARCHIVE=$released_archive"
+            echo "DIAG_RELEASED_ARCHIVE_SHA256=$released_archive_sha256"
           } >> "$GITHUB_ENV"
 
           mkdir -p "$GITHUB_WORKSPACE/diagnostic_outputs/wheels"
@@ -474,7 +502,7 @@ jobs:
             --data-home "$DIAG_DATA_HOME" \
             --baseline "$DIAG_OUTPUT_DIR/reference-benchmark.json" \
             --threshold 1e-5 \
-            --max-rows 20 \
+            --max-rows "$DIAG_MAX_ROWS" \
             --output "$DIAG_OUTPUT_DIR/$DIAG_OUTPUT_NAME"
 
       - name: Upload diagnostic results
