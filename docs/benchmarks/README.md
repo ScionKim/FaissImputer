@@ -150,7 +150,15 @@ ground truth; similar errors do not establish prediction equivalence.
 Earlier uniform-weight runs are separate experiments, and their output
 diagnostics do not establish the causes of these distance-weighted differences.
 
-The reports and full-precision summaries regenerate from the preserved ZIPs:
+A [distance-weighted Abalone output diagnostic](abalone-released-distance-output-a1ada8e.md)
+reproduces seed-101 outputs for both dtypes and traces all 21 float32 and
+seven float64 entries differing by more than `1e-5`. It distinguishes exact
+boundary ties, computed-distance ties, order reversals, and distance errors
+propagated into weights. An earlier float32 reproduction mismatch is
+preserved separately from the reproduced results. No timing measurements
+were taken; reconstruction error against ground truth remains a separate question.
+
+The benchmark reports and full-precision summaries regenerate from the preserved ZIPs:
 
 - Wine Quality: [Original evidence](../../benchmarks/results/released_wine_quality_distance_0.3.22.zip)
   · [Full-precision summary](../../benchmarks/results/released_wine_quality_distance_0.3.22-summary.json).
