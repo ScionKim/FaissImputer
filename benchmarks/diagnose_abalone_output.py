@@ -25,6 +25,10 @@ from benchmarks.benchmark_real_data_cases import (
 from benchmarks.benchmark_scaling_threads import (
     ROOT, WORKING_MEMORY_MIB, check_released_package, metadata,
 )
+from benchmarks.diagnose_distance_weights import (
+    captured_weight_reference, distance_weighted_reference,
+    trace_distance_faiss_selections,
+)
 from benchmarks.diagnose_real_data_float32 import (
     boundary_details, direct_squared_distances, json_safe,
     make_model, trace_faiss_searches,
@@ -63,22 +67,39 @@ RELEASE_DEPENDENCIES = {
     **DEPENDENCIES,
     "cloudpickle": "3.1.2", "narwhals": "2.26.0", "packaging": "26.3",
 }
-CASES = ("historical", "released_float32", "released_float64")
+DISTANCE_SOURCE = "cd8117708f0bb43a2f79e15adf1e2e543ec6cda3"
+DISTANCE_RUN = "37241332456"
+DISTANCE_ARCHIVE_SHA256 = (
+    "c9239069766885e67b3c11c8f56d4a6268f9d1c9b1d27c431ea56d35f6dca3c0"
+)
+DISTANCE_JSON_SHA256 = {
+    "float32": "41297a57f6d7a101527f731efb9c6571f90b706da810e5ec3f2d42af590959d5",
+    "float64": "c908b062021185483b6f72551d264c96c77290a97bebed93144bbda7c8f87a7f",
+}
+CASES = (
+    "historical", "released_float32", "released_float64",
+    "released_distance_float32", "released_distance_float64",
+)
 
 
 def diagnostic_profile(name):
     if name == "historical":
         return {
-            "name": name, "published": False,
+            "name": name, "published": False, "weights": "uniform",
             "target": dict(TARGET), "baseline_sha256": BASELINE_SHA256,
         }
     if name not in CASES:
         raise ValueError(f"Unknown Abalone diagnostic case: {name}")
-    dtype = name.removeprefix("released_")
+    dtype = name.rsplit("_", 1)[1]
+    distance = name.startswith("released_distance_")
     return {
         "name": name, "published": True,
+        "weights": "distance" if distance else "uniform",
         "target": {**TARGET, "mechanism": "MCAR", "dtype": dtype, "seed": 101},
-        "baseline_sha256": RELEASE_JSON_SHA256[dtype],
+        "baseline_sha256": (DISTANCE_JSON_SHA256 if distance else RELEASE_JSON_SHA256)[dtype],
+        "source": DISTANCE_SOURCE if distance else RELEASE_SOURCE,
+        "run": DISTANCE_RUN if distance else RELEASE_RUN,
+        "archive_sha256": DISTANCE_ARCHIVE_SHA256 if distance else RELEASE_ARCHIVE_SHA256,
     }
 
 
@@ -97,15 +118,16 @@ def select_records(baseline, profile):
                 and baseline.get("complete") is True,
                 "Expected a complete released real-data benchmark")
         environment = baseline["metadata"]
-        require(environment["git_commit"] == RELEASE_SOURCE
-                and environment["github_run_id"] == RELEASE_RUN
+        require(environment["git_commit"] == profile["source"]
+                and environment["github_run_id"] == profile["run"]
                 and environment["github_run_attempt"] == "1",
                 "Unexpected published benchmark provenance")
         parameters = baseline["parameters"]
         require(parameters["previous_version"] == "0.3.21"
                 and parameters["current_version"] == RELEASE_VERSION
                 and parameters["dtype"] == target["dtype"]
-                and parameters["dataset_id"] == "abalone",
+                and parameters["dataset_id"] == "abalone"
+                and parameters.get("weights", "uniform") == profile["weights"],
                 "Unexpected published benchmark configuration")
     chosen = {}
     for label, method in METHODS.items():
@@ -132,6 +154,9 @@ def select_records(baseline, profile):
             }
             require(all(record.get(key) == value for key, value in expected.items()),
                     "Archived worker configuration differs from the diagnostic")
+            require(record.get("weights", "uniform") == profile["weights"]
+                    and record["model_parameters"].get("weights") == profile["weights"],
+                    "Archived worker weights differ from the diagnostic")
             require(record["environment"]["faiss_imputer"] == RELEASE_VERSION,
                     "Archived worker used a different package release")
             require(len(record["imputed_values"]) == record["scored_cells"],
@@ -142,10 +167,11 @@ def select_records(baseline, profile):
     return chosen
 
 
-def verify_published_wheel(provenance_path, provenance, package):
+def verify_published_wheel(provenance_path, provenance, package, profile=None):
+    expected_archive = RELEASE_ARCHIVE_SHA256 if profile is None else profile["archive_sha256"]
     require(provenance.get("kind") == "published-wheel"
             and provenance.get("version") == RELEASE_VERSION
-            and provenance.get("archive_sha256") == RELEASE_ARCHIVE_SHA256,
+            and provenance.get("archive_sha256") == expected_archive,
             "Expected published-wheel provenance for the preserved release run")
     filename = provenance.get("wheel_filename", "")
     require(filename and Path(filename).name == filename
@@ -254,6 +280,30 @@ def selection_details(train, column, ids, distances, reference, observed_output)
     }
 
 
+def distance_selection_details(train, column, ids, distances, reference, output, observation):
+    detail = selection_details(train, column, ids, distances, reference, output)
+    detail.pop("exact_mean")
+    detail.pop("this_query_output_minus_rounded_exact_mean")
+    values = train[np.asarray(ids, dtype=np.intp), column]
+    detail["distance_weighted_reference"] = distance_weighted_reference(
+        values, [distances[int(index)] for index in ids],
+    )
+    detail["captured_distance_weighting_reference"] = distance_weighted_reference(
+        values, [Fraction.from_float(float(d)) ** 2
+                 for d in observation["weight_input_distances"]],
+    )
+    detail["captured_distance_weighting_reference"]["scope"] = (
+        "Rounded Decimal inverse-distance weighting of the captured unsquared distances, "
+        "using their exact rational squares. Compare with captured weights to examine "
+        "weight construction separately from distance errors. Not a certified exact mean."
+    )
+    detail["captured_weight_arithmetic"] = captured_weight_reference(
+        values, observation["captured_weights"], observation["returned_value"], output,
+    )
+    detail["weight_observation"] = observation
+    return detail
+
+
 def trace_knn_selections(model, train, query, wanted_rows):
     """Observe actual argpartition results inside sklearn's imputation call."""
     missing = np.isnan(query)
@@ -263,6 +313,7 @@ def trace_knn_selections(model, train, query, wanted_rows):
     original_pairwise = _knn.pairwise_distances_chunked
     original_calc = model._calc_impute
     original_partition = np.argpartition
+    original_weights = _knn._get_weights
 
     def traced_calc(dist_pot_donors, n_neighbors, fit_X_col, mask_fit_X_col):
         require(active.get("columns"), "Unexpected KNN column dispatch")
@@ -278,6 +329,14 @@ def trace_knn_selections(model, train, query, wanted_rows):
         require(n_neighbors == K and np.isfinite(expected).all(),
                 "Unsupported KNN donor count or undefined distance")
         partitions = []
+        weight_calls = []
+
+        def traced_weights(distances, weights):
+            before = distances.copy()
+            result = original_weights(distances, weights)
+            require(result is not None, "Expected explicit KNN distance weights")
+            weight_calls.append((before, result.copy()))
+            return result
 
         def traced_partition(array, kth, axis=-1, **kwargs):
             result = original_partition(array, kth, axis=axis, **kwargs)
@@ -287,9 +346,16 @@ def trace_knn_selections(model, train, query, wanted_rows):
             return result
 
         with patch.object(_knn.np, "argpartition", traced_partition):
-            values = original_calc(
-                dist_pot_donors, n_neighbors, fit_X_col, mask_fit_X_col
-            )
+            if model.weights == "distance":
+                with patch.object(_knn, "_get_weights", traced_weights):
+                    values = original_calc(
+                        dist_pot_donors, n_neighbors, fit_X_col, mask_fit_X_col
+                    )
+                require(len(weight_calls) == 1, "Expected one observed KNN weighting call")
+            else:
+                values = original_calc(
+                    dist_pot_donors, n_neighbors, fit_X_col, mask_fit_X_col
+                )
         require(len(partitions) == 1, "Expected one observed KNN partition")
         for position, row in enumerate(receivers):
             if int(row) in wanted:
@@ -303,6 +369,22 @@ def trace_knn_selections(model, train, query, wanted_rows):
                     "captured_distances": dist_pot_donors[position, local_ids].copy(),
                     "returned_value": float(values[position]),
                 }
+                if model.weights == "distance":
+                    weight_distances, captured_weights = weight_calls[0]
+                    np.testing.assert_array_equal(
+                        weight_distances[position], dist_pot_donors[position, local_ids],
+                    )
+                    require(np.isfinite(captured_weights[position]).all(),
+                            "Invalid captured KNN weights")
+                    selections[cell].update({
+                        "weight_input_distances": weight_distances[position].copy(),
+                        "captured_weights": captured_weights[position].copy(),
+                        "distance_dtype": str(weight_distances.dtype),
+                        "weight_dtype": str(captured_weights.dtype),
+                        "target_dtype": str(fit_X_col.dtype),
+                        "returned_dtype": str(values.dtype),
+                        "capture": "Actual _get_weights return before masked averaging; all selected donors and distances are finite.",
+                    })
         return values
 
     def traced_pairwise(X, Y=None, **kwargs):
@@ -343,9 +425,55 @@ def trace_knn_selections(model, train, query, wanted_rows):
     require(set(captured) == wanted and set(selections) == expected_cells,
             "Some requested KNN observations were not captured")
     for (row, column), selection in selections.items():
-        require(selection["returned_value"] == output[row, column],
+        assigned = np.asarray(selection["returned_value"], dtype=output.dtype).item()
+        require(assigned == output[row, column],
                 "Captured KNN value differs from transform output")
+        if model.weights == "distance":
+            selection["assigned_output"] = float(output[row, column])
     return output, captured, selections
+
+
+def compare_archived_imputed_values(chosen, outputs, missing):
+    """Keep archived values separate from observations of this execution."""
+    rows, columns = np.nonzero(missing)
+    archived = {}
+    methods = {}
+    scores = np.zeros(len(rows), dtype=np.float64)
+    changed_rows = set()
+    for label, (_, record) in chosen.items():
+        previous = np.asarray(record["imputed_values"], dtype=np.float64)
+        current = outputs[label][missing].astype(np.float64)
+        require(previous.shape == current.shape and np.isfinite(previous).all(),
+                "Archived imputed values have an invalid shape or value")
+        delta = np.abs(current - previous)
+        changed = np.flatnonzero(current != previous)
+        methods[label] = {
+            "changed_value_count": int(changed.size),
+            "max_abs_difference": float(delta.max()),
+            "changed_cells": [{
+                "query_row_index": int(rows[index]),
+                "feature_index": int(columns[index]),
+                "archived_value": float(previous[index]),
+                "current_value": float(current[index]),
+                "absolute_difference": float(delta[index]),
+            } for index in changed],
+        }
+        changed_rows.update(int(rows[index]) for index in changed)
+        scores = np.maximum(scores, delta)
+        grid = np.full(missing.shape, np.nan, dtype=np.float64)
+        grid[missing] = previous
+        archived[label] = grid
+    scores = np.maximum(scores, np.abs(
+        archived["faiss"][missing] - archived["knn"][missing]
+    ))
+    row_scores = np.zeros(missing.shape[0], dtype=np.float64)
+    np.maximum.at(row_scores, rows, scores)
+    comparison = {
+        "scope": "Archived masked values versus this execution; observed entries are excluded.",
+        "methods": methods,
+        "changed_query_rows": sorted(changed_rows),
+    }
+    return comparison, archived, row_scores
 
 
 def diagnose(args, report):
@@ -364,12 +492,12 @@ def diagnose(args, report):
     if profile["published"]:
         require(args.expected_version == RELEASE_VERSION,
                 "The published diagnostic requires faiss-imputer 0.3.22")
-        core_hashes = verify_published_wheel(args.provenance, provenance, package)
+        core_hashes = verify_published_wheel(args.provenance, provenance, package, profile)
         baseline_provenance = {
-            "benchmark_source_commit": RELEASE_SOURCE,
-            "github_run_id": RELEASE_RUN, "github_run_attempt": "1",
+            "benchmark_source_commit": profile["source"],
+            "github_run_id": profile["run"], "github_run_attempt": "1",
             "package_version": RELEASE_VERSION,
-            "archive_sha256": RELEASE_ARCHIVE_SHA256,
+            "archive_sha256": profile["archive_sha256"],
         }
     else:
         require(provenance["source_commit"]
@@ -388,7 +516,7 @@ def diagnose(args, report):
         "environment": metadata(), "provenance": provenance,
         "baseline_provenance": baseline_provenance,
         "baseline_sha256": profile["baseline_sha256"], "core_sha256": core_hashes,
-        "diagnostic_case": profile["name"],
+        "diagnostic_case": profile["name"], "weights": profile["weights"],
         "dependencies": installed, "target": target, "threshold": args.threshold,
         "knn_source_sha256": sha256(Path(inspect.getfile(KNNImputer)).read_bytes()).hexdigest(),
         "notes": [
@@ -399,8 +527,12 @@ def diagnose(args, report):
             "Exact boundary ties can admit multiple valid neighbor sets.",
             "Float64 direct distances and captured KNN distances have separate floating-point tie summaries.",
             "KNN IDs come from observed argpartition results, not a reconstructed selection.",
-            "Faiss selections are reconstructed from actual finished search results.",
-            "Duplicate query values may have multiple Faiss traces; ambiguous ordered selections stay separate.",
+            ("Faiss selected donors and weights are observed at aggregation calls."
+             if profile["weights"] == "distance" else
+             "Faiss selections are reconstructed from actual finished search results."),
+            ("Duplicate query values may share search logs; weighted selections are mapped by actual batch row and feature."
+             if profile["weights"] == "distance" else
+             "Duplicate query values may have multiple Faiss traces; ambiguous ordered selections stay separate."),
             "All row indices are zero-based in the prepared arrays.",
             "Threshold and max-rows limit detailed diagnostics, not archived output arrays.",
             "An output hash mismatch prevents claiming reproduction of the archived outputs.",
@@ -412,6 +544,15 @@ def diagnose(args, report):
             "Installed core files are checked against the retained published wheel.",
             "The original run did not preserve its wheel hash; binary artifact identity is not claimed.",
             "Float32 output differences are computed after exact promotion to float64.",
+        ])
+    if profile["weights"] == "distance":
+        report["notes"].extend([
+            "Distance-weight cases are separate from previous uniform-weight diagnoses.",
+            "Faiss aggregation operands are observed at the actual weighted-mean return and mapped by batch row and feature.",
+            "Captured weight arithmetic uses exact rational target values and captured floating-point weights.",
+            "Inverse-distance references use exact squared distances followed by rounded Decimal arithmetic at 80 and 120 digits; they are not certified exact weighted means.",
+            "Agreement of the two rounded references is a precision comparison, not a proof or an equivalence test.",
+            "Exact-neighbor admissibility and reconstruction error against held-out truth are distinct questions.",
         ])
     data, names, dataset = load_dataset(
         args.data_home, dataset_id="abalone", download_if_missing=False
@@ -437,7 +578,7 @@ def diagnose(args, report):
     input_hashes = (array_digest(train), array_digest(query))
     models, outputs = {}, {}
     for label in METHODS:
-        model = make_model(label)
+        model = make_model(label).set_params(weights=profile["weights"])
         expected_parameters = chosen[label][1]["model_parameters"]
         require(all(model.get_params()[name] == value for name, value in expected_parameters.items()),
                 "Model configuration differs from the benchmark")
@@ -448,6 +589,9 @@ def diagnose(args, report):
         np.testing.assert_array_equal(outputs[label][~missing], query[~missing])
         require((array_digest(train), array_digest(query)) == input_hashes, "Input was modified")
 
+    report["threadpools"] = threadpool_info()
+    require(all(pool["num_threads"] == 1 for pool in report["threadpools"]),
+            "A native thread pool exceeded one thread")
     report["output_sha256"] = {label: array_digest(value) for label, value in outputs.items()}
     report["baseline_output_hashes_match"] = {
         label: report["output_sha256"][label] == pair[1]["output_sha256"]
@@ -480,14 +624,36 @@ def diagnose(args, report):
     )
     row_maxima = np.where(missing, difference, 0.0).max(axis=1)
     affected = np.flatnonzero(row_maxima > args.threshold)
-    ordered = affected[np.argsort(-row_maxima[affected], kind="stable")]
+    candidates = affected
+    selection_scores = row_maxima
+    archived_outputs = None
+    if profile["published"] and profile["weights"] == "distance":
+        comparison, archived_outputs, archived_scores = compare_archived_imputed_values(
+            chosen, outputs, missing,
+        )
+        report["baseline_value_comparison"] = comparison
+        selection_scores = np.maximum(row_maxima, archived_scores)
+        candidates = np.union1d(
+            np.flatnonzero(selection_scores > args.threshold),
+            comparison["changed_query_rows"],
+        ).astype(np.intp)
+        report.update({
+            "trace_scope": "current_execution",
+            "trace_explains_archived_outputs": report["original_reproduced"],
+            "row_selection_scope": (
+                "Union of current and archived between-method differences above the threshold "
+                "and all rows with changed masked values; limited by max-rows."
+            ),
+            "candidate_query_rows": [int(row) for row in candidates],
+        })
+    ordered = candidates[np.argsort(-selection_scores[candidates], kind="stable")]
     wanted = [int(row) for row in ordered[:args.max_rows]]
     report.update({
         "max_abs_output_difference": float(difference[missing].max()),
         "cells_above_threshold": int((difference[missing] > args.threshold).sum()),
         "affected_query_rows": len(affected), "detailed_query_rows": wanted,
-        "details_truncated": len(affected) > len(wanted), "rows": [],
-        "quality": {},
+        "details_truncated": len(candidates) > len(wanted), "rows": [],
+        "quality": {}, "tracing_completed": False,
     })
     for label, output in outputs.items():
         errors = output[missing] - truth[missing]
@@ -506,18 +672,41 @@ def diagnose(args, report):
     }
     if profile["published"] and not report["original_reproduced"]:
         report["status"] = "baseline_output_mismatch"
+        if profile["weights"] != "distance":
+            report["notes"].append(
+                "Tracing was skipped because the archived outputs were not reproduced."
+            )
+            return
         report["notes"].append(
-            "Tracing was skipped because the archived outputs were not reproduced."
+            "Archived outputs were not reproduced. Detailed traces describe only this "
+            "execution, including archived or changed-value rows selected for comparison. "
+            "The reproduction failure and nonzero exit status are retained."
         )
-        return
     captured, selections, searches, matching_rows = {}, {}, {}, {}
+    faiss_observations = {}
     if wanted:
         traced_knn, captured, selections = trace_knn_selections(models["knn"], train, query, wanted)
-        traced_faiss, searches, matching_rows = trace_faiss_searches(models["faiss"], train, query, wanted)
+        if profile["weights"] == "distance":
+            traced_faiss, searches, matching_rows, faiss_observations = trace_distance_faiss_selections(
+                models["faiss"], train, query, wanted,
+            )
+            for logs in searches.values():
+                for log in logs:
+                    for feature in log["features"].values():
+                        feature.pop("mean_float32", None)
+                        feature.pop("mean_float64", None)
+        else:
+            traced_faiss, searches, matching_rows = trace_faiss_searches(models["faiss"], train, query, wanted)
         np.testing.assert_array_equal(traced_knn, outputs["knn"])
         np.testing.assert_array_equal(traced_faiss, outputs["faiss"])
         require((array_digest(train), array_digest(query)) == input_hashes, "Tracing modified inputs")
         report["traced_outputs_unchanged"] = True
+        if profile["weights"] == "distance":
+            report["traced_output_sha256"] = {
+                "knn": array_digest(traced_knn), "faiss": array_digest(traced_faiss),
+            }
+            require(report["traced_output_sha256"] == report["output_sha256"],
+                    "Tracing changed output fingerprints")
         arrays["traced_query_rows"] = np.asarray(wanted, dtype=np.int64)
         arrays["knn_distance_rows"] = np.stack([captured[row] for row in wanted])
         np.savez_compressed(arrays_path, **arrays)
@@ -564,11 +753,51 @@ def diagnose(args, report):
                     for ids in faiss_ids
                 ],
             }
+            if archived_outputs is not None:
+                feature["archived_outputs"] = {
+                    label: float(output[row, column])
+                    for label, output in archived_outputs.items()
+                }
+                feature["output_matches_archive"] = {
+                    label: feature["outputs"][label] == value
+                    for label, value in feature["archived_outputs"].items()
+                }
+                feature["observation_scope"] = "current_execution"
+            if profile["weights"] == "distance":
+                reference.pop("minimum_exact_mean")
+                reference.pop("maximum_exact_mean")
+                representative = reference["representative_ids"]
+                reference["representative_distance_weighted_reference"] = distance_weighted_reference(
+                    train[representative, column], [exact[index] for index in representative],
+                )
+                for key in ("float64_direct_boundary", "knn_captured_boundary"):
+                    feature[key].pop("smallest_float64_mean_at_boundary")
+                    feature[key].pop("largest_float64_mean_at_boundary")
+                feature["knn_observation"] = {
+                    **actual,
+                    **distance_selection_details(
+                        train, column, actual["training_row_indices"], exact, reference,
+                        outputs["knn"][row, column], actual,
+                    ),
+                }
+                observed = faiss_observations[(row, column)]
+                feature["faiss_search_value_mapping_ambiguous"] = not same_ids
+                feature["faiss_query_mapping_ambiguous"] = False
+                feature["faiss_selections"] = [distance_selection_details(
+                    train, column, observed["training_row_indices"], exact, reference,
+                    outputs["faiss"][row, column], observed,
+                )]
+                feature["selection_sets_equal"] = (
+                    set(int(i) for i in actual["training_row_indices"])
+                    == set(int(i) for i in observed["training_row_indices"])
+                )
             candidate_ids = set(reference["representative_ids"])
             candidate_ids.update(reference["exact_boundary_tie_ids"])
             candidate_ids.update(actual["training_row_indices"].tolist())
             for ids in faiss_ids:
                 candidate_ids.update(ids.tolist())
+            if profile["weights"] == "distance":
+                candidate_ids.update(faiss_observations[(row, column)]["training_row_indices"].tolist())
             feature["donor_details"] = [{
                 "training_row_index": index,
                 "standardized_values": train[index],
@@ -579,9 +808,7 @@ def diagnose(args, report):
             } for index in sorted(candidate_ids)]
             detail["features"].append(feature)
         report["rows"].append(detail)
-    report["threadpools"] = threadpool_info()
-    require(all(pool["num_threads"] == 1 for pool in report["threadpools"]),
-            "A native thread pool exceeded one thread")
+    report["tracing_completed"] = True
     report["status"] = "ok" if report["original_reproduced"] else "baseline_output_mismatch"
 
 
@@ -602,8 +829,9 @@ def main():
             parser.error("--baseline must identify the extracted published JSON")
         args.baseline = ROOT / "benchmarks/results/real-data-datasets-ef04b1b/abalone.json"
     if args.output is None:
+        weight_suffix = "distance_" if profile["weights"] == "distance" else ""
         filename = (
-            f"abalone_released_0.3.22_{profile['target']['dtype']}_diagnostic.json"
+            f"abalone_released_0.3.22_{weight_suffix}{profile['target']['dtype']}_diagnostic.json"
             if profile["published"] else "abalone_output_diagnostic.json"
         )
         args.output = ROOT / "benchmark_outputs" / filename
@@ -626,6 +854,8 @@ def main():
         json.dumps(json_safe(report), indent=2, allow_nan=False) + "\n", encoding="utf-8"
     )
     print(f"Status: {report['status']}", flush=True)
+    if report.get("tracing_completed") and not report["original_reproduced"]:
+        print("Current-execution tracing completed; archived outputs were not reproduced.", flush=True)
     print(f"Results: {args.output}", flush=True)
     if "error" in report:
         print(report["error"], flush=True)

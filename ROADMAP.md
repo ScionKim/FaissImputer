@@ -198,8 +198,15 @@ The following output diagnostics are complete for their selected cases:
   KNN distance ordering reversals explain all entries differing by more than 1e-5:
   two for float32 and four for float64. Faiss donor selections are
   admissible under exact arithmetic for those examined entries.
+- [Published Abalone 0.3.22, distance weights](docs/benchmarks/abalone-released-distance-output-a1ada8e.md):
+  3,000 training rows, 1,000 held-out queries, MCAR, seed 101,
+  float32 and float64. Original outputs are reproduced for both dtypes, with traces
+  covering all 21 float32 and seven float64 entries differing by more than
+  `1e-5`. Findings distinguish exact boundary ties, computed-distance ties,
+  order reversals, and distance errors propagated into weights. The report
+  also preserves an earlier float32 reproduction mismatch separately.
 
-These diagnostics reproduce the original output fingerprints and preserve
+The successful diagnostics reproduce the original output fingerprints and preserve
 prepared inputs, outputs, actual neighbor traces, and exact rational
 distance references. Their reports separate neighbor-selection agreement
 from reconstruction quality against held-out ground truth.
