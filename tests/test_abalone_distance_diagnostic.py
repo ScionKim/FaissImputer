@@ -1,9 +1,12 @@
 """Offline distance-diagnostic regressions; execution belongs in GitHub CI."""
 
+from contextlib import nullcontext
 from copy import deepcopy
 from fractions import Fraction
 from hashlib import sha256
 from pathlib import Path
+from types import SimpleNamespace
+import json
 import sys
 from zipfile import ZipFile
 
@@ -226,3 +229,171 @@ def test_faiss_profiler_is_restored_on_trace_failure(monkeypatch):
     with pytest.raises(RuntimeError, match="trace sentinel"):
         weighting.trace_distance_faiss_selections(model, None, None, [])
     assert sys.getprofile() is previous
+
+
+def test_archive_comparison_keeps_disappeared_and_shared_output_changes():
+    missing = np.array([[False, True], [False, True], [False, True]])
+    current = np.array([[5, 1], [6, 2], [7, 3]], dtype=np.float64)
+    outputs = {label: current.copy() for label in ("knn", "faiss")}
+    archived_knn = [1.5, 2.25, 3 + 2**-23]
+    archived_faiss = [1.0, 2.25, 3.0]
+    chosen = {
+        "knn": (0, {"imputed_values": archived_knn}),
+        "faiss": (1, {"imputed_values": archived_faiss}),
+    }
+    comparison, archived, scores = diagnostic.compare_archived_imputed_values(
+        chosen, outputs, missing,
+    )
+    # Row 0's old between-method difference has disappeared. Row 1 changed
+    # identically in both methods. Row 2 changed by less than the usual threshold.
+    assert comparison["changed_query_rows"] == [0, 1, 2]
+    assert comparison["methods"]["knn"]["changed_value_count"] == 3
+    assert comparison["methods"]["faiss"]["changed_value_count"] == 1
+    np.testing.assert_array_equal(scores, [0.5, 0.25, 2**-23])
+    assert comparison["methods"]["knn"]["changed_cells"][0] == {
+        "query_row_index": 0, "feature_index": 1,
+        "archived_value": 1.5, "current_value": 1.0, "absolute_difference": 0.5,
+    }
+    for label, values in (("knn", archived_knn), ("faiss", archived_faiss)):
+        assert np.isnan(archived[label][~missing]).all()
+        np.testing.assert_array_equal(archived[label][missing], values)
+        np.testing.assert_array_equal(outputs[label], current)
+        assert chosen[label][1]["imputed_values"] == values
+
+
+@pytest.mark.parametrize("values", [[1.0], [1.0, float("nan")]])
+def test_archive_comparison_rejects_invalid_masked_values(values):
+    missing = np.ones((2, 1), dtype=bool)
+    outputs = {label: np.ones((2, 1)) for label in ("knn", "faiss")}
+    chosen = {label: (0, {"imputed_values": values}) for label in outputs}
+    with pytest.raises(ValueError, match="invalid shape or value"):
+        diagnostic.compare_archived_imputed_values(chosen, outputs, missing)
+
+
+@pytest.mark.parametrize(
+    "mode", ["reproduced", "archive_changed", "trace_changed", "uniform_archive_changed"],
+)
+def test_diagnostic_preserves_reproduction_failure_while_tracing_current_outputs(
+    tmp_path, monkeypatch, mode,
+):
+    weights = "uniform" if mode == "uniform_archive_changed" else "distance"
+    case_name = "released_float64" if weights == "uniform" else "released_distance_float64"
+    train = np.array([[0, 10], [1, 20], [2, 30], [3, 40], [4, 50], [5, 60]], dtype=np.float64)
+    query = np.array([[1.25, np.nan], [2.25, np.nan]], dtype=np.float64)
+    truth = np.array([[1.25, 22.5], [2.25, 32.5]], dtype=np.float64)
+    missing = np.isnan(query)
+    names, dataset, case = ["Length", "target"], {"fixture": "offline"}, {"fixture": "same inputs"}
+    provenance = tmp_path / "provenance.json"
+    provenance.write_text("{}", encoding="utf-8")
+    args = SimpleNamespace(
+        case=case_name, expected_version="0.3.22", baseline=tmp_path / "baseline.json",
+        provenance=provenance, data_home=tmp_path, threshold=1e-5, max_rows=20,
+        output=tmp_path / "diagnostic.json",
+    )
+    monkeypatch.setattr(diagnostic, "check_released_package", lambda *args: None)
+    monkeypatch.setattr(diagnostic, "version", lambda name: diagnostic.RELEASE_DEPENDENCIES[name])
+    monkeypatch.setattr(diagnostic, "verify_published_wheel", lambda *args: {})
+    monkeypatch.setattr(diagnostic, "metadata", lambda: {"fixture": "offline"})
+    monkeypatch.setattr(diagnostic, "read_baseline", lambda *args: {
+        "metadata": {"python": sys.version.split()[0]}, "dataset": dataset,
+    })
+    monkeypatch.setattr(diagnostic, "load_dataset", lambda *args, **kwargs: (train.copy(), names, dataset))
+    monkeypatch.setattr(diagnostic, "prepare_case", lambda *args, **kwargs: (
+        train.copy(), query.copy(), truth.copy(), missing.copy(), case,
+    ))
+    report = {"status": "error", "original_reproduced": False, "inputs_reproduced": False}
+    old_threads = diagnostic.faiss.omp_get_max_threads()
+    calls = []
+    original_trace = diagnostic.trace_knn_selections
+
+    def trace(model, actual_train, actual_query, wanted):
+        calls.append(list(wanted))
+        output, captured, selections = original_trace(model, actual_train, actual_query, wanted)
+        if mode == "trace_changed":
+            output = output.copy()
+            output[0, 1] += 1
+        return output, captured, selections
+
+    monkeypatch.setattr(diagnostic, "trace_knn_selections", trace)
+    try:
+        diagnostic.faiss.omp_set_num_threads(1)
+        with threadpool_limits(limits=1):
+            chosen, outputs = {}, {}
+            for index, label in enumerate(("knn", "faiss")):
+                model = diagnostic.make_model(label).set_params(weights=weights)
+                outputs[label] = model.fit(train).transform(query)
+                archived = outputs[label].copy()
+                if label == "knn" and mode != "reproduced":
+                    archived[0, 1] += 0.25
+                chosen[label] = (index, {
+                    "case": case, "output_sha256": diagnostic.array_digest(archived),
+                    "imputed_values": archived[missing].tolist(),
+                    "model_parameters": {name: model.get_params()[name]
+                                         for name in ("copy", "metric", "n_neighbors", "weights")},
+                })
+            preserved = deepcopy(chosen)
+            monkeypatch.setattr(diagnostic, "select_records", lambda *args: chosen)
+            assert np.max(np.abs(outputs["knn"] - outputs["faiss"])) < args.threshold
+            if mode == "trace_changed":
+                with pytest.raises(AssertionError):
+                    diagnostic.diagnose(args, report)
+                assert calls == [[0]]
+                assert report["tracing_completed"] is False
+                assert report["original_reproduced"] is False
+                return
+            diagnostic.diagnose(args, report)
+    finally:
+        diagnostic.faiss.omp_set_num_threads(old_threads)
+    assert chosen == preserved
+    assert report["threadpools"]
+    if mode == "uniform_archive_changed":
+        assert calls == [] and report["rows"] == []
+        assert report["status"] == "baseline_output_mismatch"
+        assert report["tracing_completed"] is False
+        return
+    reproduced = mode == "reproduced"
+    assert report["original_reproduced"] is reproduced
+    assert report["trace_explains_archived_outputs"] is reproduced
+    assert report["trace_scope"] == "current_execution"
+    assert report["tracing_completed"] is True
+    assert report["status"] == ("ok" if reproduced else "baseline_output_mismatch")
+    if not reproduced:
+        assert calls == [[0]]
+        assert report["affected_query_rows"] == 0
+        assert report["candidate_query_rows"] == [0]
+        assert report["detailed_query_rows"] == [0]
+        assert report["archived_output_comparison"]["cells_above_threshold"] == 1
+        assert report["cells_above_threshold"] == 0
+        feature = report["rows"][0]["features"][0]
+        assert feature["observation_scope"] == "current_execution"
+        assert feature["output_matches_archive"] == {"knn": False, "faiss": True}
+        assert feature["archived_outputs"]["knn"] == chosen["knn"][1]["imputed_values"][0]
+        assert report["traced_output_sha256"] == report["output_sha256"]
+        with np.load(args.output.with_suffix(".npz"), allow_pickle=False) as arrays:
+            np.testing.assert_array_equal(arrays["knn_output"], outputs["knn"])
+            np.testing.assert_array_equal(arrays["traced_query_rows"], [0])
+
+
+def test_cli_keeps_nonzero_exit_after_current_execution_trace(tmp_path, monkeypatch):
+    def completed_observation(args, report):
+        report.update(
+            status="baseline_output_mismatch", original_reproduced=False,
+            inputs_reproduced=True, tracing_completed=True, trace_scope="current_execution",
+        )
+
+    output = tmp_path / "diagnostic.json"
+    monkeypatch.setattr(diagnostic, "diagnose", completed_observation)
+    monkeypatch.setattr(diagnostic, "threadpool_limits", lambda **kwargs: nullcontext())
+    monkeypatch.setattr(diagnostic, "config_context", lambda **kwargs: nullcontext())
+    monkeypatch.setattr(diagnostic.faiss, "omp_set_num_threads", lambda count: None)
+    monkeypatch.setattr(diagnostic.sys, "argv", [
+        "diagnose_abalone_output", "--case", "released_distance_float32",
+        "--expected-version", "0.3.22", "--provenance", str(tmp_path / "provenance.json"),
+        "--baseline", str(tmp_path / "baseline.json"), "--data-home", str(tmp_path),
+        "--output", str(output),
+    ])
+    assert diagnostic.main() == 1
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    assert saved["original_reproduced"] is False
+    assert saved["status"] == "baseline_output_mismatch"
+    assert saved["tracing_completed"] is True

@@ -433,6 +433,49 @@ def trace_knn_selections(model, train, query, wanted_rows):
     return output, captured, selections
 
 
+def compare_archived_imputed_values(chosen, outputs, missing):
+    """Keep archived values separate from observations of this execution."""
+    rows, columns = np.nonzero(missing)
+    archived = {}
+    methods = {}
+    scores = np.zeros(len(rows), dtype=np.float64)
+    changed_rows = set()
+    for label, (_, record) in chosen.items():
+        previous = np.asarray(record["imputed_values"], dtype=np.float64)
+        current = outputs[label][missing].astype(np.float64)
+        require(previous.shape == current.shape and np.isfinite(previous).all(),
+                "Archived imputed values have an invalid shape or value")
+        delta = np.abs(current - previous)
+        changed = np.flatnonzero(current != previous)
+        methods[label] = {
+            "changed_value_count": int(changed.size),
+            "max_abs_difference": float(delta.max()),
+            "changed_cells": [{
+                "query_row_index": int(rows[index]),
+                "feature_index": int(columns[index]),
+                "archived_value": float(previous[index]),
+                "current_value": float(current[index]),
+                "absolute_difference": float(delta[index]),
+            } for index in changed],
+        }
+        changed_rows.update(int(rows[index]) for index in changed)
+        scores = np.maximum(scores, delta)
+        grid = np.full(missing.shape, np.nan, dtype=np.float64)
+        grid[missing] = previous
+        archived[label] = grid
+    scores = np.maximum(scores, np.abs(
+        archived["faiss"][missing] - archived["knn"][missing]
+    ))
+    row_scores = np.zeros(missing.shape[0], dtype=np.float64)
+    np.maximum.at(row_scores, rows, scores)
+    comparison = {
+        "scope": "Archived masked values versus this execution; observed entries are excluded.",
+        "methods": methods,
+        "changed_query_rows": sorted(changed_rows),
+    }
+    return comparison, archived, row_scores
+
+
 def diagnose(args, report):
     check_released_package(args.expected_version)
     profile = diagnostic_profile(getattr(args, "case", "historical"))
@@ -546,6 +589,9 @@ def diagnose(args, report):
         np.testing.assert_array_equal(outputs[label][~missing], query[~missing])
         require((array_digest(train), array_digest(query)) == input_hashes, "Input was modified")
 
+    report["threadpools"] = threadpool_info()
+    require(all(pool["num_threads"] == 1 for pool in report["threadpools"]),
+            "A native thread pool exceeded one thread")
     report["output_sha256"] = {label: array_digest(value) for label, value in outputs.items()}
     report["baseline_output_hashes_match"] = {
         label: report["output_sha256"][label] == pair[1]["output_sha256"]
@@ -578,14 +624,36 @@ def diagnose(args, report):
     )
     row_maxima = np.where(missing, difference, 0.0).max(axis=1)
     affected = np.flatnonzero(row_maxima > args.threshold)
-    ordered = affected[np.argsort(-row_maxima[affected], kind="stable")]
+    candidates = affected
+    selection_scores = row_maxima
+    archived_outputs = None
+    if profile["published"] and profile["weights"] == "distance":
+        comparison, archived_outputs, archived_scores = compare_archived_imputed_values(
+            chosen, outputs, missing,
+        )
+        report["baseline_value_comparison"] = comparison
+        selection_scores = np.maximum(row_maxima, archived_scores)
+        candidates = np.union1d(
+            np.flatnonzero(selection_scores > args.threshold),
+            comparison["changed_query_rows"],
+        ).astype(np.intp)
+        report.update({
+            "trace_scope": "current_execution",
+            "trace_explains_archived_outputs": report["original_reproduced"],
+            "row_selection_scope": (
+                "Union of current and archived between-method differences above the threshold "
+                "and all rows with changed masked values; limited by max-rows."
+            ),
+            "candidate_query_rows": [int(row) for row in candidates],
+        })
+    ordered = candidates[np.argsort(-selection_scores[candidates], kind="stable")]
     wanted = [int(row) for row in ordered[:args.max_rows]]
     report.update({
         "max_abs_output_difference": float(difference[missing].max()),
         "cells_above_threshold": int((difference[missing] > args.threshold).sum()),
         "affected_query_rows": len(affected), "detailed_query_rows": wanted,
-        "details_truncated": len(affected) > len(wanted), "rows": [],
-        "quality": {},
+        "details_truncated": len(candidates) > len(wanted), "rows": [],
+        "quality": {}, "tracing_completed": False,
     })
     for label, output in outputs.items():
         errors = output[missing] - truth[missing]
@@ -604,10 +672,16 @@ def diagnose(args, report):
     }
     if profile["published"] and not report["original_reproduced"]:
         report["status"] = "baseline_output_mismatch"
+        if profile["weights"] != "distance":
+            report["notes"].append(
+                "Tracing was skipped because the archived outputs were not reproduced."
+            )
+            return
         report["notes"].append(
-            "Tracing was skipped because the archived outputs were not reproduced."
+            "Archived outputs were not reproduced. Detailed traces describe only this "
+            "execution, including archived or changed-value rows selected for comparison. "
+            "The reproduction failure and nonzero exit status are retained."
         )
-        return
     captured, selections, searches, matching_rows = {}, {}, {}, {}
     faiss_observations = {}
     if wanted:
@@ -679,6 +753,16 @@ def diagnose(args, report):
                     for ids in faiss_ids
                 ],
             }
+            if archived_outputs is not None:
+                feature["archived_outputs"] = {
+                    label: float(output[row, column])
+                    for label, output in archived_outputs.items()
+                }
+                feature["output_matches_archive"] = {
+                    label: feature["outputs"][label] == value
+                    for label, value in feature["archived_outputs"].items()
+                }
+                feature["observation_scope"] = "current_execution"
             if profile["weights"] == "distance":
                 reference.pop("minimum_exact_mean")
                 reference.pop("maximum_exact_mean")
@@ -724,9 +808,7 @@ def diagnose(args, report):
             } for index in sorted(candidate_ids)]
             detail["features"].append(feature)
         report["rows"].append(detail)
-    report["threadpools"] = threadpool_info()
-    require(all(pool["num_threads"] == 1 for pool in report["threadpools"]),
-            "A native thread pool exceeded one thread")
+    report["tracing_completed"] = True
     report["status"] = "ok" if report["original_reproduced"] else "baseline_output_mismatch"
 
 
@@ -772,6 +854,8 @@ def main():
         json.dumps(json_safe(report), indent=2, allow_nan=False) + "\n", encoding="utf-8"
     )
     print(f"Status: {report['status']}", flush=True)
+    if report.get("tracing_completed") and not report["original_reproduced"]:
+        print("Current-execution tracing completed; archived outputs were not reproduced.", flush=True)
     print(f"Results: {args.output}", flush=True)
     if "error" in report:
         print(report["error"], flush=True)
