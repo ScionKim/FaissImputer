@@ -126,7 +126,7 @@ def select_records(baseline, profile):
         require(parameters["previous_version"] == "0.3.21"
                 and parameters["current_version"] == RELEASE_VERSION
                 and parameters["dtype"] == target["dtype"]
-                and parameters["dataset_id"] == "abalone"
+                and parameters["dataset_id"] == target["dataset_id"]
                 and parameters.get("weights", "uniform") == profile["weights"],
                 "Unexpected published benchmark configuration")
     chosen = {}
@@ -147,8 +147,9 @@ def select_records(baseline, profile):
             expected = {
                 "expected_version": RELEASE_VERSION,
                 "api": "fit_then_transform", "training_policy": "available",
-                "features": 7, "n_neighbors": K, "missing_rate": 0.1,
-                "mar_reference_rows": 1000, "mar_driver": "Length", "threads": 1,
+                "features": profile.get("features", 7), "n_neighbors": K, "missing_rate": 0.1,
+                "mar_reference_rows": 1000, "mar_driver": profile.get("mar_driver", "Length"),
+                "threads": 1,
                 "sklearn_working_memory_mib": 256,
                 "input_dtype": target["dtype"], "output_dtype": target["dtype"],
             }
@@ -476,10 +477,16 @@ def compare_archived_imputed_values(chosen, outputs, missing):
     return comparison, archived, row_scores
 
 
-def diagnose(args, report):
+def diagnose(args, report, *, profile=None):
+    """Run a selected archived case; Wine supplies a published-case profile."""
     check_released_package(args.expected_version)
-    profile = diagnostic_profile(getattr(args, "case", "historical"))
+    if profile is None:
+        profile = diagnostic_profile(getattr(args, "case", "historical"))
     target = profile["target"]
+    driver_name = profile.get("mar_driver", "Length")
+    trace_current = profile["published"] and (
+        profile["weights"] == "distance" or profile.get("trace_current_on_mismatch", False)
+    )
     baseline = read_baseline(args.baseline, profile)
     chosen = select_records(baseline, profile)
     provenance = json.loads(args.provenance.read_text(encoding="utf-8"))
@@ -555,14 +562,14 @@ def diagnose(args, report):
             "Exact-neighbor admissibility and reconstruction error against held-out truth are distinct questions.",
         ])
     data, names, dataset = load_dataset(
-        args.data_home, dataset_id="abalone", download_if_missing=False
+        args.data_home, dataset_id=target["dataset_id"], download_if_missing=False
     )
     require(dataset == baseline["dataset"], "Source dataset metadata mismatch")
     train, query, truth, missing, case = prepare_case(
         data, names, seed=target["seed"], mechanism=target["mechanism"],
         train_size=target["train_size"], query_size=target["query_size"],
         dtype=target["dtype"], missing_rate=0.1,
-        mar_reference_rows=1000, mar_driver="Length",
+        mar_reference_rows=1000, mar_driver=driver_name,
     )
     for _, record in chosen.values():
         if profile["published"]:
@@ -571,8 +578,9 @@ def diagnose(args, report):
         else:
             require(case["fingerprints"] == record["case"]["fingerprints"],
                     "Prepared inputs differ from the archived case")
-    require(not np.isnan(train[:, 0]).any() and not np.isnan(query[:, 0]).any(),
-            "Expected an always-observed shared Length feature")
+    driver = names.index(driver_name)
+    require(not np.isnan(train[:, driver]).any() and not np.isnan(query[:, driver]).any(),
+            f"Expected an always-observed shared {driver_name} feature")
     report.update(dataset=dataset, case=case, inputs_reproduced=True,
                   baseline_record_indices={label: pair[0] for label, pair in chosen.items()})
     input_hashes = (array_digest(train), array_digest(query))
@@ -627,7 +635,7 @@ def diagnose(args, report):
     candidates = affected
     selection_scores = row_maxima
     archived_outputs = None
-    if profile["published"] and profile["weights"] == "distance":
+    if trace_current:
         comparison, archived_outputs, archived_scores = compare_archived_imputed_values(
             chosen, outputs, missing,
         )
@@ -672,7 +680,7 @@ def diagnose(args, report):
     }
     if profile["published"] and not report["original_reproduced"]:
         report["status"] = "baseline_output_mismatch"
-        if profile["weights"] != "distance":
+        if not trace_current:
             report["notes"].append(
                 "Tracing was skipped because the archived outputs were not reproduced."
             )
@@ -701,7 +709,7 @@ def diagnose(args, report):
         np.testing.assert_array_equal(traced_faiss, outputs["faiss"])
         require((array_digest(train), array_digest(query)) == input_hashes, "Tracing modified inputs")
         report["traced_outputs_unchanged"] = True
-        if profile["weights"] == "distance":
+        if trace_current:
             report["traced_output_sha256"] = {
                 "knn": array_digest(traced_knn), "faiss": array_digest(traced_faiss),
             }
