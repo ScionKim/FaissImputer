@@ -181,6 +181,18 @@ full-precision summaries. These are separate from the uniform-weight
 experiments; earlier diagnostics do not establish the causes of these
 output differences.
 
+Published Wine Quality float32 comparisons are complete for
+[uniform weights](docs/benchmarks/released_wine_quality_float32_0.3.22.md)
+and [distance weights](docs/benchmarks/released_wine_quality_float32_distance_0.3.22.md).
+Both use available donors, 3,000 training rows, 1,000 held-out queries,
+five neighbors, and 10% target MCAR missingness. All 54 workers passed their
+checks. Release timings were similar, and KNNImputer was faster in each
+run. Recorded output hashes matched in all 18 version pairs; differences
+from KNNImputer remain. The runs used different CPU models, so their
+cross-run timings do not isolate a weights effect. Preserved ZIPs and the
+shared analysis script reproduce timing, memory, donor counts, seed-level
+reconstruction errors, and output differences separately for each run.
+
 The following output diagnostics are complete for their selected cases:
 
 - [Abalone float64](docs/benchmarks/abalone-output-1969f4b.md):
@@ -265,6 +277,8 @@ for one million queries.
 - [Benchmark index](docs/benchmarks/README.md)
 - [Published 0.3.22 comparison](docs/benchmarks/released_versions_0.3.22.md)
 - [Published Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_0.3.22.md)
+- [Published Wine Quality float32, uniform weights](docs/benchmarks/released_wine_quality_float32_0.3.22.md)
+- [Published Wine Quality float32, distance weights](docs/benchmarks/released_wine_quality_float32_distance_0.3.22.md)
 - [Published Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_0.3.22.md)
 - [Distance-weighted Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_distance_0.3.22.md)
 - [Distance-weighted Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_distance_0.3.22.md)

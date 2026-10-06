@@ -166,6 +166,39 @@ The benchmark reports and full-precision summaries regenerate from the preserved
   · [Full-precision summary](../../benchmarks/results/released_abalone_distance_0.3.22-summary.json).
 - [Shared analysis script](../../benchmarks/analyze_released_real_data.py).
 
+### Wine Quality White float32 — published 0.3.22
+
+Published FaissImputer 0.3.21, 0.3.22, and KNNImputer compared with
+available donors, 3,000 training rows, 1,000 held-out queries, 11 features,
+five neighbors, and 10% target MCAR missingness. Uniform and distance
+weights were measured in separate runs on different CPU models.
+
+The table gives median matched **fit-plus-first-transform** timing ratios
+across nine pairs per method comparison: three seeds × three repeats.
+Ratios above one favor 0.3.22; they are not ratios of method-level medians.
+
+| Report | Runner | 0.3.21 / 0.3.22 | KNNImputer / 0.3.22 |
+| --- | --- | --- | --- |
+| [Uniform weights](released_wine_quality_float32_0.3.22.md) | AMD EPYC 7763 | 1.004× | 0.382× |
+| [Distance weights](released_wine_quality_float32_distance_0.3.22.md) | AMD EPYC 9V74 | 1.002× | 0.529× |
+
+Release timings were similar, and KNNImputer was faster in both measured
+cases. All 54 workers passed their checks; recorded full-output hashes
+matched between releases in all 18 version pairs. Against KNNImputer,
+2 uniform-weight and 120 distance-weighted hidden entries differed by more
+than `1e-5` across three seed inputs, counting each seed once. Reconstruction
+error and output agreement are reported separately; these results do not
+establish the causes of the output differences.
+
+Both reports and full-precision summaries regenerate from the preserved
+ZIPs. These runs and the earlier float64 runs are separate experiments;
+cross-run timings do not isolate a weights or dtype effect.
+
+- Uniform: [Original evidence](../../benchmarks/results/released_wine_quality_float32_0.3.22.zip)
+  · [Full-precision summary](../../benchmarks/results/released_wine_quality_float32_0.3.22-summary.json).
+- Distance: [Original evidence](../../benchmarks/results/released_wine_quality_float32_distance_0.3.22.zip)
+  · [Full-precision summary](../../benchmarks/results/released_wine_quality_float32_distance_0.3.22-summary.json).
+
 ## Historical version comparisons
 
 | Report | Coverage |
