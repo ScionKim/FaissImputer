@@ -1,0 +1,3593 @@
+{
+  "schema_version": 1,
+  "dataset_id": "wine_quality_white",
+  "dtypes": [
+    "float32"
+  ],
+  "source": {
+    "archive": "benchmarks/results/released_wine_quality_float32_0.3.22.zip",
+    "archive_sha256": "0654259363cd7c1d76f467fc06e5c3fd104f24198f9a7ef865569bdd2c4833bd",
+    "benchmark_commit": "6d533d37c8173058ce2cfb314701377ee67b4b59",
+    "github_run_id": "37403070692",
+    "github_run_attempt": "1",
+    "json_members": {
+      "float32": {
+        "member": "version_comparison_wine_quality_white_float32.json",
+        "sha256": "e4b16d9794a944afc8e63dceffe2cb04a97132ff7f7a7228be562999757a7ece"
+      }
+    }
+  },
+  "environment": {
+    "git_commit": "6d533d37c8173058ce2cfb314701377ee67b4b59",
+    "github_run_id": "37403070692",
+    "github_run_attempt": "1",
+    "python": "3.12.14",
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "logical_cpus": 4,
+    "affinity_cpus": 4,
+    "numpy": "2.5.3",
+    "scikit_learn": "1.9.1",
+    "faiss": "1.15.1"
+  },
+  "dataset": {
+    "dataset": "Wine Quality (white)",
+    "loader": "UCI ZIP archive with numpy.loadtxt",
+    "source": "https://archive.ics.uci.edu/dataset/186/wine+quality",
+    "source_url": "https://archive.ics.uci.edu/static/public/186/wine%2Bquality.zip",
+    "source_file": "winequality-white.csv",
+    "source_archive_sha256": "3ed56667f4b828242bd732d7d1dd7f2861e54432239d7fa63877014cbb0304d4",
+    "source_file_sha256": "76c3f809815c17c07212622f776311faeb31e87610d52c26d87d6e361b169836",
+    "citation": "Cortez et al. (2009). Wine Quality. https://doi.org/10.24432/C56S3T",
+    "license": "CC BY 4.0",
+    "rows": 4898,
+    "features": 11,
+    "feature_names": [
+      "fixed acidity",
+      "volatile acidity",
+      "citric acid",
+      "residual sugar",
+      "chlorides",
+      "free sulfur dioxide",
+      "total sulfur dioxide",
+      "density",
+      "pH",
+      "sulphates",
+      "alcohol"
+    ],
+    "excluded_columns": [
+      "quality"
+    ],
+    "dataset_sha256": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+    "target_used": false,
+    "original_units": "Values as supplied in the source data file"
+  },
+  "dependency_freezes": {
+    "current-environment.txt": {
+      "cloudpickle": "3.1.2",
+      "faiss-cpu": "1.15.1",
+      "faiss-imputer": "0.3.22",
+      "joblib": "1.6.0",
+      "narwhals": "2.26.0",
+      "numpy": "2.5.3",
+      "packaging": "26.3",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "threadpoolctl": "3.7.0"
+    },
+    "previous-environment.txt": {
+      "cloudpickle": "3.1.2",
+      "faiss-cpu": "1.15.1",
+      "faiss-imputer": "0.3.21",
+      "joblib": "1.6.0",
+      "narwhals": "2.26.0",
+      "numpy": "2.5.3",
+      "packaging": "26.3",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "threadpoolctl": "3.7.0"
+    },
+    "shared-dependencies.txt": {
+      "cloudpickle": "3.1.2",
+      "faiss-cpu": "1.15.1",
+      "joblib": "1.6.0",
+      "narwhals": "2.26.0",
+      "numpy": "2.5.3",
+      "packaging": "26.3",
+      "scikit-learn": "1.9.1",
+      "scipy": "1.18.1",
+      "threadpoolctl": "3.7.0"
+    }
+  },
+  "aggregation": {
+    "dtype_separation": "Each dtype is analyzed separately; no pooled timing, memory, quality or speedup.",
+    "configuration": "One available-donor, fit-then-transform MCAR configuration per dtype.",
+    "per_dtype_definitions": "See aggregation in each by_dtype entry for matching and full-precision arithmetic.",
+    "cross_dtype_inputs": "One dtype is present; no cross-dtype check applies.",
+    "seed_output_agreement": "Repeat 1 per seed after repeat-consistency checks; count absolute hidden-entry differences above 1e-5 standardized units without repeating timing trials."
+  },
+  "validation": {
+    "successful_records": 27,
+    "expected_records": 27
+  },
+  "by_dtype": {
+    "float32": {
+      "schema_version": 1,
+      "source": {
+        "archive": "benchmarks/results/released_wine_quality_float32_0.3.22.zip",
+        "archive_sha256": "0654259363cd7c1d76f467fc06e5c3fd104f24198f9a7ef865569bdd2c4833bd",
+        "json_member": "version_comparison_wine_quality_white_float32.json",
+        "json_sha256": "e4b16d9794a944afc8e63dceffe2cb04a97132ff7f7a7228be562999757a7ece",
+        "benchmark_commit": "6d533d37c8173058ce2cfb314701377ee67b4b59",
+        "github_run_id": "37403070692",
+        "github_run_attempt": "1",
+        "dataset_member": "datasets/wine_quality_white.zip",
+        "dataset_archive_sha256": "3ed56667f4b828242bd732d7d1dd7f2861e54432239d7fa63877014cbb0304d4",
+        "dataset_source_file": "winequality-white.csv",
+        "dataset_source_sha256": "76c3f809815c17c07212622f776311faeb31e87610d52c26d87d6e361b169836"
+      },
+      "configuration": {
+        "dataset_id": "wine_quality_white",
+        "api": "fit_then_transform",
+        "training_policy": "available",
+        "train_size": 3000,
+        "query_size": 1000,
+        "features": 11,
+        "n_neighbors": 5,
+        "missing_rate": 0.1,
+        "mechanism": "MCAR",
+        "dtype": "float32",
+        "mar_reference_rows": 1000,
+        "mar_driver": "alcohol",
+        "threads": 1,
+        "seeds": [
+          101,
+          202,
+          303
+        ],
+        "repeats": 3,
+        "weights": "uniform",
+        "strategy": "mean",
+        "index_factory": "Flat",
+        "sklearn_working_memory_mib": 256
+      },
+      "environment": {
+        "git_commit": "6d533d37c8173058ce2cfb314701377ee67b4b59",
+        "github_run_id": "37403070692",
+        "github_run_attempt": "1",
+        "python": "3.12.14",
+        "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+        "cpu_model": "AMD EPYC 7763 64-Core Processor",
+        "logical_cpus": 4,
+        "affinity_cpus": 4,
+        "numpy": "2.5.3",
+        "scikit_learn": "1.9.1",
+        "faiss": "1.15.1"
+      },
+      "dataset": {
+        "dataset": "Wine Quality (white)",
+        "loader": "UCI ZIP archive with numpy.loadtxt",
+        "source": "https://archive.ics.uci.edu/dataset/186/wine+quality",
+        "source_url": "https://archive.ics.uci.edu/static/public/186/wine%2Bquality.zip",
+        "source_file": "winequality-white.csv",
+        "source_archive_sha256": "3ed56667f4b828242bd732d7d1dd7f2861e54432239d7fa63877014cbb0304d4",
+        "source_file_sha256": "76c3f809815c17c07212622f776311faeb31e87610d52c26d87d6e361b169836",
+        "citation": "Cortez et al. (2009). Wine Quality. https://doi.org/10.24432/C56S3T",
+        "license": "CC BY 4.0",
+        "rows": 4898,
+        "features": 11,
+        "feature_names": [
+          "fixed acidity",
+          "volatile acidity",
+          "citric acid",
+          "residual sugar",
+          "chlorides",
+          "free sulfur dioxide",
+          "total sulfur dioxide",
+          "density",
+          "pH",
+          "sulphates",
+          "alcohol"
+        ],
+        "excluded_columns": [
+          "quality"
+        ],
+        "dataset_sha256": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+        "target_used": false,
+        "original_units": "Values as supplied in the source data file"
+      },
+      "dependency_freezes": {
+        "current-environment.txt": {
+          "cloudpickle": "3.1.2",
+          "faiss-cpu": "1.15.1",
+          "faiss-imputer": "0.3.22",
+          "joblib": "1.6.0",
+          "narwhals": "2.26.0",
+          "numpy": "2.5.3",
+          "packaging": "26.3",
+          "scikit-learn": "1.9.1",
+          "scipy": "1.18.1",
+          "threadpoolctl": "3.7.0"
+        },
+        "previous-environment.txt": {
+          "cloudpickle": "3.1.2",
+          "faiss-cpu": "1.15.1",
+          "faiss-imputer": "0.3.21",
+          "joblib": "1.6.0",
+          "narwhals": "2.26.0",
+          "numpy": "2.5.3",
+          "packaging": "26.3",
+          "scikit-learn": "1.9.1",
+          "scipy": "1.18.1",
+          "threadpoolctl": "3.7.0"
+        },
+        "shared-dependencies.txt": {
+          "cloudpickle": "3.1.2",
+          "faiss-cpu": "1.15.1",
+          "joblib": "1.6.0",
+          "narwhals": "2.26.0",
+          "numpy": "2.5.3",
+          "packaging": "26.3",
+          "scikit-learn": "1.9.1",
+          "scipy": "1.18.1",
+          "threadpoolctl": "3.7.0"
+        }
+      },
+      "aggregation": {
+        "timing_and_memory": "Median [min, max] across 3 seeds x 3 repeats = 9 workers per variant.",
+        "quality": "Repeat 1 for each of 3 seeds after exact repeat quality/hash/imputed-value checks.",
+        "total_seconds": "Consecutive fit plus first held-out transform; no additional transforms.",
+        "speedup": "Median [min, max] of 9 matched numerator/denominator timing ratios; not ratio of medians.",
+        "matching": [
+          "dataset_id",
+          "api",
+          "training_policy",
+          "train_size",
+          "query_size",
+          "features",
+          "n_neighbors",
+          "missing_rate",
+          "mechanism",
+          "dtype",
+          "mar_reference_rows",
+          "mar_driver",
+          "threads",
+          "seed",
+          "repeat"
+        ],
+        "additional_matching": "Same archived run, prepared case/fingerprints, validated model parameters and native thread settings.",
+        "duration_change": "Median [min, max] of 100 * (denominator/numerator time - 1) for matched records.",
+        "output_agreement": "Recompute hidden-entry differences from saved imputed_values; compare recorded full-output hashes.",
+        "quality_evidence": "Aggregate stored worker errors against held-out truth; underlying truth/mask arrays are not regenerated.",
+        "memory": "Peak sampled after validation and before worker JSON serialization; includes setup and warmup, not isolated transform memory.",
+        "numeric_precision": "Unrounded binary64 calculations from parsed JSON, serialized at round-trip precision; Markdown alone is rounded."
+      },
+      "validation": {
+        "successful_records": 27,
+        "expected_records": 27,
+        "stored_summaries_checked": 3,
+        "stored_comparisons_checked": 3,
+        "identical_dependencies_except_faiss_imputer": true,
+        "installed_versions_and_site_packages_paths_checked": true,
+        "all_native_thread_counts_one": true,
+        "prepared_cases_identical_across_variants_and_repeats": true,
+        "quality_hashes_and_imputed_values_stable_across_repeats": true
+      },
+      "cases": [
+        {
+          "seed": 101,
+          "mechanism": "MCAR",
+          "input_dtype": "float32",
+          "truth_dtype": "float64",
+          "n_train": 3000,
+          "n_query": 1000,
+          "feature_names": [
+            "fixed acidity",
+            "volatile acidity",
+            "citric acid",
+            "residual sugar",
+            "chlorides",
+            "free sulfur dioxide",
+            "total sulfur dioxide",
+            "density",
+            "pH",
+            "sulphates",
+            "alcohol"
+          ],
+          "nominal_overall_missing_rate": 0.1,
+          "eligible_base_probability": 0.11000000000000001,
+          "always_observed": [
+            "alcohol"
+          ],
+          "mar_reference_rows": null,
+          "mar_cutoff": null,
+          "mar_low_probability": null,
+          "mar_high_probability": null,
+          "train_mask": {
+            "overall_missing_rate": 0.09803030303030304,
+            "eligible_missing_rate": 0.10783333333333334,
+            "missing_per_feature": [
+              319,
+              297,
+              329,
+              311,
+              328,
+              313,
+              340,
+              330,
+              343,
+              325,
+              0
+            ],
+            "rows_with_missing": 2057,
+            "complete_rows": 943
+          },
+          "query_mask": {
+            "overall_missing_rate": 0.10045454545454545,
+            "eligible_missing_rate": 0.1105,
+            "missing_per_feature": [
+              108,
+              107,
+              119,
+              103,
+              105,
+              135,
+              112,
+              102,
+              103,
+              111,
+              0
+            ],
+            "rows_with_missing": 706,
+            "complete_rows": 294
+          },
+          "complete_donors": 943,
+          "scaler_mean": [
+            6.877732189481519,
+            0.2772586015538288,
+            0.33396106327218267,
+            6.333878765340281,
+            0.0457814371257491,
+            34.95068850018608,
+            138.47086466165413,
+            0.9940552734082386,
+            3.1852578095596535,
+            0.4897607476635528,
+            10.49487111111113
+          ],
+          "scaler_scale": [
+            0.863102626498563,
+            0.10120068346737315,
+            0.11403673692387047,
+            5.125159745697746,
+            0.022486242960654195,
+            17.224952864977524,
+            42.582670554853514,
+            0.003030678426194492,
+            0.15148524300569674,
+            0.11206614681960103,
+            1.2146843752744165
+          ],
+          "quality_scope": "masked held-out query entries",
+          "quality_units": "standardized using observed training values",
+          "fingerprints": {
+            "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+            "train_row_ids": "8b5518cf58946286acaf6ab3684eeab7f61e8fea747738bd808fde2d8583c495",
+            "query_row_ids": "0ca3ab241914b1b8df7b5f8cf12380cf22c0f09ec6ad23331fb4cacb80827cf2",
+            "raw_train": "1705a356159e2b84e89d5285c8892eb0477be6b509bc9341f0ef71b46208f6ff",
+            "raw_query": "8761e1eab4e103591b6505f50fd2daf470b999452d1f46bda4d81db60cf2abbe",
+            "train_mask": "5002cacb5d55792a15399d1eb92c70c6a5341c38e873df7c04413a4768745b31",
+            "query_mask": "0b8def8e0498df58f59a131a906e83b9af9dd6f37e3411d6639636f6842c5ce0",
+            "train": "8f82676414c457b393de78087e3e4b3fcb52af8c806e3aa62f1c7948eb1a8718",
+            "query": "e9550d567661b86e31184b8c3e7b0cb21e8312910149f47c2ec78f36033ea1bb",
+            "truth": "1261c9c5cb43cb55aa68cfea7ca8bc5e15a181e3e0de592bd728d0786649bf99"
+          },
+          "scored_cells": 1105,
+          "observed_donors_per_feature": [
+            2681,
+            2703,
+            2671,
+            2689,
+            2672,
+            2687,
+            2660,
+            2670,
+            2657,
+            2675,
+            3000
+          ]
+        },
+        {
+          "seed": 202,
+          "mechanism": "MCAR",
+          "input_dtype": "float32",
+          "truth_dtype": "float64",
+          "n_train": 3000,
+          "n_query": 1000,
+          "feature_names": [
+            "fixed acidity",
+            "volatile acidity",
+            "citric acid",
+            "residual sugar",
+            "chlorides",
+            "free sulfur dioxide",
+            "total sulfur dioxide",
+            "density",
+            "pH",
+            "sulphates",
+            "alcohol"
+          ],
+          "nominal_overall_missing_rate": 0.1,
+          "eligible_base_probability": 0.11000000000000001,
+          "always_observed": [
+            "alcohol"
+          ],
+          "mar_reference_rows": null,
+          "mar_cutoff": null,
+          "mar_low_probability": null,
+          "mar_high_probability": null,
+          "train_mask": {
+            "overall_missing_rate": 0.09893939393939394,
+            "eligible_missing_rate": 0.10883333333333334,
+            "missing_per_feature": [
+              300,
+              361,
+              346,
+              320,
+              359,
+              323,
+              308,
+              296,
+              347,
+              305,
+              0
+            ],
+            "rows_with_missing": 2036,
+            "complete_rows": 964
+          },
+          "query_mask": {
+            "overall_missing_rate": 0.10027272727272728,
+            "eligible_missing_rate": 0.1103,
+            "missing_per_feature": [
+              119,
+              100,
+              105,
+              104,
+              91,
+              111,
+              126,
+              113,
+              120,
+              114,
+              0
+            ],
+            "rows_with_missing": 699,
+            "complete_rows": 301
+          },
+          "complete_donors": 964,
+          "scaler_mean": [
+            6.829462962962961,
+            0.2767582417582423,
+            0.3318161266013564,
+            6.474104477611945,
+            0.04514615675880404,
+            35.64755323122899,
+            138.40973254086182,
+            0.9940285946745556,
+            3.1909046362608353,
+            0.4889795918367352,
+            10.504091111111146
+          ],
+          "scaler_scale": [
+            0.8430881772117179,
+            0.09907949154800906,
+            0.11892485939251828,
+            5.151332708693124,
+            0.02066803284746353,
+            17.411290894316966,
+            42.75910904147313,
+            0.0030617755670025067,
+            0.15299920163298045,
+            0.11442604027479415,
+            1.232176188337595
+          ],
+          "quality_scope": "masked held-out query entries",
+          "quality_units": "standardized using observed training values",
+          "fingerprints": {
+            "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+            "train_row_ids": "20e28c63a25fa170d0477cecd6555709924b217fe72e11400c1200ffee8cd0e7",
+            "query_row_ids": "3a3b1c64403e9e5c8d30fe9009e34a8f8fb0c1c72febf1e1a92f3894e48d4a61",
+            "raw_train": "2dbc616d334283387de72bc2e7fb170508ced6af93f7a74b47eaf45d4f491626",
+            "raw_query": "313aa375f779267373bbefb2279d9fed55cc6ce9a7eb7bb6fc14167e648cf3ee",
+            "train_mask": "906be45a4d774c549d6811805f2e586572df4dc6f808ccd8fafb00ca733e3aaa",
+            "query_mask": "c718caf46ce01367866868cdbfb39cda16f72adae59af9ddfe842de311a56d3e",
+            "train": "6dd12d782b4ba6b6f65f05817c1b4d894632549a6284acce42b9a4a4af8a1d0b",
+            "query": "c08f756b206f5e98c81681b4c844ba7dd16b4087eaaeac507c6c00707091a538",
+            "truth": "79bc74310696dc790be266ea7b85873b46b9a5c359c49aa2e64e3a0a03197175"
+          },
+          "scored_cells": 1103,
+          "observed_donors_per_feature": [
+            2700,
+            2639,
+            2654,
+            2680,
+            2641,
+            2677,
+            2692,
+            2704,
+            2653,
+            2695,
+            3000
+          ]
+        },
+        {
+          "seed": 303,
+          "mechanism": "MCAR",
+          "input_dtype": "float32",
+          "truth_dtype": "float64",
+          "n_train": 3000,
+          "n_query": 1000,
+          "feature_names": [
+            "fixed acidity",
+            "volatile acidity",
+            "citric acid",
+            "residual sugar",
+            "chlorides",
+            "free sulfur dioxide",
+            "total sulfur dioxide",
+            "density",
+            "pH",
+            "sulphates",
+            "alcohol"
+          ],
+          "nominal_overall_missing_rate": 0.1,
+          "eligible_base_probability": 0.11000000000000001,
+          "always_observed": [
+            "alcohol"
+          ],
+          "mar_reference_rows": null,
+          "mar_cutoff": null,
+          "mar_low_probability": null,
+          "mar_high_probability": null,
+          "train_mask": {
+            "overall_missing_rate": 0.10433333333333333,
+            "eligible_missing_rate": 0.11476666666666667,
+            "missing_per_feature": [
+              335,
+              326,
+              389,
+              336,
+              328,
+              343,
+              343,
+              371,
+              341,
+              331,
+              0
+            ],
+            "rows_with_missing": 2090,
+            "complete_rows": 910
+          },
+          "query_mask": {
+            "overall_missing_rate": 0.09936363636363636,
+            "eligible_missing_rate": 0.1093,
+            "missing_per_feature": [
+              107,
+              104,
+              122,
+              119,
+              122,
+              103,
+              105,
+              100,
+              114,
+              97,
+              0
+            ],
+            "rows_with_missing": 680,
+            "complete_rows": 320
+          },
+          "complete_donors": 910,
+          "scaler_mean": [
+            6.87491557223265,
+            0.2785471204188481,
+            0.33449253159708825,
+            6.441816816816826,
+            0.04605464071856344,
+            35.03838916070757,
+            138.05419646217538,
+            0.9941446976036484,
+            3.188198570891305,
+            0.49081678531285367,
+            10.479763333333365
+          ],
+          "scaler_scale": [
+            0.8312382783676101,
+            0.10236869394465953,
+            0.12129456598149649,
+            5.180664763316327,
+            0.02188102374251752,
+            17.289359043443014,
+            42.84334048311526,
+            0.0030406871260918776,
+            0.15117649582531792,
+            0.1156602876472102,
+            1.2230968222432306
+          ],
+          "quality_scope": "masked held-out query entries",
+          "quality_units": "standardized using observed training values",
+          "fingerprints": {
+            "dataset": "518c625f745e3807da855507e3b47c6b3d9dd499699b55dd0c5a88105d96674c",
+            "train_row_ids": "b11ef98111c8e90d9d4b9fb23b8d42f6053e55c9bd34dd561324a1f803577338",
+            "query_row_ids": "845d2ef6a3f8edb5cfbac8c027018d0084d4b3f9572524e44c9ac88d8e5b62ff",
+            "raw_train": "7998c7072eda8b2d4b889e26dcc60114fed8f668be8ae9183590016212ab9dd6",
+            "raw_query": "c2d6423411ca7911d9faa2fa80774b7f4fab652b0fa2ccce130e3135c9a9706b",
+            "train_mask": "64ba45f70c4e3ddbee3eea76a0f8f1a1901f89ef052add2c8e55b2ee60407146",
+            "query_mask": "3a02bc830ba6fd7a353b5d84b07e5b0dca72cd6c2f22bafb94092b533c7cbbf6",
+            "train": "ceffc8120970b933954aba7e9a97b45b9854f9e1bbb6716efdd2df5f1277273f",
+            "query": "ea18621a88b275ebd489910ee32d6e95707850a2bfa4354c8831026eab2e203a",
+            "truth": "9c1b38ed5c22ebd2ec9accb03f99a86016553d16ea14d090fb0dd10ebff86b25"
+          },
+          "scored_cells": 1093,
+          "observed_donors_per_feature": [
+            2665,
+            2674,
+            2611,
+            2664,
+            2672,
+            2657,
+            2657,
+            2629,
+            2659,
+            2669,
+            3000
+          ]
+        }
+      ],
+      "cells": [
+        {
+          "variant": "knn",
+          "label": "KNNImputer",
+          "record_count": 9,
+          "quality_seed_count": 3,
+          "timing": {
+            "fit_seconds": {
+              "median": 0.0006473410000040758,
+              "min": 0.0006387450000033823,
+              "max": 0.0006849319999986392
+            },
+            "transform_seconds": {
+              "median": 0.06344395700000405,
+              "min": 0.06137753000000146,
+              "max": 0.06509734800000899
+            },
+            "total_seconds": {
+              "median": 0.06408489599999712,
+              "min": 0.062019509999998945,
+              "max": 0.06574230400001113
+            }
+          },
+          "memory": {
+            "worker_peak_rss_mib": {
+              "median": 173.078125,
+              "min": 172.01953125,
+              "max": 173.375
+            }
+          },
+          "quality": {
+            "rmse": {
+              "median": 0.8013359890467205,
+              "min": 0.6941226105750372,
+              "max": 0.8514761198345393
+            },
+            "mae": {
+              "median": 0.5049077624362714,
+              "min": 0.49915837710654554,
+              "max": 0.5545421514507286
+            }
+          },
+          "samples": [
+            {
+              "record_index": 0,
+              "seed": 101,
+              "repeat": 1,
+              "worker_peak_rss_mib": 173.375,
+              "worker_wall_seconds": 1.232441649000009,
+              "rmse": 0.6941226105750372,
+              "mae": 0.49915837710654554,
+              "output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "fit_seconds": 0.0006414279999944483,
+              "transform_seconds": 0.06509734800000899,
+              "total_seconds": 0.06573877600000344
+            },
+            {
+              "record_index": 5,
+              "seed": 101,
+              "repeat": 2,
+              "worker_peak_rss_mib": 173.34375,
+              "worker_wall_seconds": 1.2261145049999982,
+              "rmse": 0.6941226105750372,
+              "mae": 0.49915837710654554,
+              "output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "fit_seconds": 0.0006793210000068939,
+              "transform_seconds": 0.06506298300000424,
+              "total_seconds": 0.06574230400001113
+            },
+            {
+              "record_index": 7,
+              "seed": 101,
+              "repeat": 3,
+              "worker_peak_rss_mib": 173.33984375,
+              "worker_wall_seconds": 1.2299793990000012,
+              "rmse": 0.6941226105750372,
+              "mae": 0.49915837710654554,
+              "output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "fit_seconds": 0.0006849319999986392,
+              "transform_seconds": 0.06431790700000306,
+              "total_seconds": 0.0650028390000017
+            },
+            {
+              "record_index": 11,
+              "seed": 202,
+              "repeat": 1,
+              "worker_peak_rss_mib": 173.14453125,
+              "worker_wall_seconds": 1.2222483789999927,
+              "rmse": 0.8514761198345393,
+              "mae": 0.5545421514507286,
+              "output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "fit_seconds": 0.0006473410000040758,
+              "transform_seconds": 0.06168950100000359,
+              "total_seconds": 0.062336842000007664
+            },
+            {
+              "record_index": 13,
+              "seed": 202,
+              "repeat": 2,
+              "worker_peak_rss_mib": 173.078125,
+              "worker_wall_seconds": 1.244514800999994,
+              "rmse": 0.8514761198345393,
+              "mae": 0.5545421514507286,
+              "output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "fit_seconds": 0.0006419799999974884,
+              "transform_seconds": 0.06137753000000146,
+              "total_seconds": 0.062019509999998945
+            },
+            {
+              "record_index": 15,
+              "seed": 202,
+              "repeat": 3,
+              "worker_peak_rss_mib": 173.03125,
+              "worker_wall_seconds": 1.2528934819999904,
+              "rmse": 0.8514761198345393,
+              "mae": 0.5545421514507286,
+              "output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "fit_seconds": 0.0006847509999943213,
+              "transform_seconds": 0.06417002999999966,
+              "total_seconds": 0.06485478099999398
+            },
+            {
+              "record_index": 19,
+              "seed": 303,
+              "repeat": 1,
+              "worker_peak_rss_mib": 172.1796875,
+              "worker_wall_seconds": 1.246950800999997,
+              "rmse": 0.8013359890467205,
+              "mae": 0.5049077624362714,
+              "output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "fit_seconds": 0.0006568480000055388,
+              "transform_seconds": 0.06292683499999896,
+              "total_seconds": 0.0635836830000045
+            },
+            {
+              "record_index": 21,
+              "seed": 303,
+              "repeat": 2,
+              "worker_peak_rss_mib": 172.125,
+              "worker_wall_seconds": 1.21373243299999,
+              "rmse": 0.8013359890467205,
+              "mae": 0.5049077624362714,
+              "output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "fit_seconds": 0.0006387450000033823,
+              "transform_seconds": 0.06222796699999833,
+              "total_seconds": 0.06286671200000171
+            },
+            {
+              "record_index": 26,
+              "seed": 303,
+              "repeat": 3,
+              "worker_peak_rss_mib": 172.01953125,
+              "worker_wall_seconds": 1.2402627359999912,
+              "rmse": 0.8013359890467205,
+              "mae": 0.5049077624362714,
+              "output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "fit_seconds": 0.0006409389999930681,
+              "transform_seconds": 0.06344395700000405,
+              "total_seconds": 0.06408489599999712
+            }
+          ],
+          "quality_samples": [
+            {
+              "record_index": 0,
+              "seed": 101,
+              "scored_cells": 1105,
+              "rmse": 0.6941226105750372,
+              "mae": 0.49915837710654554,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 108,
+                  "rmse_standardized": 0.7413164228198287,
+                  "mae_standardized": 0.5814509575465893,
+                  "rmse_original_units": 0.6398321516023133,
+                  "mae_original_units": 0.5018518486385657
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 107,
+                  "rmse_standardized": 0.6780092887029536,
+                  "mae_standardized": 0.4997934533991719,
+                  "rmse_original_units": 0.06861500341396644,
+                  "mae_original_units": 0.050579439076514916
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.8147676258242567,
+                  "mae_standardized": 0.6291647859832713,
+                  "rmse_original_units": 0.09291344140020727,
+                  "mae_original_units": 0.07174789918093756
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.5008099455700983,
+                  "mae_standardized": 0.3636921941344533,
+                  "rmse_original_units": 2.566730973280947,
+                  "mae_original_units": 1.86398059320239
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 105,
+                  "rmse_standardized": 0.4976669299789672,
+                  "mae_standardized": 0.33620556449669536,
+                  "rmse_original_units": 0.011190659500989934,
+                  "mae_original_units": 0.0075600000079965885
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 135,
+                  "rmse_standardized": 0.7019220838986059,
+                  "mae_standardized": 0.5559978630992206,
+                  "rmse_original_units": 12.090574810040286,
+                  "mae_original_units": 9.577036984912299
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 112,
+                  "rmse_standardized": 0.8337628622254711,
+                  "mae_standardized": 0.5482822297817841,
+                  "rmse_original_units": 35.503849283018965,
+                  "mae_original_units": 23.347321561878207
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 102,
+                  "rmse_standardized": 0.3167977340964479,
+                  "mae_standardized": 0.23558434015262336,
+                  "rmse_original_units": 0.0009601120581934039,
+                  "mae_original_units": 0.0007139803772498204
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.7844990176066395,
+                  "mae_standardized": 0.5770692524624669,
+                  "rmse_original_units": 0.11884002431987215,
+                  "mae_original_units": 0.08741747594039258
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 111,
+                  "rmse_standardized": 0.8221120443278959,
+                  "mae_standardized": 0.6101608740614636,
+                  "rmse_original_units": 0.09213092906181236,
+                  "mae_original_units": 0.06837837809614809
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5"
+            },
+            {
+              "record_index": 11,
+              "seed": 202,
+              "scored_cells": 1103,
+              "rmse": 0.8514761198345393,
+              "mae": 0.5545421514507286,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.8357774849312384,
+                  "mae_standardized": 0.6088061980420001,
+                  "rmse_original_units": 0.7046341163252718,
+                  "mae_original_units": 0.5132773077824261
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 100,
+                  "rmse_standardized": 1.0513998785653758,
+                  "mae_standardized": 0.7622162673712678,
+                  "rmse_original_units": 0.10417216538189591,
+                  "mae_original_units": 0.07552000022076653
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 105,
+                  "rmse_standardized": 1.0640879459248005,
+                  "mae_standardized": 0.6877491912054453,
+                  "rmse_original_units": 0.1265465093503805,
+                  "mae_original_units": 0.08179047586142575
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 104,
+                  "rmse_standardized": 0.5201682501677675,
+                  "mae_standardized": 0.3664846970497119,
+                  "rmse_original_units": 2.6795597211128874,
+                  "mae_original_units": 1.8878846071476711
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 91,
+                  "rmse_standardized": 1.255498775080976,
+                  "mae_standardized": 0.5223334237222519,
+                  "rmse_original_units": 0.025948689923323838,
+                  "mae_original_units": 0.010795604358819587
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 111,
+                  "rmse_standardized": 0.7945243026461959,
+                  "mae_standardized": 0.6054371010672601,
+                  "rmse_original_units": 13.833693755977245,
+                  "mae_original_units": 10.541441484894047
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 126,
+                  "rmse_standardized": 0.6385566508067603,
+                  "mae_standardized": 0.4940560600163359,
+                  "rmse_original_units": 27.304113461004146,
+                  "mae_original_units": 21.1253969428391
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 113,
+                  "rmse_standardized": 0.2687790778914617,
+                  "mae_standardized": 0.1999071365929136,
+                  "rmse_original_units": 0.0008229412136095411,
+                  "mae_original_units": 0.0006120707864896157
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 120,
+                  "rmse_standardized": 0.8700011375336661,
+                  "mae_standardized": 0.6180860219392685,
+                  "rmse_original_units": 0.13310947946243573,
+                  "mae_original_units": 0.09456666789721295
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 114,
+                  "rmse_standardized": 0.9133943095500918,
+                  "mae_standardized": 0.6922421295554952,
+                  "rmse_original_units": 0.10451609405134661,
+                  "mae_original_units": 0.07921052579642637
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4"
+            },
+            {
+              "record_index": 19,
+              "seed": 303,
+              "scored_cells": 1093,
+              "rmse": 0.8013359890467205,
+              "mae": 0.5049077624362714,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 107,
+                  "rmse_standardized": 0.7501534662833059,
+                  "mae_standardized": 0.5491188362663353,
+                  "rmse_original_units": 0.6235562758248303,
+                  "mae_original_units": 0.4564485960772542
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 104,
+                  "rmse_standardized": 0.6905438621164163,
+                  "mae_standardized": 0.5153881796627888,
+                  "rmse_original_units": 0.07069007327635858,
+                  "mae_original_units": 0.05275961482659523
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 122,
+                  "rmse_standardized": 0.789037857824343,
+                  "mae_standardized": 0.5934611009676861,
+                  "rmse_original_units": 0.09570600450777342,
+                  "mae_original_units": 0.07198360666877655
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.437783098447275,
+                  "mae_standardized": 0.2931228888880427,
+                  "rmse_original_units": 2.26800747210124,
+                  "mae_original_units": 1.5185714217837696
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 122,
+                  "rmse_standardized": 1.2031262624916297,
+                  "mae_standardized": 0.47582213811371504,
+                  "rmse_original_units": 0.026325634314825708,
+                  "mae_original_units": 0.010411475501281648
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.9958731333298676,
+                  "mae_standardized": 0.641507995425463,
+                  "rmse_original_units": 17.218008163858677,
+                  "mae_original_units": 11.091262062150228
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 105,
+                  "rmse_standardized": 0.6444615646891104,
+                  "mae_standardized": 0.4644384617380858,
+                  "rmse_original_units": 27.610886244256772,
+                  "mae_original_units": 19.89809514969911
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 100,
+                  "rmse_standardized": 0.3390768284304357,
+                  "mae_standardized": 0.25831990376286834,
+                  "rmse_original_units": 0.0010310265469644902,
+                  "mae_original_units": 0.0007854700057850465
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 114,
+                  "rmse_standardized": 0.9052894559921929,
+                  "mae_standardized": 0.6612463874115854,
+                  "rmse_original_units": 0.13685848766450806,
+                  "mae_original_units": 0.09996491172603408
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 97,
+                  "rmse_standardized": 0.8249225264653475,
+                  "mae_standardized": 0.5991595740131905,
+                  "rmse_original_units": 0.09541077669764547,
+                  "mae_original_units": 0.06929896867694554
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033"
+            }
+          ]
+        },
+        {
+          "variant": "previous",
+          "label": "FaissImputer 0.3.21",
+          "record_count": 9,
+          "quality_seed_count": 3,
+          "timing": {
+            "fit_seconds": {
+              "median": 0.0013460229999964213,
+              "min": 0.0013141480000058436,
+              "max": 0.001406858999999372
+            },
+            "transform_seconds": {
+              "median": 0.16484968199999628,
+              "min": 0.16260101700000007,
+              "max": 0.16728723500000342
+            },
+            "total_seconds": {
+              "median": 0.16622337700000855,
+              "min": 0.1639383579999958,
+              "max": 0.16868405799999664
+            }
+          },
+          "memory": {
+            "worker_peak_rss_mib": {
+              "median": 157.11328125,
+              "min": 156.984375,
+              "max": 157.328125
+            }
+          },
+          "quality": {
+            "rmse": {
+              "median": 0.8013359884100253,
+              "min": 0.6943968042774052,
+              "max": 0.8514761210862603
+            },
+            "mae": {
+              "median": 0.5049077623493594,
+              "min": 0.49919072773235573,
+              "max": 0.5545421522086339
+            }
+          },
+          "samples": [
+            {
+              "record_index": 1,
+              "seed": 101,
+              "repeat": 1,
+              "worker_peak_rss_mib": 157.04296875,
+              "worker_wall_seconds": 1.3217683970000138,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "fit_seconds": 0.0013460229999964213,
+              "transform_seconds": 0.1648349350000018,
+              "total_seconds": 0.1661809579999982
+            },
+            {
+              "record_index": 3,
+              "seed": 101,
+              "repeat": 2,
+              "worker_peak_rss_mib": 157.328125,
+              "worker_wall_seconds": 1.3348286030000054,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "fit_seconds": 0.0013703939999913928,
+              "transform_seconds": 0.16517519200000663,
+              "total_seconds": 0.16654558599999802
+            },
+            {
+              "record_index": 8,
+              "seed": 101,
+              "repeat": 3,
+              "worker_peak_rss_mib": 157.1640625,
+              "worker_wall_seconds": 1.314950636000006,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "fit_seconds": 0.0013141480000058436,
+              "transform_seconds": 0.1649092290000027,
+              "total_seconds": 0.16622337700000855
+            },
+            {
+              "record_index": 9,
+              "seed": 202,
+              "repeat": 1,
+              "worker_peak_rss_mib": 157.1328125,
+              "worker_wall_seconds": 1.3107069280000019,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "fit_seconds": 0.0013279240000088066,
+              "transform_seconds": 0.1629565169999978,
+              "total_seconds": 0.1642844410000066
+            },
+            {
+              "record_index": 14,
+              "seed": 202,
+              "repeat": 2,
+              "worker_peak_rss_mib": 157.0546875,
+              "worker_wall_seconds": 1.3205684929999961,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "fit_seconds": 0.0013312290000015992,
+              "transform_seconds": 0.16294967900000756,
+              "total_seconds": 0.16428090800000916
+            },
+            {
+              "record_index": 16,
+              "seed": 202,
+              "repeat": 3,
+              "worker_peak_rss_mib": 156.984375,
+              "worker_wall_seconds": 1.329750639000011,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "fit_seconds": 0.001406858999999372,
+              "transform_seconds": 0.16484968199999628,
+              "total_seconds": 0.16625654099999565
+            },
+            {
+              "record_index": 20,
+              "seed": 303,
+              "repeat": 1,
+              "worker_peak_rss_mib": 157.09375,
+              "worker_wall_seconds": 1.326397626000002,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "fit_seconds": 0.0014027929999969047,
+              "transform_seconds": 0.1661353909999974,
+              "total_seconds": 0.16753818399999432
+            },
+            {
+              "record_index": 22,
+              "seed": 303,
+              "repeat": 2,
+              "worker_peak_rss_mib": 157.28125,
+              "worker_wall_seconds": 1.348832740000006,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "fit_seconds": 0.0013968229999932191,
+              "transform_seconds": 0.16728723500000342,
+              "total_seconds": 0.16868405799999664
+            },
+            {
+              "record_index": 24,
+              "seed": 303,
+              "repeat": 3,
+              "worker_peak_rss_mib": 157.11328125,
+              "worker_wall_seconds": 1.3333458809999996,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "fit_seconds": 0.0013373409999957175,
+              "transform_seconds": 0.16260101700000007,
+              "total_seconds": 0.1639383579999958
+            }
+          ],
+          "quality_samples": [
+            {
+              "record_index": 1,
+              "seed": 101,
+              "scored_cells": 1105,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 108,
+                  "rmse_standardized": 0.7413164230750258,
+                  "mae_standardized": 0.5814509566734744,
+                  "rmse_original_units": 0.6398321518225746,
+                  "mae_original_units": 0.5018518478849779
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 107,
+                  "rmse_standardized": 0.6772814413306886,
+                  "mae_standardized": 0.4976694265462422,
+                  "rmse_original_units": 0.06854134476243327,
+                  "mae_original_units": 0.05036448610729539
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.8147676217863817,
+                  "mae_standardized": 0.6291647854073089,
+                  "rmse_original_units": 0.09291344093974119,
+                  "mae_original_units": 0.07174789911525668
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.5008099462847947,
+                  "mae_standardized": 0.3636921935806328,
+                  "rmse_original_units": 2.56673097694388,
+                  "mae_original_units": 1.863980590363972
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 105,
+                  "rmse_standardized": 0.49766692027450726,
+                  "mae_standardized": 0.33620556356370973,
+                  "rmse_original_units": 0.011190659282773092,
+                  "mae_original_units": 0.007559999987017246
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 135,
+                  "rmse_standardized": 0.7019220822902442,
+                  "mae_standardized": 0.5559978595694565,
+                  "rmse_original_units": 12.090574782336331,
+                  "mae_original_units": 9.57703692411228
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 112,
+                  "rmse_standardized": 0.836575860575739,
+                  "mae_standardized": 0.5506306069848207,
+                  "rmse_original_units": 35.62363426503976,
+                  "mae_original_units": 23.447321734653638
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 102,
+                  "rmse_standardized": 0.31679773657504323,
+                  "mae_standardized": 0.23558434785886115,
+                  "rmse_original_units": 0.0009601120657052295,
+                  "mae_original_units": 0.000713980400604949
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.7844990216619806,
+                  "mae_standardized": 0.5770692500211358,
+                  "rmse_original_units": 0.1188400249341965,
+                  "mae_original_units": 0.08741747557056694
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 111,
+                  "rmse_standardized": 0.8221120446597522,
+                  "mae_standardized": 0.6101608770148469,
+                  "rmse_original_units": 0.0921309290990022,
+                  "mae_original_units": 0.06837837842712238
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3"
+            },
+            {
+              "record_index": 9,
+              "seed": 202,
+              "scored_cells": 1103,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.8357774903871276,
+                  "mae_standardized": 0.6088062029334002,
+                  "rmse_original_units": 0.7046341209250674,
+                  "mae_original_units": 0.5132773119063077
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 100,
+                  "rmse_standardized": 1.0513998811965286,
+                  "mae_standardized": 0.7622162691341436,
+                  "rmse_original_units": 0.1041721656425892,
+                  "mae_original_units": 0.07552000039543139
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 105,
+                  "rmse_standardized": 1.064087945678729,
+                  "mae_standardized": 0.6877491937987352,
+                  "rmse_original_units": 0.1265465093211165,
+                  "mae_original_units": 0.0817904761698324
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 104,
+                  "rmse_standardized": 0.5201682566426453,
+                  "mae_standardized": 0.36648470561071556,
+                  "rmse_original_units": 2.679559754467138,
+                  "mae_original_units": 1.8878846512482494
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 91,
+                  "rmse_standardized": 1.2554987774017585,
+                  "mae_standardized": 0.5223334241751203,
+                  "rmse_original_units": 0.025948689971289844,
+                  "mae_original_units": 0.010795604368179487
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 111,
+                  "rmse_standardized": 0.7945243004628759,
+                  "mae_standardized": 0.6054370979712418,
+                  "rmse_original_units": 13.833693717962827,
+                  "mae_original_units": 10.541441430988373
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 126,
+                  "rmse_standardized": 0.638556650807487,
+                  "mae_standardized": 0.49405605781518547,
+                  "rmse_original_units": 27.30411346103522,
+                  "mae_original_units": 21.125396848719866
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 113,
+                  "rmse_standardized": 0.26877907824719627,
+                  "mae_standardized": 0.19990713484565356,
+                  "rmse_original_units": 0.0008229412146987205,
+                  "mae_original_units": 0.0006120707811398975
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 120,
+                  "rmse_standardized": 0.870001133572212,
+                  "mae_standardized": 0.6180860165802833,
+                  "rmse_original_units": 0.13310947885633642,
+                  "mae_original_units": 0.09456666707729246
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 114,
+                  "rmse_standardized": 0.9133943130425022,
+                  "mae_standardized": 0.6922421324965139,
+                  "rmse_original_units": 0.10451609445096928,
+                  "mae_original_units": 0.0792105261329555
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361"
+            },
+            {
+              "record_index": 20,
+              "seed": 303,
+              "scored_cells": 1093,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 107,
+                  "rmse_standardized": 0.7501534665200433,
+                  "mae_standardized": 0.5491188362880952,
+                  "rmse_original_units": 0.6235562760216156,
+                  "mae_original_units": 0.4564485960953417
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 104,
+                  "rmse_standardized": 0.6905438645037026,
+                  "mae_standardized": 0.5153881821925833,
+                  "rmse_original_units": 0.07069007352074197,
+                  "mae_original_units": 0.05275961508556699
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 122,
+                  "rmse_standardized": 0.7890378611147235,
+                  "mae_standardized": 0.5934611014982346,
+                  "rmse_original_units": 0.0957060049068787,
+                  "mae_original_units": 0.07198360673312922
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.4377831000390191,
+                  "mae_standardized": 0.29312289024980853,
+                  "rmse_original_units": 2.2680074803475327,
+                  "mae_original_units": 1.5185714288386216
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 122,
+                  "rmse_standardized": 1.203126255472798,
+                  "mae_standardized": 0.4758221314455981,
+                  "rmse_original_units": 0.02632563416124649,
+                  "mae_original_units": 0.010411475355376424
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.9958731299143185,
+                  "mae_standardized": 0.641507998409312,
+                  "rmse_original_units": 17.218008104806025,
+                  "mae_original_units": 11.091262113739067
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 105,
+                  "rmse_standardized": 0.6444615645304175,
+                  "mae_standardized": 0.4644384602834486,
+                  "rmse_original_units": 27.610886237457837,
+                  "mae_original_units": 19.898095087377595
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 100,
+                  "rmse_standardized": 0.3390768279410645,
+                  "mae_standardized": 0.25831989955329027,
+                  "rmse_original_units": 0.0010310265454764656,
+                  "mae_original_units": 0.0007854699929850369
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 114,
+                  "rmse_standardized": 0.9052894565127161,
+                  "mae_standardized": 0.6612463894212814,
+                  "rmse_original_units": 0.13685848774319895,
+                  "mae_original_units": 0.09996491202985289
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 97,
+                  "rmse_standardized": 0.8249225290451188,
+                  "mae_standardized": 0.5991595767303481,
+                  "rmse_original_units": 0.09541077699602256,
+                  "mae_original_units": 0.0692989689912128
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7"
+            }
+          ]
+        },
+        {
+          "variant": "current",
+          "label": "FaissImputer 0.3.22",
+          "record_count": 9,
+          "quality_seed_count": 3,
+          "timing": {
+            "fit_seconds": {
+              "median": 0.0013447750000068481,
+              "min": 0.0012922469999949726,
+              "max": 0.0014104979999984835
+            },
+            "transform_seconds": {
+              "median": 0.1641952989999993,
+              "min": 0.1630493400000006,
+              "max": 0.16772322900000347
+            },
+            "total_seconds": {
+              "median": 0.16557290400000113,
+              "min": 0.16436428400000125,
+              "max": 0.16901547599999844
+            }
+          },
+          "memory": {
+            "worker_peak_rss_mib": {
+              "median": 157.1953125,
+              "min": 156.640625,
+              "max": 157.4375
+            }
+          },
+          "quality": {
+            "rmse": {
+              "median": 0.8013359884100253,
+              "min": 0.6943968042774052,
+              "max": 0.8514761210862603
+            },
+            "mae": {
+              "median": 0.5049077623493594,
+              "min": 0.49919072773235573,
+              "max": 0.5545421522086339
+            }
+          },
+          "samples": [
+            {
+              "record_index": 2,
+              "seed": 101,
+              "repeat": 1,
+              "worker_peak_rss_mib": 157.14453125,
+              "worker_wall_seconds": 1.3426637489999962,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "fit_seconds": 0.0013166990000001988,
+              "transform_seconds": 0.1641051019999935,
+              "total_seconds": 0.1654218009999937
+            },
+            {
+              "record_index": 4,
+              "seed": 101,
+              "repeat": 2,
+              "worker_peak_rss_mib": 157.171875,
+              "worker_wall_seconds": 1.3434503899999868,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "fit_seconds": 0.0012922469999949726,
+              "transform_seconds": 0.16772322900000347,
+              "total_seconds": 0.16901547599999844
+            },
+            {
+              "record_index": 6,
+              "seed": 101,
+              "repeat": 3,
+              "worker_peak_rss_mib": 157.4375,
+              "worker_wall_seconds": 1.323919441000001,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "fit_seconds": 0.0013447750000068481,
+              "transform_seconds": 0.1633401240000012,
+              "total_seconds": 0.16468489900000804
+            },
+            {
+              "record_index": 10,
+              "seed": 202,
+              "repeat": 1,
+              "worker_peak_rss_mib": 156.96484375,
+              "worker_wall_seconds": 1.3231731040000057,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "fit_seconds": 0.0013810829999982843,
+              "transform_seconds": 0.1630493400000006,
+              "total_seconds": 0.16443042299999888
+            },
+            {
+              "record_index": 12,
+              "seed": 202,
+              "repeat": 2,
+              "worker_peak_rss_mib": 157.1953125,
+              "worker_wall_seconds": 1.3177853899999974,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "fit_seconds": 0.001312514000005649,
+              "transform_seconds": 0.1630517699999956,
+              "total_seconds": 0.16436428400000125
+            },
+            {
+              "record_index": 17,
+              "seed": 202,
+              "repeat": 3,
+              "worker_peak_rss_mib": 156.640625,
+              "worker_wall_seconds": 1.3495012409999987,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "fit_seconds": 0.0013776050000018358,
+              "transform_seconds": 0.1641952989999993,
+              "total_seconds": 0.16557290400000113
+            },
+            {
+              "record_index": 18,
+              "seed": 303,
+              "repeat": 1,
+              "worker_peak_rss_mib": 157.30859375,
+              "worker_wall_seconds": 1.3528377020000022,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "fit_seconds": 0.0013189770000110457,
+              "transform_seconds": 0.16525182799999527,
+              "total_seconds": 0.16657080500000632
+            },
+            {
+              "record_index": 23,
+              "seed": 303,
+              "repeat": 2,
+              "worker_peak_rss_mib": 157.28125,
+              "worker_wall_seconds": 1.3284055909999921,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "fit_seconds": 0.0013515480000023672,
+              "transform_seconds": 0.16620996000000332,
+              "total_seconds": 0.1675615080000057
+            },
+            {
+              "record_index": 25,
+              "seed": 303,
+              "repeat": 3,
+              "worker_peak_rss_mib": 157.26171875,
+              "worker_wall_seconds": 1.3253494119999942,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "fit_seconds": 0.0014104979999984835,
+              "transform_seconds": 0.1664579400000008,
+              "total_seconds": 0.1678684379999993
+            }
+          ],
+          "quality_samples": [
+            {
+              "record_index": 2,
+              "seed": 101,
+              "scored_cells": 1105,
+              "rmse": 0.6943968042774052,
+              "mae": 0.49919072773235573,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 108,
+                  "rmse_standardized": 0.7413164230750258,
+                  "mae_standardized": 0.5814509566734744,
+                  "rmse_original_units": 0.6398321518225746,
+                  "mae_original_units": 0.5018518478849779
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 107,
+                  "rmse_standardized": 0.6772814413306886,
+                  "mae_standardized": 0.4976694265462422,
+                  "rmse_original_units": 0.06854134476243327,
+                  "mae_original_units": 0.05036448610729539
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.8147676217863817,
+                  "mae_standardized": 0.6291647854073089,
+                  "rmse_original_units": 0.09291344093974119,
+                  "mae_original_units": 0.07174789911525668
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.5008099462847947,
+                  "mae_standardized": 0.3636921935806328,
+                  "rmse_original_units": 2.56673097694388,
+                  "mae_original_units": 1.863980590363972
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 105,
+                  "rmse_standardized": 0.49766692027450726,
+                  "mae_standardized": 0.33620556356370973,
+                  "rmse_original_units": 0.011190659282773092,
+                  "mae_original_units": 0.007559999987017246
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 135,
+                  "rmse_standardized": 0.7019220822902442,
+                  "mae_standardized": 0.5559978595694565,
+                  "rmse_original_units": 12.090574782336331,
+                  "mae_original_units": 9.57703692411228
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 112,
+                  "rmse_standardized": 0.836575860575739,
+                  "mae_standardized": 0.5506306069848207,
+                  "rmse_original_units": 35.62363426503976,
+                  "mae_original_units": 23.447321734653638
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 102,
+                  "rmse_standardized": 0.31679773657504323,
+                  "mae_standardized": 0.23558434785886115,
+                  "rmse_original_units": 0.0009601120657052295,
+                  "mae_original_units": 0.000713980400604949
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.7844990216619806,
+                  "mae_standardized": 0.5770692500211358,
+                  "rmse_original_units": 0.1188400249341965,
+                  "mae_original_units": 0.08741747557056694
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 111,
+                  "rmse_standardized": 0.8221120446597522,
+                  "mae_standardized": 0.6101608770148469,
+                  "rmse_original_units": 0.0921309290990022,
+                  "mae_original_units": 0.06837837842712238
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3"
+            },
+            {
+              "record_index": 10,
+              "seed": 202,
+              "scored_cells": 1103,
+              "rmse": 0.8514761210862603,
+              "mae": 0.5545421522086339,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.8357774903871276,
+                  "mae_standardized": 0.6088062029334002,
+                  "rmse_original_units": 0.7046341209250674,
+                  "mae_original_units": 0.5132773119063077
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 100,
+                  "rmse_standardized": 1.0513998811965286,
+                  "mae_standardized": 0.7622162691341436,
+                  "rmse_original_units": 0.1041721656425892,
+                  "mae_original_units": 0.07552000039543139
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 105,
+                  "rmse_standardized": 1.064087945678729,
+                  "mae_standardized": 0.6877491937987352,
+                  "rmse_original_units": 0.1265465093211165,
+                  "mae_original_units": 0.0817904761698324
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 104,
+                  "rmse_standardized": 0.5201682566426453,
+                  "mae_standardized": 0.36648470561071556,
+                  "rmse_original_units": 2.679559754467138,
+                  "mae_original_units": 1.8878846512482494
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 91,
+                  "rmse_standardized": 1.2554987774017585,
+                  "mae_standardized": 0.5223334241751203,
+                  "rmse_original_units": 0.025948689971289844,
+                  "mae_original_units": 0.010795604368179487
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 111,
+                  "rmse_standardized": 0.7945243004628759,
+                  "mae_standardized": 0.6054370979712418,
+                  "rmse_original_units": 13.833693717962827,
+                  "mae_original_units": 10.541441430988373
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 126,
+                  "rmse_standardized": 0.638556650807487,
+                  "mae_standardized": 0.49405605781518547,
+                  "rmse_original_units": 27.30411346103522,
+                  "mae_original_units": 21.125396848719866
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 113,
+                  "rmse_standardized": 0.26877907824719627,
+                  "mae_standardized": 0.19990713484565356,
+                  "rmse_original_units": 0.0008229412146987205,
+                  "mae_original_units": 0.0006120707811398975
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 120,
+                  "rmse_standardized": 0.870001133572212,
+                  "mae_standardized": 0.6180860165802833,
+                  "rmse_original_units": 0.13310947885633642,
+                  "mae_original_units": 0.09456666707729246
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 114,
+                  "rmse_standardized": 0.9133943130425022,
+                  "mae_standardized": 0.6922421324965139,
+                  "rmse_original_units": 0.10451609445096928,
+                  "mae_original_units": 0.0792105261329555
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361"
+            },
+            {
+              "record_index": 18,
+              "seed": 303,
+              "scored_cells": 1093,
+              "rmse": 0.8013359884100253,
+              "mae": 0.5049077623493594,
+              "feature_quality": [
+                {
+                  "feature": "fixed acidity",
+                  "scored_cells": 107,
+                  "rmse_standardized": 0.7501534665200433,
+                  "mae_standardized": 0.5491188362880952,
+                  "rmse_original_units": 0.6235562760216156,
+                  "mae_original_units": 0.4564485960953417
+                },
+                {
+                  "feature": "volatile acidity",
+                  "scored_cells": 104,
+                  "rmse_standardized": 0.6905438645037026,
+                  "mae_standardized": 0.5153881821925833,
+                  "rmse_original_units": 0.07069007352074197,
+                  "mae_original_units": 0.05275961508556699
+                },
+                {
+                  "feature": "citric acid",
+                  "scored_cells": 122,
+                  "rmse_standardized": 0.7890378611147235,
+                  "mae_standardized": 0.5934611014982346,
+                  "rmse_original_units": 0.0957060049068787,
+                  "mae_original_units": 0.07198360673312922
+                },
+                {
+                  "feature": "residual sugar",
+                  "scored_cells": 119,
+                  "rmse_standardized": 0.4377831000390191,
+                  "mae_standardized": 0.29312289024980853,
+                  "rmse_original_units": 2.2680074803475327,
+                  "mae_original_units": 1.5185714288386216
+                },
+                {
+                  "feature": "chlorides",
+                  "scored_cells": 122,
+                  "rmse_standardized": 1.203126255472798,
+                  "mae_standardized": 0.4758221314455981,
+                  "rmse_original_units": 0.02632563416124649,
+                  "mae_original_units": 0.010411475355376424
+                },
+                {
+                  "feature": "free sulfur dioxide",
+                  "scored_cells": 103,
+                  "rmse_standardized": 0.9958731299143185,
+                  "mae_standardized": 0.641507998409312,
+                  "rmse_original_units": 17.218008104806025,
+                  "mae_original_units": 11.091262113739067
+                },
+                {
+                  "feature": "total sulfur dioxide",
+                  "scored_cells": 105,
+                  "rmse_standardized": 0.6444615645304175,
+                  "mae_standardized": 0.4644384602834486,
+                  "rmse_original_units": 27.610886237457837,
+                  "mae_original_units": 19.898095087377595
+                },
+                {
+                  "feature": "density",
+                  "scored_cells": 100,
+                  "rmse_standardized": 0.3390768279410645,
+                  "mae_standardized": 0.25831989955329027,
+                  "rmse_original_units": 0.0010310265454764656,
+                  "mae_original_units": 0.0007854699929850369
+                },
+                {
+                  "feature": "pH",
+                  "scored_cells": 114,
+                  "rmse_standardized": 0.9052894565127161,
+                  "mae_standardized": 0.6612463894212814,
+                  "rmse_original_units": 0.13685848774319895,
+                  "mae_original_units": 0.09996491202985289
+                },
+                {
+                  "feature": "sulphates",
+                  "scored_cells": 97,
+                  "rmse_standardized": 0.8249225290451188,
+                  "mae_standardized": 0.5991595767303481,
+                  "rmse_original_units": 0.09541077699602256,
+                  "mae_original_units": 0.0692989689912128
+                },
+                {
+                  "feature": "alcohol",
+                  "scored_cells": 0,
+                  "rmse_standardized": null,
+                  "mae_standardized": null,
+                  "rmse_original_units": null,
+                  "mae_original_units": null
+                }
+              ],
+              "output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7"
+            }
+          ]
+        }
+      ],
+      "comparisons": [
+        {
+          "numerator_variant": "previous",
+          "denominator_variant": "current",
+          "pair_count": 9,
+          "pairs": [
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 1
+              },
+              "numerator_record_index": 1,
+              "denominator_record_index": 2,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0013460229999964213,
+                  "denominator_seconds": 0.0013166990000001988,
+                  "ratio": 1.0222708454978837,
+                  "denominator_duration_change_percent": -2.1785660420587494
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.1648349350000018,
+                  "denominator_seconds": 0.1641051019999935,
+                  "ratio": 1.0044473510641267,
+                  "denominator_duration_change_percent": -0.4427659707017084
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.1661809579999982,
+                  "denominator_seconds": 0.1654218009999937,
+                  "ratio": 1.004589219772819,
+                  "denominator_duration_change_percent": -0.45682550464326566
+                }
+              },
+              "numerator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 2
+              },
+              "numerator_record_index": 3,
+              "denominator_record_index": 4,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0013703939999913928,
+                  "denominator_seconds": 0.0012922469999949726,
+                  "ratio": 1.060473732960281,
+                  "denominator_duration_change_percent": -5.702520588743898
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.16517519200000663,
+                  "denominator_seconds": 0.16772322900000347,
+                  "ratio": 0.9848080852295255,
+                  "denominator_duration_change_percent": 1.5426269339506637
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.16654558599999802,
+                  "denominator_seconds": 0.16901547599999844,
+                  "ratio": 0.9853866044787494,
+                  "denominator_duration_change_percent": 1.4830113840425874
+                }
+              },
+              "numerator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 3
+              },
+              "numerator_record_index": 8,
+              "denominator_record_index": 6,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0013141480000058436,
+                  "denominator_seconds": 0.0013447750000068481,
+                  "ratio": 0.977225186368836,
+                  "denominator_duration_change_percent": 2.330559419553069
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.1649092290000027,
+                  "denominator_seconds": 0.1633401240000012,
+                  "ratio": 1.0096063659165675,
+                  "denominator_duration_change_percent": -0.9514961712673409
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.16622337700000855,
+                  "denominator_seconds": 0.16468489900000804,
+                  "ratio": 1.0093419494400664,
+                  "denominator_duration_change_percent": -0.9255485165605926
+                }
+              },
+              "numerator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 1
+              },
+              "numerator_record_index": 9,
+              "denominator_record_index": 10,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0013279240000088066,
+                  "denominator_seconds": 0.0013810829999982843,
+                  "ratio": 0.961509192431198,
+                  "denominator_duration_change_percent": 4.003165843009482
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.1629565169999978,
+                  "denominator_seconds": 0.1630493400000006,
+                  "ratio": 0.9994307060672384,
+                  "denominator_duration_change_percent": 0.05696182129542038
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.1642844410000066,
+                  "denominator_seconds": 0.16443042299999888,
+                  "ratio": 0.999112195922574,
+                  "denominator_duration_change_percent": 0.08885929738913223
+                }
+              },
+              "numerator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 2
+              },
+              "numerator_record_index": 14,
+              "denominator_record_index": 12,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0013312290000015992,
+                  "denominator_seconds": 0.001312514000005649,
+                  "ratio": 1.014258895521015,
+                  "denominator_duration_change_percent": -1.4058437726287232
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.16294967900000756,
+                  "denominator_seconds": 0.1630517699999956,
+                  "ratio": 0.9993738737090186,
+                  "denominator_duration_change_percent": 0.06265185707301502
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.16428090800000916,
+                  "denominator_seconds": 0.16436428400000125,
+                  "ratio": 0.9994927365120753,
+                  "denominator_duration_change_percent": 0.05075209347642495
+                }
+              },
+              "numerator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 3
+              },
+              "numerator_record_index": 16,
+              "denominator_record_index": 17,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.001406858999999372,
+                  "denominator_seconds": 0.0013776050000018358,
+                  "ratio": 1.0212354049219459,
+                  "denominator_duration_change_percent": -2.079383932401835
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.16484968199999628,
+                  "denominator_seconds": 0.1641952989999993,
+                  "ratio": 1.0039853942468657,
+                  "denominator_duration_change_percent": -0.39695739297634924
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.16625654099999565,
+                  "denominator_seconds": 0.16557290400000113,
+                  "ratio": 1.0041289183403737,
+                  "denominator_duration_change_percent": -0.41119404739362597
+                }
+              },
+              "numerator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 1
+              },
+              "numerator_record_index": 20,
+              "denominator_record_index": 18,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0014027929999969047,
+                  "denominator_seconds": 0.0013189770000110457,
+                  "ratio": 1.0635462180046786,
+                  "denominator_duration_change_percent": -5.974937142261472
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.1661353909999974,
+                  "denominator_seconds": 0.16525182799999527,
+                  "ratio": 1.0053467668751124,
+                  "denominator_duration_change_percent": -0.5318330999095511
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.16753818399999432,
+                  "denominator_seconds": 0.16657080500000632,
+                  "ratio": 1.0058076143654824,
+                  "denominator_duration_change_percent": -0.577408073127994
+                }
+              },
+              "numerator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 2
+              },
+              "numerator_record_index": 22,
+              "denominator_record_index": 23,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0013968229999932191,
+                  "denominator_seconds": 0.0013515480000023672,
+                  "ratio": 1.033498625273222,
+                  "denominator_duration_change_percent": -3.2412839702003593
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.16728723500000342,
+                  "denominator_seconds": 0.16620996000000332,
+                  "ratio": 1.0064814106206397,
+                  "denominator_duration_change_percent": -0.6439672459169321
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.16868405799999664,
+                  "denominator_seconds": 0.1675615080000057,
+                  "ratio": 1.0066993309703975,
+                  "denominator_duration_change_percent": -0.6654748606954697
+                }
+              },
+              "numerator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 3
+              },
+              "numerator_record_index": 24,
+              "denominator_record_index": 25,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0013373409999957175,
+                  "denominator_seconds": 0.0014104979999984835,
+                  "ratio": 0.9481339214923774,
+                  "denominator_duration_change_percent": 5.470332548168355
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.16260101700000007,
+                  "denominator_seconds": 0.1664579400000008,
+                  "ratio": 0.9768294441226372,
+                  "denominator_duration_change_percent": 2.3720165292697493
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.1639383579999958,
+                  "denominator_seconds": 0.1678684379999993,
+                  "ratio": 0.9765883328228531,
+                  "denominator_duration_change_percent": 2.3972913038470267
+                }
+              },
+              "numerator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": true,
+              "max_scored_abs_difference": 0.0,
+              "absolute_rmse_difference": 0.0,
+              "absolute_mae_difference": 0.0
+            }
+          ],
+          "speedup": {
+            "fit_seconds": {
+              "median": 1.0212354049219459,
+              "min": 0.9481339214923774,
+              "max": 1.0635462180046786
+            },
+            "transform_seconds": {
+              "median": 1.0039853942468657,
+              "min": 0.9768294441226372,
+              "max": 1.0096063659165675
+            },
+            "total_seconds": {
+              "median": 1.0041289183403737,
+              "min": 0.9765883328228531,
+              "max": 1.0093419494400664
+            }
+          },
+          "denominator_duration_change_percent": {
+            "fit_seconds": {
+              "median": -2.079383932401835,
+              "min": -5.974937142261472,
+              "max": 5.470332548168355
+            },
+            "transform_seconds": {
+              "median": -0.39695739297634924,
+              "min": -0.9514961712673409,
+              "max": 2.3720165292697493
+            },
+            "total_seconds": {
+              "median": -0.41119404739362597,
+              "min": -0.9255485165605926,
+              "max": 2.3972913038470267
+            }
+          },
+          "faster_pairs": {
+            "fit_seconds": 6,
+            "transform_seconds": 5,
+            "total_seconds": 5
+          },
+          "matching_output_hashes": 9,
+          "max_scored_abs_difference": 0.0,
+          "max_absolute_rmse_difference": 0.0,
+          "max_absolute_mae_difference": 0.0,
+          "seed_output_agreement": [
+            {
+              "seed": 101,
+              "repeat": 1,
+              "numerator_record_index": 1,
+              "denominator_record_index": 2,
+              "scored_cells": 1105,
+              "different_hidden_entries": 0,
+              "hidden_entries_above_1e_minus_5": 0,
+              "max_scored_abs_difference": 0.0,
+              "numerator_rmse": 0.6943968042774052,
+              "denominator_rmse": 0.6943968042774052,
+              "numerator_mae": 0.49919072773235573,
+              "denominator_mae": 0.49919072773235573,
+              "denominator_minus_numerator_rmse": 0.0,
+              "denominator_minus_numerator_mae": 0.0
+            },
+            {
+              "seed": 202,
+              "repeat": 1,
+              "numerator_record_index": 9,
+              "denominator_record_index": 10,
+              "scored_cells": 1103,
+              "different_hidden_entries": 0,
+              "hidden_entries_above_1e_minus_5": 0,
+              "max_scored_abs_difference": 0.0,
+              "numerator_rmse": 0.8514761210862603,
+              "denominator_rmse": 0.8514761210862603,
+              "numerator_mae": 0.5545421522086339,
+              "denominator_mae": 0.5545421522086339,
+              "denominator_minus_numerator_rmse": 0.0,
+              "denominator_minus_numerator_mae": 0.0
+            },
+            {
+              "seed": 303,
+              "repeat": 1,
+              "numerator_record_index": 20,
+              "denominator_record_index": 18,
+              "scored_cells": 1093,
+              "different_hidden_entries": 0,
+              "hidden_entries_above_1e_minus_5": 0,
+              "max_scored_abs_difference": 0.0,
+              "numerator_rmse": 0.8013359884100253,
+              "denominator_rmse": 0.8013359884100253,
+              "numerator_mae": 0.5049077623493594,
+              "denominator_mae": 0.5049077623493594,
+              "denominator_minus_numerator_rmse": 0.0,
+              "denominator_minus_numerator_mae": 0.0
+            }
+          ]
+        },
+        {
+          "numerator_variant": "knn",
+          "denominator_variant": "current",
+          "pair_count": 9,
+          "pairs": [
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 1
+              },
+              "numerator_record_index": 0,
+              "denominator_record_index": 2,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006414279999944483,
+                  "denominator_seconds": 0.0013166990000001988,
+                  "ratio": 0.48714854343654207,
+                  "denominator_duration_change_percent": 105.27619623895355
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06509734800000899,
+                  "denominator_seconds": 0.1641051019999935,
+                  "ratio": 0.39668082958207823,
+                  "denominator_duration_change_percent": 152.09183944017326
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06573877600000344,
+                  "denominator_seconds": 0.1654218009999937,
+                  "ratio": 0.39740092057156323,
+                  "denominator_duration_change_percent": 151.6350486963509
+                }
+              },
+              "numerator_output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "absolute_rmse_difference": 0.00027419370236803076,
+              "absolute_mae_difference": 3.2350625810195766e-05
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 2
+              },
+              "numerator_record_index": 5,
+              "denominator_record_index": 4,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006793210000068939,
+                  "denominator_seconds": 0.0012922469999949726,
+                  "ratio": 0.5256897481747195,
+                  "denominator_duration_change_percent": 90.22627005228141
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06506298300000424,
+                  "denominator_seconds": 0.16772322900000347,
+                  "ratio": 0.3879187360505854,
+                  "denominator_duration_change_percent": 157.78595026913007
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06574230400001113,
+                  "denominator_seconds": 0.16901547599999844,
+                  "ratio": 0.3889720962594676,
+                  "denominator_duration_change_percent": 157.08785016109235
+                }
+              },
+              "numerator_output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "absolute_rmse_difference": 0.00027419370236803076,
+              "absolute_mae_difference": 3.2350625810195766e-05
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 3
+              },
+              "numerator_record_index": 7,
+              "denominator_record_index": 6,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006849319999986392,
+                  "denominator_seconds": 0.0013447750000068481,
+                  "ratio": 0.5093283262963331,
+                  "denominator_duration_change_percent": 96.33700863874368
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06431790700000306,
+                  "denominator_seconds": 0.1633401240000012,
+                  "ratio": 0.3937667330288214,
+                  "denominator_duration_change_percent": 153.95746164438066
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.0650028390000017,
+                  "denominator_seconds": 0.16468489900000804,
+                  "ratio": 0.3947103796080206,
+                  "denominator_duration_change_percent": 153.35031751459925
+                }
+              },
+              "numerator_output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "absolute_rmse_difference": 0.00027419370236803076,
+              "absolute_mae_difference": 3.2350625810195766e-05
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 1
+              },
+              "numerator_record_index": 11,
+              "denominator_record_index": 10,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006473410000040758,
+                  "denominator_seconds": 0.0013810829999982843,
+                  "ratio": 0.4687198379857546,
+                  "denominator_duration_change_percent": 113.34706128448357
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06168950100000359,
+                  "denominator_seconds": 0.1630493400000006,
+                  "ratio": 0.3783486704086221,
+                  "denominator_duration_change_percent": 164.30646602246162
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.062336842000007664,
+                  "denominator_seconds": 0.16443042299999888,
+                  "ratio": 0.3791077153648634,
+                  "denominator_duration_change_percent": 163.77727476149445
+                }
+              },
+              "numerator_output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "absolute_rmse_difference": 1.2517209491136327e-09,
+              "absolute_mae_difference": 7.579052940798192e-10
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 2
+              },
+              "numerator_record_index": 13,
+              "denominator_record_index": 12,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006419799999974884,
+                  "denominator_seconds": 0.001312514000005649,
+                  "ratio": 0.48912240173798177,
+                  "denominator_duration_change_percent": 104.44780211389512
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06137753000000146,
+                  "denominator_seconds": 0.1630517699999956,
+                  "ratio": 0.3764297069575087,
+                  "denominator_duration_change_percent": 165.6538475888354
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.062019509999998945,
+                  "denominator_seconds": 0.16436428400000125,
+                  "ratio": 0.37732960282294953,
+                  "denominator_duration_change_percent": 165.020287970679
+                }
+              },
+              "numerator_output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "absolute_rmse_difference": 1.2517209491136327e-09,
+              "absolute_mae_difference": 7.579052940798192e-10
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 3
+              },
+              "numerator_record_index": 15,
+              "denominator_record_index": 17,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006847509999943213,
+                  "denominator_seconds": 0.0013776050000018358,
+                  "ratio": 0.4970590263489235,
+                  "denominator_duration_change_percent": 101.18334986195863
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06417002999999966,
+                  "denominator_seconds": 0.1641952989999993,
+                  "ratio": 0.39081526932144345,
+                  "denominator_duration_change_percent": 155.8753658055017
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06485478099999398,
+                  "denominator_seconds": 0.16557290400000113,
+                  "ratio": 0.3916992420450241,
+                  "denominator_duration_change_percent": 155.29791550759612
+                }
+              },
+              "numerator_output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "absolute_rmse_difference": 1.2517209491136327e-09,
+              "absolute_mae_difference": 7.579052940798192e-10
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 1
+              },
+              "numerator_record_index": 19,
+              "denominator_record_index": 18,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006568480000055388,
+                  "denominator_seconds": 0.0013189770000110457,
+                  "ratio": 0.4979980697161801,
+                  "denominator_duration_change_percent": 100.8039911821188
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06292683499999896,
+                  "denominator_seconds": 0.16525182799999527,
+                  "ratio": 0.3807935788764815,
+                  "denominator_duration_change_percent": 162.60947018866912
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.0635836830000045,
+                  "denominator_seconds": 0.16657080500000632,
+                  "ratio": 0.3817216528430783,
+                  "denominator_duration_change_percent": 161.97099183448452
+                }
+              },
+              "numerator_output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "absolute_rmse_difference": 6.366952520764357e-10,
+              "absolute_mae_difference": 8.691203312594098e-11
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 2
+              },
+              "numerator_record_index": 21,
+              "denominator_record_index": 23,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006387450000033823,
+                  "denominator_seconds": 0.0013515480000023672,
+                  "ratio": 0.4726025268819632,
+                  "denominator_duration_change_percent": 111.59429819336518
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06222796699999833,
+                  "denominator_seconds": 0.16620996000000332,
+                  "ratio": 0.3743937306765316,
+                  "denominator_duration_change_percent": 167.0984896549935
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06286671200000171,
+                  "denominator_seconds": 0.1675615080000057,
+                  "ratio": 0.37518588099600764,
+                  "denominator_duration_change_percent": 166.5345501129455
+                }
+              },
+              "numerator_output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "absolute_rmse_difference": 6.366952520764357e-10,
+              "absolute_mae_difference": 8.691203312594098e-11
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 3
+              },
+              "numerator_record_index": 26,
+              "denominator_record_index": 25,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006409389999930681,
+                  "denominator_seconds": 0.0014104979999984835,
+                  "ratio": 0.45440617426877405,
+                  "denominator_duration_change_percent": 120.06743231629504
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06344395700000405,
+                  "denominator_seconds": 0.1664579400000008,
+                  "ratio": 0.38114106782772716,
+                  "denominator_duration_change_percent": 162.37004731591722
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06408489599999712,
+                  "denominator_seconds": 0.1678684379999993,
+                  "ratio": 0.38175667066132696,
+                  "denominator_duration_change_percent": 161.94696173027546
+                }
+              },
+              "numerator_output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "absolute_rmse_difference": 6.366952520764357e-10,
+              "absolute_mae_difference": 8.691203312594098e-11
+            }
+          ],
+          "speedup": {
+            "fit_seconds": {
+              "median": 0.48912240173798177,
+              "min": 0.45440617426877405,
+              "max": 0.5256897481747195
+            },
+            "transform_seconds": {
+              "median": 0.38114106782772716,
+              "min": 0.3743937306765316,
+              "max": 0.39668082958207823
+            },
+            "total_seconds": {
+              "median": 0.38175667066132696,
+              "min": 0.37518588099600764,
+              "max": 0.39740092057156323
+            }
+          },
+          "denominator_duration_change_percent": {
+            "fit_seconds": {
+              "median": 104.44780211389512,
+              "min": 90.22627005228141,
+              "max": 120.06743231629504
+            },
+            "transform_seconds": {
+              "median": 162.37004731591722,
+              "min": 152.09183944017326,
+              "max": 167.0984896549935
+            },
+            "total_seconds": {
+              "median": 161.94696173027546,
+              "min": 151.6350486963509,
+              "max": 166.5345501129455
+            }
+          },
+          "faster_pairs": {
+            "fit_seconds": 0,
+            "transform_seconds": 0,
+            "total_seconds": 0
+          },
+          "matching_output_hashes": 0,
+          "max_scored_abs_difference": 0.2630177140235901,
+          "max_absolute_rmse_difference": 0.00027419370236803076,
+          "max_absolute_mae_difference": 3.2350625810195766e-05,
+          "seed_output_agreement": [
+            {
+              "seed": 101,
+              "repeat": 1,
+              "numerator_record_index": 0,
+              "denominator_record_index": 2,
+              "scored_cells": 1105,
+              "different_hidden_entries": 249,
+              "hidden_entries_above_1e_minus_5": 2,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "numerator_rmse": 0.6941226105750372,
+              "denominator_rmse": 0.6943968042774052,
+              "numerator_mae": 0.49915837710654554,
+              "denominator_mae": 0.49919072773235573,
+              "denominator_minus_numerator_rmse": 0.00027419370236803076,
+              "denominator_minus_numerator_mae": 3.2350625810195766e-05
+            },
+            {
+              "seed": 202,
+              "repeat": 1,
+              "numerator_record_index": 11,
+              "denominator_record_index": 10,
+              "scored_cells": 1103,
+              "different_hidden_entries": 264,
+              "hidden_entries_above_1e_minus_5": 0,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "numerator_rmse": 0.8514761198345393,
+              "denominator_rmse": 0.8514761210862603,
+              "numerator_mae": 0.5545421514507286,
+              "denominator_mae": 0.5545421522086339,
+              "denominator_minus_numerator_rmse": 1.2517209491136327e-09,
+              "denominator_minus_numerator_mae": 7.579052940798192e-10
+            },
+            {
+              "seed": 303,
+              "repeat": 1,
+              "numerator_record_index": 19,
+              "denominator_record_index": 18,
+              "scored_cells": 1093,
+              "different_hidden_entries": 225,
+              "hidden_entries_above_1e_minus_5": 0,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "numerator_rmse": 0.8013359890467205,
+              "denominator_rmse": 0.8013359884100253,
+              "numerator_mae": 0.5049077624362714,
+              "denominator_mae": 0.5049077623493594,
+              "denominator_minus_numerator_rmse": -6.366952520764357e-10,
+              "denominator_minus_numerator_mae": -8.691203312594098e-11
+            }
+          ]
+        },
+        {
+          "numerator_variant": "knn",
+          "denominator_variant": "previous",
+          "pair_count": 9,
+          "pairs": [
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 1
+              },
+              "numerator_record_index": 0,
+              "denominator_record_index": 1,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006414279999944483,
+                  "denominator_seconds": 0.0013460229999964213,
+                  "ratio": 0.47653569069484975,
+                  "denominator_duration_change_percent": 109.84787068978457
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06509734800000899,
+                  "denominator_seconds": 0.1648349350000018,
+                  "ratio": 0.3949244618563916,
+                  "denominator_duration_change_percent": 153.21298035056518
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06573877600000344,
+                  "denominator_seconds": 0.1661809579999982,
+                  "ratio": 0.39558549181070524,
+                  "denominator_duration_change_percent": 152.7898572373625
+                }
+              },
+              "numerator_output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "absolute_rmse_difference": 0.00027419370236803076,
+              "absolute_mae_difference": 3.2350625810195766e-05
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 2
+              },
+              "numerator_record_index": 5,
+              "denominator_record_index": 3,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006793210000068939,
+                  "denominator_seconds": 0.0013703939999913928,
+                  "ratio": 0.4957121820521402,
+                  "denominator_duration_change_percent": 101.72996270945336
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06506298300000424,
+                  "denominator_seconds": 0.16517519200000663,
+                  "ratio": 0.39390287495474274,
+                  "denominator_duration_change_percent": 153.86968808361564
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06574230400001113,
+                  "denominator_seconds": 0.16654558599999802,
+                  "ratio": 0.39474059672774464,
+                  "denominator_duration_change_percent": 153.3309237229803
+                }
+              },
+              "numerator_output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "absolute_rmse_difference": 0.00027419370236803076,
+              "absolute_mae_difference": 3.2350625810195766e-05
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 101,
+                "repeat": 3
+              },
+              "numerator_record_index": 7,
+              "denominator_record_index": 8,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006849319999986392,
+                  "denominator_seconds": 0.0013141480000058436,
+                  "ratio": 0.5211985255812842,
+                  "denominator_duration_change_percent": 91.86546985809608
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06431790700000306,
+                  "denominator_seconds": 0.1649092290000027,
+                  "ratio": 0.3900200576403277,
+                  "denominator_duration_change_percent": 156.39706994817922
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.0650028390000017,
+                  "denominator_seconds": 0.16622337700000855,
+                  "ratio": 0.39105714354484783,
+                  "denominator_duration_change_percent": 155.71710337144538
+                }
+              },
+              "numerator_output_sha256": "312690116dd258fcc4a55e778ddf0159071afcfb707f5d420c6c368a926c3ec5",
+              "denominator_output_sha256": "0a6ed82e0a7ef813c8cc75f5911db49eeec578dfd2992ed6058f604bc268e7c3",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "absolute_rmse_difference": 0.00027419370236803076,
+              "absolute_mae_difference": 3.2350625810195766e-05
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 1
+              },
+              "numerator_record_index": 11,
+              "denominator_record_index": 9,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006473410000040758,
+                  "denominator_seconds": 0.0013279240000088066,
+                  "ratio": 0.4874834704394097,
+                  "denominator_duration_change_percent": 105.13516060321311
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06168950100000359,
+                  "denominator_seconds": 0.1629565169999978,
+                  "ratio": 0.3785641847021339,
+                  "denominator_duration_change_percent": 164.15599795496533
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.062336842000007664,
+                  "denominator_seconds": 0.1642844410000066,
+                  "ratio": 0.3794445878170846,
+                  "denominator_duration_change_percent": 163.54309222142888
+                }
+              },
+              "numerator_output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "absolute_rmse_difference": 1.2517209491136327e-09,
+              "absolute_mae_difference": 7.579052940798192e-10
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 2
+              },
+              "numerator_record_index": 13,
+              "denominator_record_index": 14,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006419799999974884,
+                  "denominator_seconds": 0.0013312290000015992,
+                  "ratio": 0.48224610491261627,
+                  "denominator_duration_change_percent": 107.3630019637383
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06137753000000146,
+                  "denominator_seconds": 0.16294967900000756,
+                  "ratio": 0.37666554715949213,
+                  "denominator_duration_change_percent": 165.48751473055972
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.062019509999998945,
+                  "denominator_seconds": 0.16428090800000916,
+                  "ratio": 0.37752110549568846,
+                  "denominator_duration_change_percent": 164.88585285503214
+                }
+              },
+              "numerator_output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "absolute_rmse_difference": 1.2517209491136327e-09,
+              "absolute_mae_difference": 7.579052940798192e-10
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 202,
+                "repeat": 3
+              },
+              "numerator_record_index": 15,
+              "denominator_record_index": 16,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006847509999943213,
+                  "denominator_seconds": 0.001406858999999372,
+                  "ratio": 0.486723260820471,
+                  "denominator_duration_change_percent": 105.45555975983083
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06417002999999966,
+                  "denominator_seconds": 0.16484968199999628,
+                  "ratio": 0.38926389921699156,
+                  "denominator_duration_change_percent": 156.8951300162976
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06485478099999398,
+                  "denominator_seconds": 0.16625654099999565,
+                  "ratio": 0.390088598078049,
+                  "denominator_duration_change_percent": 156.35201975319458
+                }
+              },
+              "numerator_output_sha256": "ad7fa00db839585804c163ab45231e2542d4e44de44e25ef51d51f11abbed3f4",
+              "denominator_output_sha256": "b539aa5e99d7b988e7f7f0476fb848c0178d379c167a3921f8a75b9283488361",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "absolute_rmse_difference": 1.2517209491136327e-09,
+              "absolute_mae_difference": 7.579052940798192e-10
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 1
+              },
+              "numerator_record_index": 19,
+              "denominator_record_index": 20,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006568480000055388,
+                  "denominator_seconds": 0.0014027929999969047,
+                  "ratio": 0.46824299808096287,
+                  "denominator_duration_change_percent": 113.56432538198726
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06292683499999896,
+                  "denominator_seconds": 0.1661353909999974,
+                  "ratio": 0.3787683925816862,
+                  "denominator_duration_change_percent": 164.0135818049647
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.0635836830000045,
+                  "denominator_seconds": 0.16753818399999432,
+                  "ratio": 0.3795175612026847,
+                  "denominator_duration_change_percent": 163.49241833000215
+                }
+              },
+              "numerator_output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "absolute_rmse_difference": 6.366952520764357e-10,
+              "absolute_mae_difference": 8.691203312594098e-11
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 2
+              },
+              "numerator_record_index": 21,
+              "denominator_record_index": 22,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006387450000033823,
+                  "denominator_seconds": 0.0013968229999932191,
+                  "ratio": 0.4572841369353763,
+                  "denominator_duration_change_percent": 118.6824162984951
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06222796699999833,
+                  "denominator_seconds": 0.16728723500000342,
+                  "ratio": 0.3719827576802083,
+                  "denominator_duration_change_percent": 168.8296646426002
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06286671200000171,
+                  "denominator_seconds": 0.16868405799999664,
+                  "ratio": 0.37268911327710036,
+                  "denominator_duration_change_percent": 168.3201532791981
+                }
+              },
+              "numerator_output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "absolute_rmse_difference": 6.366952520764357e-10,
+              "absolute_mae_difference": 8.691203312594098e-11
+            },
+            {
+              "match": {
+                "dataset_id": "wine_quality_white",
+                "api": "fit_then_transform",
+                "training_policy": "available",
+                "train_size": 3000,
+                "query_size": 1000,
+                "features": 11,
+                "n_neighbors": 5,
+                "missing_rate": 0.1,
+                "mechanism": "MCAR",
+                "dtype": "float32",
+                "mar_reference_rows": 1000,
+                "mar_driver": "alcohol",
+                "threads": 1,
+                "seed": 303,
+                "repeat": 3
+              },
+              "numerator_record_index": 26,
+              "denominator_record_index": 24,
+              "timing": {
+                "fit_seconds": {
+                  "numerator_seconds": 0.0006409389999930681,
+                  "denominator_seconds": 0.0013373409999957175,
+                  "ratio": 0.47926370312068545,
+                  "denominator_duration_change_percent": 108.65339759480719
+                },
+                "transform_seconds": {
+                  "numerator_seconds": 0.06344395700000405,
+                  "denominator_seconds": 0.16260101700000007,
+                  "ratio": 0.3901817969564361,
+                  "denominator_duration_change_percent": 156.29078747403744
+                },
+                "total_seconds": {
+                  "numerator_seconds": 0.06408489599999712,
+                  "denominator_seconds": 0.1639383579999958,
+                  "ratio": 0.3909084901289469,
+                  "denominator_duration_change_percent": 155.81434664418143
+                }
+              },
+              "numerator_output_sha256": "638cde0f4ed0788ccc85b6af9c73a19b30b34a269456a8d1672285dc61620033",
+              "denominator_output_sha256": "c29b735513e4746b56b77ae2eb459d0674e94790bfa72387be908143f84c7ed7",
+              "full_output_hash_matches": false,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "absolute_rmse_difference": 6.366952520764357e-10,
+              "absolute_mae_difference": 8.691203312594098e-11
+            }
+          ],
+          "speedup": {
+            "fit_seconds": {
+              "median": 0.48224610491261627,
+              "min": 0.4572841369353763,
+              "max": 0.5211985255812842
+            },
+            "transform_seconds": {
+              "median": 0.38926389921699156,
+              "min": 0.3719827576802083,
+              "max": 0.3949244618563916
+            },
+            "total_seconds": {
+              "median": 0.390088598078049,
+              "min": 0.37268911327710036,
+              "max": 0.39558549181070524
+            }
+          },
+          "denominator_duration_change_percent": {
+            "fit_seconds": {
+              "median": 107.3630019637383,
+              "min": 91.86546985809608,
+              "max": 118.6824162984951
+            },
+            "transform_seconds": {
+              "median": 156.8951300162976,
+              "min": 153.21298035056518,
+              "max": 168.8296646426002
+            },
+            "total_seconds": {
+              "median": 156.35201975319458,
+              "min": 152.7898572373625,
+              "max": 168.3201532791981
+            }
+          },
+          "faster_pairs": {
+            "fit_seconds": 0,
+            "transform_seconds": 0,
+            "total_seconds": 0
+          },
+          "matching_output_hashes": 0,
+          "max_scored_abs_difference": 0.2630177140235901,
+          "max_absolute_rmse_difference": 0.00027419370236803076,
+          "max_absolute_mae_difference": 3.2350625810195766e-05,
+          "seed_output_agreement": [
+            {
+              "seed": 101,
+              "repeat": 1,
+              "numerator_record_index": 0,
+              "denominator_record_index": 1,
+              "scored_cells": 1105,
+              "different_hidden_entries": 249,
+              "hidden_entries_above_1e_minus_5": 2,
+              "max_scored_abs_difference": 0.2630177140235901,
+              "numerator_rmse": 0.6941226105750372,
+              "denominator_rmse": 0.6943968042774052,
+              "numerator_mae": 0.49915837710654554,
+              "denominator_mae": 0.49919072773235573,
+              "denominator_minus_numerator_rmse": 0.00027419370236803076,
+              "denominator_minus_numerator_mae": 3.2350625810195766e-05
+            },
+            {
+              "seed": 202,
+              "repeat": 1,
+              "numerator_record_index": 11,
+              "denominator_record_index": 9,
+              "scored_cells": 1103,
+              "different_hidden_entries": 264,
+              "hidden_entries_above_1e_minus_5": 0,
+              "max_scored_abs_difference": 2.384185791015625e-07,
+              "numerator_rmse": 0.8514761198345393,
+              "denominator_rmse": 0.8514761210862603,
+              "numerator_mae": 0.5545421514507286,
+              "denominator_mae": 0.5545421522086339,
+              "denominator_minus_numerator_rmse": 1.2517209491136327e-09,
+              "denominator_minus_numerator_mae": 7.579052940798192e-10
+            },
+            {
+              "seed": 303,
+              "repeat": 1,
+              "numerator_record_index": 19,
+              "denominator_record_index": 20,
+              "scored_cells": 1093,
+              "different_hidden_entries": 225,
+              "hidden_entries_above_1e_minus_5": 0,
+              "max_scored_abs_difference": 4.76837158203125e-07,
+              "numerator_rmse": 0.8013359890467205,
+              "denominator_rmse": 0.8013359884100253,
+              "numerator_mae": 0.5049077624362714,
+              "denominator_mae": 0.5049077623493594,
+              "denominator_minus_numerator_rmse": -6.366952520764357e-10,
+              "denominator_minus_numerator_mae": -8.691203312594098e-11
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
