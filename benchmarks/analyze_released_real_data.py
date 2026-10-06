@@ -170,14 +170,64 @@ DISTANCE_WORKLOADS = {
 WEIGHTS = ("uniform", "distance")
 
 
-def workload_spec(dataset_id, weights="uniform"):
+WINE_FLOAT32_PROFILES = {
+    "uniform": {
+        **PROFILE,
+        "archive": "benchmarks/results/released_wine_quality_float32_0.3.22.zip",
+        "report": "docs/benchmarks/released_wine_quality_float32_0.3.22.md",
+        "summary": "benchmarks/results/released_wine_quality_float32_0.3.22-summary.json",
+        "archive_sha256": "0654259363cd7c1d76f467fc06e5c3fd104f24198f9a7ef865569bdd2c4833bd",
+        "json_sha256": "e4b16d9794a944afc8e63dceffe2cb04a97132ff7f7a7228be562999757a7ece",
+        "commit": "6d533d37c8173058ce2cfb314701377ee67b4b59",
+        "run": "37403070692",
+        "json_member": "version_comparison_wine_quality_white_float32.json",
+    },
+    "distance": {
+        **PROFILE,
+        "archive": "benchmarks/results/released_wine_quality_float32_distance_0.3.22.zip",
+        "report": "docs/benchmarks/released_wine_quality_float32_distance_0.3.22.md",
+        "summary": "benchmarks/results/released_wine_quality_float32_distance_0.3.22-summary.json",
+        "archive_sha256": "f6f3771b1385624306d7a28b22cbaff08383b5ed89a80c73c78e33b496291ddd",
+        "json_sha256": "d78ed2d9f265be1363f57af372fa16b8ff65b2680ca0c7ba634253ba2aa30e9c",
+        "commit": "6d533d37c8173058ce2cfb314701377ee67b4b59",
+        "run": "37403259216",
+        "json_member": "version_comparison_wine_quality_white_float32_distance.json",
+    },
+}
+WINE_FLOAT32_WORKLOADS = {
+    weights: {
+        **WORKLOADS["wine_quality_white"],
+        "profile": profile,
+        "configuration": {
+            **COMMON_CONFIG, "dtype": "float32",
+            **({"weights": weights} if weights != "uniform" else {}),
+        },
+        "json_members": {
+            "float32": {
+                "member": profile["json_member"],
+                "sha256": profile["json_sha256"],
+                "worker_run_budget_seconds": 1200,
+            },
+        },
+    }
+    for weights, profile in WINE_FLOAT32_PROFILES.items()
+}
+
+
+def workload_spec(dataset_id, weights="uniform", *, dtype=None):
     require(dataset_id in WORKLOADS, "Unknown archived dataset")
     require(weights in WEIGHTS, "Unknown archived weights")
+    require(dtype in (None, "float32", "float64"), "Unknown archived dtype")
+    if dataset_id == "wine_quality_white" and dtype == "float32":
+        return WINE_FLOAT32_WORKLOADS[weights]
     return (WORKLOADS if weights == "uniform" else DISTANCE_WORKLOADS)[dataset_id]
 
 
-def read_dataset_archive(path, dataset_id, *, weights="uniform"):
-    spec = workload_spec(dataset_id, weights)
+def read_dataset_archive(path, dataset_id, *, weights="uniform", dtype=None):
+    """Select one Wine dtype archive; Abalone retains its two-dtype archive."""
+    require(dataset_id == "wine_quality_white" or dtype is None,
+            "Abalone archives contain both dtypes; omit dtype")
+    spec = workload_spec(dataset_id, weights, dtype=dtype)
     profile = spec["profile"]
     raw = path.read_bytes()
     require(sha256(raw).hexdigest() == profile["archive_sha256"],
@@ -234,7 +284,7 @@ def read_abalone_archive(path):
 
 def archived_configuration(dataset_id, dtype, *, weights="uniform"):
     require(dataset_id in WORKLOADS, "Unknown archived dataset")
-    spec = workload_spec(dataset_id, weights)
+    spec = workload_spec(dataset_id, weights, dtype=dtype)
     require(dtype in spec["json_members"], "Unexpected archived dtype")
     return spec, {**spec["configuration"], "dtype": dtype}
 
@@ -263,7 +313,7 @@ def validate(
         "sklearn_working_memory_mib": 256,
     }.items():
         require(params[key] == value, f"Unexpected parameter: {key}")
-    if dataset_id == "abalone" or weights == "distance":
+    if dataset_id == "abalone" or weights == "distance" or dtype == "float32":
         require(params["dataset_id"] == dataset_id and params["dtype"] == dtype,
                 "Parameter dataset/dtype mismatch")
     require(environment["git_commit"] == profile["commit"]
@@ -800,8 +850,10 @@ def analyze_abalone(documents, freezes):
     return analyze_dataset(documents, freezes, dataset_id="abalone")
 
 
-def analyze_dataset(documents, freezes, *, dataset_id, weights="uniform"):
-    spec = workload_spec(dataset_id, weights)
+def analyze_dataset(documents, freezes, *, dataset_id, weights="uniform", dtype=None):
+    require(dataset_id == "wine_quality_white" or dtype is None,
+            "Abalone archives contain both dtypes; omit dtype")
+    spec = workload_spec(dataset_id, weights, dtype=dtype)
     dtypes = tuple(spec["json_members"])
     require(set(documents) == set(dtypes), "All archived dtype documents are required")
     by_dtype = {
@@ -896,13 +948,16 @@ def render_dataset_report(result):
     first = result["by_dtype"][dtypes[0]]
     cases, config = first["cases"], first["configuration"]
     weights = config["weights"]
-    profile = workload_spec(dataset_id, weights)["profile"]
+    profile = workload_spec(dataset_id, weights, dtype=dtypes[0])["profile"]
+    wine_float32 = dataset_id == "wine_quality_white" and dtypes == ["float32"]
     environment, dataset = result["environment"], result["dataset"]
     dataset_label = "Abalone" if dataset_id == "abalone" else "Wine Quality White"
     title_suffix = " — distance weights" if weights == "distance" else ""
+    if wine_float32:
+        title_suffix = f" — float32, {weights} weights"
     dtype_run_note = (
         "Float32 and float64 run sequentially as separate invocations on the same runner."
-        if len(dtypes) > 1 else "Only float64 is measured in this run."
+        if len(dtypes) > 1 else f"Only {dtypes[0]} is measured in this run."
     )
     input_agreement = (
         "Source rows, masks, scaler parameters and float64 scoring truth match across dtypes. "
@@ -1103,17 +1158,25 @@ def render_dataset_report(result):
         "their numerical or neighbor-selection cause. Earlier diagnostics on "
         "other seeds or missingness mechanisms do not establish the cause here.", "",
         (
-            "The [Wine Quality release comparison](released_wine_quality_0.3.22.md), "
-            "[synthetic release comparison](released_versions_0.3.22.md) and "
-            "[earlier real-data coverage](real-data-datasets-ef04b1b.md) are separate "
-            "experiments. Cross-run absolute timing differences do not isolate a "
-            "release effect."
-            if weights == "uniform" else
-            "The earlier uniform-weight comparisons and the other dataset run are "
-            "separate experiments. A matching CPU model does not make them a single "
-            "controlled run. Cross-run timing differences do not isolate a weights "
-            "or release effect. Uniform-weight output diagnostics do not establish "
-            "the cause of the distance-weighted differences reported here."
+            "The float32 uniform and distance archives were measured in separate "
+            "runs on different CPU models. They are not a hardware-controlled "
+            "weights comparison. The earlier float64 archives are also separate "
+            "experiments. Cross-run timing differences do not isolate a weights, "
+            "dtype or release effect. Diagnostics on other configurations do not "
+            "establish the cause of the output differences reported here."
+            if wine_float32 else (
+                "The [Wine Quality release comparison](released_wine_quality_0.3.22.md), "
+                "[synthetic release comparison](released_versions_0.3.22.md) and "
+                "[earlier real-data coverage](real-data-datasets-ef04b1b.md) are separate "
+                "experiments. Cross-run absolute timing differences do not isolate a "
+                "release effect."
+                if weights == "uniform" else
+                "The earlier uniform-weight comparisons and the other dataset run are "
+                "separate experiments. A matching CPU model does not make them a single "
+                "controlled run. Cross-run timing differences do not isolate a weights "
+                "or release effect. Uniform-weight output diagnostics do not establish "
+                "the cause of the distance-weighted differences reported here."
+            )
         ), "", "## Dataset provenance", "",
         f"[{dataset['dataset']}]({dataset['source']}). {dataset['citation']}", "",
         f"The source file `{dataset['source_file']}` contains {dataset['rows']:,} rows. "
@@ -1131,22 +1194,33 @@ def render_dataset_report(result):
         "or running imputers.", "",
         (
             "In the [Analyze released-version benchmark results workflow]"
-            "(../../.github/workflows/analyze-released-versions.yml), the Abalone "
-            "matrix entry uses `--dataset abalone`. It produces this Markdown "
-            "report and the full-precision summary. On the first push or manual "
-            "analysis run on `bench/released-abalone-results-0.3.22`, both outputs "
-            "may initially be absent. Commit them together; subsequent runs compare "
-            "them byte-for-byte. Pull requests require the output pair, and a "
-            "partially present pair fails. This is saved-data analysis, not a new benchmark."
-            if weights == "uniform" else
-            "In the [Analyze released-version benchmark results workflow]"
             "(../../.github/workflows/analyze-released-versions.yml), the corresponding "
-            f"matrix entry uses `--dataset {dataset_id} --weights distance`. It produces "
-            "this Markdown report and the full-precision summary. On the first push "
-            "or manual analysis run on `bench/released-distance-weights`, both outputs "
-            "may initially be absent. Commit them together; subsequent runs compare "
+            f"matrix entry uses `--dataset wine_quality_white --dtype float32 --weights {weights}`. "
+            "It produces this Markdown report and the full-precision summary. "
+            "On the first push or manual analysis run on "
+            "`bench/released-wine-quality-float32-results`, both outputs may "
+            "initially be absent. Commit them together; subsequent runs compare "
             "them byte-for-byte. Pull requests require both files; a partially "
             "present pair fails. This is saved-data analysis, not a new benchmark."
+            if wine_float32 else (
+                "In the [Analyze released-version benchmark results workflow]"
+                "(../../.github/workflows/analyze-released-versions.yml), the Abalone "
+                "matrix entry uses `--dataset abalone`. It produces this Markdown "
+                "report and the full-precision summary. On the first push or manual "
+                "analysis run on `bench/released-abalone-results-0.3.22`, both outputs "
+                "may initially be absent. Commit them together; subsequent runs compare "
+                "them byte-for-byte. Pull requests require the output pair, and a "
+                "partially present pair fails. This is saved-data analysis, not a new benchmark."
+                if weights == "uniform" else
+                "In the [Analyze released-version benchmark results workflow]"
+                "(../../.github/workflows/analyze-released-versions.yml), the corresponding "
+                f"matrix entry uses `--dataset {dataset_id} --weights distance`. It produces "
+                "this Markdown report and the full-precision summary. On the first push "
+                "or manual analysis run on `bench/released-distance-weights`, both outputs "
+                "may initially be absent. Commit them together; subsequent runs compare "
+                "them byte-for-byte. Pull requests require both files; a partially "
+                "present pair fails. This is saved-data analysis, not a new benchmark."
+            )
         ), "",
     ])
     return "\n".join(lines)
@@ -1160,11 +1234,17 @@ def main():
     parser.add_argument("--release", choices=(PROFILE["current"],), default=PROFILE["current"])
     parser.add_argument("--dataset", choices=tuple(WORKLOADS), default="wine_quality_white")
     parser.add_argument("--weights", choices=WEIGHTS, default="uniform")
+    parser.add_argument(
+        "--dtype", choices=("float32", "float64"),
+        help="Wine archive dtype (default: float64); omit for the two-dtype Abalone archive.",
+    )
     parser.add_argument("--input", type=Path)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--summary", type=Path)
     args = parser.parse_args()
-    profile = workload_spec(args.dataset, args.weights)["profile"]
+    require(args.dataset == "wine_quality_white" or args.dtype is None,
+            "Abalone archives contain both dtypes; omit --dtype")
+    profile = workload_spec(args.dataset, args.weights, dtype=args.dtype)["profile"]
     input_path = args.input if args.input is not None else ROOT / profile["archive"]
     report_path = args.report if args.report is not None else ROOT / profile["report"]
     summary_path = args.summary if args.summary is not None else ROOT / profile["summary"]
@@ -1172,18 +1252,19 @@ def main():
     protected = {
         input_path.resolve(),
         *((ROOT / item["profile"]["archive"]).resolve()
-          for item in (*WORKLOADS.values(), *DISTANCE_WORKLOADS.values())),
+          for item in (*WORKLOADS.values(), *DISTANCE_WORKLOADS.values(),
+                       *WINE_FLOAT32_WORKLOADS.values())),
         (ROOT / "benchmarks/results/released_versions_0.3.21.zip").resolve(),
         (ROOT / "benchmarks/results/released_versions_0.3.22.zip").resolve(),
     }
     require(outputs[0] != outputs[1], "Report and summary need different paths")
     require(not protected.intersection(outputs), "Output would overwrite a raw archive")
-    if args.weights == "distance":
+    if args.weights == "distance" or args.dtype == "float32":
         documents, freezes = read_dataset_archive(
-            input_path, args.dataset, weights=args.weights,
+            input_path, args.dataset, weights=args.weights, dtype=args.dtype,
         )
         result = analyze_dataset(
-            documents, freezes, dataset_id=args.dataset, weights=args.weights,
+            documents, freezes, dataset_id=args.dataset, weights=args.weights, dtype=args.dtype,
         )
         report = render_dataset_report(result)
     elif args.dataset == "abalone":
