@@ -12,13 +12,14 @@ on:
           - candidate
           - released
       workload:
-        description: Synthetic, Wine Quality White, or Abalone comparison
+        description: Synthetic, Wine Quality White (float64 or float32), or Abalone
         type: choice
         required: false
         default: synthetic
         options:
           - synthetic
           - wine_quality_white
+          - wine_quality_white_float32
           - abalone
       weights:
         description: Neighbor weights for real data; synthetic requires uniform
@@ -87,7 +88,7 @@ jobs:
 
           benchmark_workload="${REQUESTED_WORKLOAD:-synthetic}"
           case "$benchmark_workload" in
-            synthetic|wine_quality_white|abalone) ;;
+            synthetic|wine_quality_white|wine_quality_white_float32|abalone) ;;
             *)
               echo "Unknown benchmark workload: $benchmark_workload" >&2
               exit 1
@@ -389,21 +390,31 @@ jobs:
           done
 
       - name: Run sequential Wine Quality White comparison
-        if: env.BENCHMARK_WORKLOAD == 'wine_quality_white'
+        if: env.BENCHMARK_WORKLOAD == 'wine_quality_white' || env.BENCHMARK_WORKLOAD == 'wine_quality_white_float32'
         working-directory: ${{ env.BENCHMARK_DIR }}
         run: |
           set -euo pipefail
+          wine_dtype="float64"
+          wine_dtype_suffix=""
+          if [[ "$BENCHMARK_WORKLOAD" == "wine_quality_white_float32" ]]; then
+            wine_dtype="float32"
+            wine_dtype_suffix="_float32"
+          fi
+
+          echo "Comparing Wine Quality White ${wine_dtype}; weights=${BENCHMARK_WEIGHTS}."
 
           "$CURRENT_ENV/bin/python" -u \
             -m benchmarks.benchmark_released_real_data \
             --previous-python "$PREVIOUS_ENV/bin/python" \
             --previous-version "$PREVIOUS_VERSION" \
             --current-version "$CURRENT_VERSION" \
+            --dataset wine_quality_white \
+            --dtype "$wine_dtype" \
             --weights "$BENCHMARK_WEIGHTS" \
             --data-home "$GITHUB_WORKSPACE/benchmark_outputs/datasets" \
             --timeout-seconds 300 \
             --budget-seconds 1200 \
-            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white${BENCHMARK_WEIGHTS_SUFFIX}.json"
+            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white${wine_dtype_suffix}${BENCHMARK_WEIGHTS_SUFFIX}.json"
 
       - name: Run sequential Abalone comparisons
         if: env.BENCHMARK_WORKLOAD == 'abalone'
