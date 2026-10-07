@@ -106,6 +106,14 @@ def validation_inputs(dataset_id, dtype):
         "nominal_overall_missing_rate": 0.10,
         "feature_names": names,
         "always_observed": [config["mar_driver"]],
+        "eligible_base_probability": (
+            config["missing_rate"] * config["features"] / (config["features"] - 1)
+        ),
+        "mar_reference_rows": None,
+        "mar_cutoff": None,
+        "mar_low_probability": None,
+        "mar_high_probability": None,
+        "train_mask": {"missing_per_feature": [0] * config["features"]},
     })
     record["feature_quality"] = [
         {
