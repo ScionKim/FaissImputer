@@ -190,6 +190,16 @@ than `1e-5` across three seed inputs, counting each seed once. Reconstruction
 error and output agreement are reported separately; these results do not
 establish the causes of the output differences.
 
+A [published-output diagnostic](wine-released-float32-output-822f7a2.md)
+reproduces uniform seed 101 and distance-weight seeds 101 and 303, tracing
+all 2, 47, and 38 entries above `1e-5`, respectively. It distinguishes
+neighbor-order reversals from zero- and positive-distance weighting effects.
+Distance-weight seed 202 preserves a reproduction mismatch: three KNN values
+change by at most `1.7881393432617188e-07`, while the inputs and Faiss output
+match the archive. Its traces describe the current execution only; the cause
+of those cross-execution changes remains unresolved. All four diagnostic
+ZIPs are preserved, and no timing measurements were taken.
+
 Both reports and full-precision summaries regenerate from the preserved
 ZIPs. These runs and the earlier float64 runs are separate experiments;
 cross-run timings do not isolate a weights or dtype effect.

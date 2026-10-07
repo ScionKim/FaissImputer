@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       diagnostic:
-        description: Case to diagnose (abalone_released_* uses published PyPI 0.3.22)
+        description: Case to diagnose (wine_released_* and abalone_released_* use PyPI 0.3.22)
         required: true
         type: choice
         default: wine_quality_float32
@@ -17,6 +17,10 @@ on:
           - abalone_released_float64
           - abalone_released_distance_float32
           - abalone_released_distance_float64
+          - wine_released_uniform_float32_seed101
+          - wine_released_distance_float32_seed101
+          - wine_released_distance_float32_seed202
+          - wine_released_distance_float32_seed303
 
 permissions:
   contents: read
@@ -69,6 +73,7 @@ jobs:
           released_case=""
           baseline_member=""
           baseline_sha256=""
+          dataset_sha256="755a6a67c5b266961a3f149ea13be2cfb6e6c727e48cee3c83bc0b4526210ee4"
           max_rows="20"
           released_archive="$GITHUB_WORKSPACE/benchmarks/results/released_abalone_0.3.22.zip"
           released_archive_sha256="8d2e491b9f066312627e5ea8ad6b955269c1634e7ae059b71d1aecac8579b638"
@@ -139,6 +144,34 @@ jobs:
               fi
               echo "DIAG_EXPECTED_VERSION=0.3.22" >> "$GITHUB_ENV"
               ;;
+            wine_released_uniform_float32_seed101|wine_released_distance_float32_seed101|wine_released_distance_float32_seed202|wine_released_distance_float32_seed303)
+              source_dir=""
+              source_commit=""
+              released_case="${DIAG_CASE#wine_}"
+              seed="${DIAG_CASE##*seed}"
+              max_rows="100"
+              module="benchmarks.diagnose_wine_quality_output"
+              dataset_id="wine_quality_white"
+              archive_name="wine_quality_white.zip"
+              dataset_sha256="3ed56667f4b828242bd732d7d1dd7f2861e54432239d7fa63877014cbb0304d4"
+              baseline="$GITHUB_WORKSPACE/diagnostic_outputs/reference-benchmark.json"
+              provenance="$GITHUB_WORKSPACE/diagnostic_outputs/published-wheel.json"
+              if [[ "$DIAG_CASE" == "wine_released_uniform_float32_seed101" ]]; then
+                weights="uniform"
+                released_archive="$GITHUB_WORKSPACE/benchmarks/results/released_wine_quality_float32_0.3.22.zip"
+                released_archive_sha256="0654259363cd7c1d76f467fc06e5c3fd104f24198f9a7ef865569bdd2c4833bd"
+                baseline_member="version_comparison_wine_quality_white_float32.json"
+                baseline_sha256="e4b16d9794a944afc8e63dceffe2cb04a97132ff7f7a7228be562999757a7ece"
+              else
+                weights="distance"
+                released_archive="$GITHUB_WORKSPACE/benchmarks/results/released_wine_quality_float32_distance_0.3.22.zip"
+                released_archive_sha256="f6f3771b1385624306d7a28b22cbaff08383b5ed89a80c73c78e33b496291ddd"
+                baseline_member="version_comparison_wine_quality_white_float32_distance.json"
+                baseline_sha256="d78ed2d9f265be1363f57af372fa16b8ff65b2680ca0c7ba634253ba2aa30e9c"
+              fi
+              output_name="wine_quality_released_0.3.22_float32_${weights}_seed${seed}_diagnostic.json"
+              echo "DIAG_EXPECTED_VERSION=0.3.22" >> "$GITHUB_ENV"
+              ;;
             *)
               echo "Unsupported diagnostic: $DIAG_CASE" >&2
               exit 1
@@ -163,6 +196,7 @@ jobs:
             echo "DIAG_RELEASED_CASE=$released_case"
             echo "DIAG_BASELINE_MEMBER=$baseline_member"
             echo "DIAG_BASELINE_SHA256=$baseline_sha256"
+            echo "DIAG_DATASET_SHA256=$dataset_sha256"
             echo "DIAG_PROVENANCE=$provenance"
             echo "DIAG_RELEASED_ARCHIVE=$released_archive"
             echo "DIAG_RELEASED_ARCHIVE_SHA256=$released_archive_sha256"
@@ -407,7 +441,8 @@ jobs:
           (output_directory / archive_path.name).write_bytes(archive_bytes)
 
           baseline_name = os.environ["DIAG_BASELINE_MEMBER"]
-          dataset_name = "datasets/abalone.zip"
+          archive_name = os.environ["DIAG_ARCHIVE_NAME"]
+          dataset_name = f"datasets/{archive_name}"
           environment_names = (
               "current-environment.txt",
               "previous-environment.txt",
@@ -425,22 +460,22 @@ jobs:
 
           if hashlib.sha256(baseline_bytes).hexdigest() != os.environ["DIAG_BASELINE_SHA256"]:
               raise RuntimeError("Selected reference JSON SHA256 mismatch")
-          dataset_sha256 = "755a6a67c5b266961a3f149ea13be2cfb6e6c727e48cee3c83bc0b4526210ee4"
+          dataset_sha256 = os.environ["DIAG_DATASET_SHA256"]
           if hashlib.sha256(dataset_bytes).hexdigest() != dataset_sha256:
-              raise RuntimeError("Archived Abalone dataset SHA256 mismatch")
+              raise RuntimeError("Archived dataset SHA256 mismatch")
 
           Path(os.environ["DIAG_BASELINE"]).write_bytes(baseline_bytes)
-          (Path(os.environ["DIAG_DATA_HOME"]) / "abalone.zip").write_bytes(dataset_bytes)
+          (Path(os.environ["DIAG_DATA_HOME"]) / archive_name).write_bytes(dataset_bytes)
           source_data = output_directory / "source-data"
           source_data.mkdir(exist_ok=True)
-          (source_data / "abalone.zip").write_bytes(dataset_bytes)
+          (source_data / archive_name).write_bytes(dataset_bytes)
           environment_directory = output_directory / "archived-environments"
           environment_directory.mkdir(exist_ok=True)
           for name, content in environments.items():
               (environment_directory / name).write_bytes(content)
           with (output_directory / "SHA256SUMS.txt").open("a", encoding="utf-8") as stream:
               stream.write(f"{os.environ['DIAG_BASELINE_SHA256']}  reference-benchmark.json\n")
-              stream.write(f"{dataset_sha256}  source-data/abalone.zip\n")
+              stream.write(f"{dataset_sha256}  source-data/{archive_name}\n")
               for name, content in environments.items():
                   stream.write(f"{hashlib.sha256(content).hexdigest()}  archived-environments/{name}\n")
           print(f"Reference member: {baseline_name}")

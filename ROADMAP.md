@@ -193,7 +193,7 @@ cross-run timings do not isolate a weights effect. Preserved ZIPs and the
 shared analysis script reproduce timing, memory, donor counts, seed-level
 reconstruction errors, and output differences separately for each run.
 
-The following output diagnostics are complete for their selected cases:
+The following output diagnostic reports document their selected cases:
 
 - [Abalone float64](docs/benchmarks/abalone-output-1969f4b.md):
   3,000 training rows, 1,000 held-out queries, MAR, seed 303.
@@ -217,6 +217,14 @@ The following output diagnostics are complete for their selected cases:
   `1e-5`. Findings distinguish exact boundary ties, computed-distance ties,
   order reversals, and distance errors propagated into weights. The report
   also preserves an earlier float32 reproduction mismatch separately.
+- [Published Wine Quality 0.3.22, float32](docs/benchmarks/wine-released-float32-output-822f7a2.md):
+  Original outputs are reproduced for uniform seed 101 and distance-weight
+  seeds 101 and 303. Traces distinguish neighbor-order reversals from
+  zero- and positive-distance weighting effects. Distance-weight seed 202
+  preserves a reproduction mismatch in three KNN values; inputs and Faiss
+  output match the archive. Its traces describe the current execution only,
+  and the cause of the cross-execution changes remains unresolved. All four
+  evidence ZIPs are preserved; no timing measurements were taken.
 
 The successful diagnostics reproduce the original output fingerprints and preserve
 prepared inputs, outputs, actual neighbor traces, and exact rational
@@ -279,6 +287,7 @@ for one million queries.
 - [Published Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_0.3.22.md)
 - [Published Wine Quality float32, uniform weights](docs/benchmarks/released_wine_quality_float32_0.3.22.md)
 - [Published Wine Quality float32, distance weights](docs/benchmarks/released_wine_quality_float32_distance_0.3.22.md)
+- [Published Wine Quality float32 output diagnostics](docs/benchmarks/wine-released-float32-output-822f7a2.md)
 - [Published Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_0.3.22.md)
 - [Distance-weighted Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_distance_0.3.22.md)
 - [Distance-weighted Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_distance_0.3.22.md)
