@@ -16,6 +16,7 @@ import numpy as np
 from benchmarks.benchmark_real_data_cases import (
     DATASET_DEFAULTS,
     DTYPES,
+    MECHANISMS,
     MISSING_RATE,
     N_NEIGHBORS,
     UCI_DATASETS,
@@ -68,12 +69,14 @@ def match_configuration(record):
 
 def build_configs(
     previous_version, current_version, data_home, *,
-    dataset_id=DATASET_ID, dtype="float64", weights="uniform",
+    dataset_id=DATASET_ID, dtype="float64", weights="uniform", mechanism="MCAR",
 ):
     if dataset_id not in DATASETS:
         raise ValueError(f"Unsupported dataset: {dataset_id}")
     if dtype not in DTYPES:
         raise ValueError(f"Unsupported dtype: {dtype}")
+    if mechanism not in MECHANISMS:
+        raise ValueError(f"Unsupported mechanism: {mechanism}")
     record_weights({"weights": weights})
     defaults = DATASET_DEFAULTS[dataset_id]
     features = len(UCI_DATASETS[dataset_id]["feature_names"])
@@ -103,7 +106,7 @@ def build_configs(
                     # Preserve the shape of historical uniform configurations.
                     **({"weights": weights} if weights != "uniform" else {}),
                     "dtype": dtype,
-                    "mechanism": "MCAR",
+                    "mechanism": mechanism,
                     "missing_rate": MISSING_RATE,
                     "mar_reference_rows": defaults["mar_reference_rows"],
                     "mar_driver": defaults["mar_driver"],
@@ -163,6 +166,49 @@ def require_number(value, name, *, positive=False):
         raise ValueError(f"Invalid {name}: {value!r}")
 
 
+def validate_missingness(case, config):
+    """Check the worker's missingness metadata against the requested case."""
+    mechanism = config["mechanism"]
+    if mechanism not in MECHANISMS:
+        raise ValueError(f"Unsupported mechanism: {mechanism}")
+    base_probability = config["missing_rate"] * config["features"] / (
+        config["features"] - 1
+    )
+    expected_probabilities = {"eligible_base_probability": base_probability}
+    if mechanism == "MAR":
+        if case.get("mar_reference_rows") != config["mar_reference_rows"]:
+            raise ValueError("Unexpected MAR reference rows")
+        cutoff = case.get("mar_cutoff")
+        if (
+            isinstance(cutoff, bool)
+            or not isinstance(cutoff, (int, float))
+            or not math.isfinite(cutoff)
+        ):
+            raise ValueError("MAR cutoff must be finite")
+        expected_probabilities.update(
+            mar_low_probability=0.5 * base_probability,
+            mar_high_probability=1.5 * base_probability,
+        )
+    elif any(
+        case.get(name) is not None for name in (
+            "mar_reference_rows", "mar_cutoff",
+            "mar_low_probability", "mar_high_probability",
+        )
+    ):
+        raise ValueError("MCAR missingness must not contain MAR metadata")
+    for name, expected in expected_probabilities.items():
+        value = case.get(name)
+        require_number(value, name)
+        if value > 1 or not math.isclose(
+            value, expected, rel_tol=1e-12, abs_tol=1e-15
+        ):
+            raise ValueError(f"Unexpected missingness probability: {name}")
+    driver = case["feature_names"].index(config["mar_driver"])
+    for name in ("train_mask", "query_mask"):
+        if case[name]["missing_per_feature"][driver] != 0:
+            raise ValueError("The MAR driver must remain observed")
+
+
 def validate_record(record, config, environment, dataset):
     if record.get("checks_passed") is not True:
         raise ValueError("Worker checks did not pass")
@@ -214,6 +260,7 @@ def validate_record(record, config, environment, dataset):
         raise ValueError("Prepared case does not match the requested configuration")
     if len(case["feature_names"]) != config["features"]:
         raise ValueError("Unexpected feature count")
+    validate_missingness(case, config)
     for name in FINGERPRINTS:
         if not re.fullmatch(r"[0-9a-f]{64}", case["fingerprints"][name]):
             raise ValueError(f"Invalid input fingerprint: {name}")
@@ -374,6 +421,7 @@ def main():
     parser.add_argument("--dataset", choices=DATASETS, default=DATASET_ID)
     parser.add_argument("--dtype", choices=DTYPES, default="float64")
     parser.add_argument("--weights", choices=WEIGHTS, default="uniform")
+    parser.add_argument("--mechanism", choices=MECHANISMS, default="MCAR")
     parser.add_argument("--timeout-seconds", type=int, default=300)
     parser.add_argument("--budget-seconds", type=int, default=1200)
     parser.add_argument("--output", type=Path, required=True)
@@ -396,6 +444,7 @@ def main():
     configs = build_configs(
         args.previous_version, args.current_version, data_home,
         dataset_id=args.dataset, dtype=args.dtype, weights=args.weights,
+        mechanism=args.mechanism,
     )
     interpreters = {
         "knn": sys.executable, "current": sys.executable,
@@ -412,7 +461,7 @@ def main():
             "current_version": args.current_version,
             "interpreters": interpreters,
             "dataset_id": args.dataset, "dtype": args.dtype,
-            "weights": args.weights,
+            "weights": args.weights, "mechanism": args.mechanism,
             "seeds": list(SEEDS), "repeats": REPEATS,
             "expected_workers": len(configs),
             "worker_timeout_seconds": args.timeout_seconds,
@@ -422,14 +471,23 @@ def main():
         "planned_configs": configs,
         "notes": [
             f"One fixed {dataset['dataset']} {args.dtype} {args.weights}-weighted "
-            "configuration per JSON.",
-            "Different datasets, dtypes and weights are never pooled in summaries or paired ratios.",
+            f"{args.mechanism} configuration per JSON.",
+            "Different datasets, dtypes, weights and missingness mechanisms are never pooled.",
             "A missing record-level weights field means uniform for archive compatibility.",
             "Installed releases and KNN run in fresh sequential workers; order rotates.",
             "KNN uses the current-release environment; dependencies are shared.",
             "All variants and repeats for a seed must have identical prepared cases.",
             f"The {DATASET_DEFAULTS[args.dataset]['mar_driver']} feature stays observed; "
             "nominal overall missingness is 10%.",
+            (
+                "MAR uses the median driver value from the first "
+                f"{DATASET_DEFAULTS[args.dataset]['mar_reference_rows']} training rows; "
+                "eligible-feature missingness probabilities are 0.5x the base "
+                "at or below the cutoff and 1.5x above it. Query values do not "
+                "determine the cutoff."
+                if args.mechanism == "MAR"
+                else "MCAR uses a constant missingness probability for eligible features."
+            ),
             "Scaling uses observed training values only; scoring truth is float64.",
             "Fit and first transform are consecutive, without GC or RSS sampling between.",
             "Timing excludes preparation, warmup, validation and worker startup.",

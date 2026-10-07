@@ -29,6 +29,14 @@ on:
         options:
           - uniform
           - distance
+      mechanism:
+        description: Missingness for real data; synthetic requires MCAR
+        type: choice
+        required: false
+        default: MCAR
+        options:
+          - MCAR
+          - MAR
       baseline_commit:
         description: Optional baseline commit for candidate mode; blank uses PyPI 0.3.22
         type: string
@@ -51,6 +59,7 @@ jobs:
       REQUESTED_MODE: ${{ inputs.mode }}
       REQUESTED_WORKLOAD: ${{ inputs.workload }}
       REQUESTED_WEIGHTS: ${{ inputs.weights }}
+      REQUESTED_MECHANISM: ${{ inputs.mechanism }}
       REQUESTED_BASELINE_COMMIT: ${{ inputs.baseline_commit }}
       PYTHONNOUSERSITE: "1"
       PYTHONHASHSEED: "0"
@@ -105,9 +114,25 @@ jobs:
               ;;
           esac
 
+          benchmark_mechanism="${REQUESTED_MECHANISM:-MCAR}"
+          case "$benchmark_mechanism" in
+            MCAR) mechanism_suffix="" ;;
+            MAR) mechanism_suffix="_mar" ;;
+            *)
+              echo "Unknown missingness mechanism: $benchmark_mechanism" >&2
+              exit 1
+              ;;
+          esac
+
           if [[ "$benchmark_workload" == "synthetic" &&
                 "$benchmark_weights" != "uniform" ]]; then
             echo "Synthetic workloads require weights=uniform." >&2
+            exit 1
+          fi
+
+          if [[ "$benchmark_workload" == "synthetic" &&
+                "$benchmark_mechanism" != "MCAR" ]]; then
+            echo "Synthetic workloads require mechanism=MCAR." >&2
             exit 1
           fi
 
@@ -127,6 +152,8 @@ jobs:
             echo "BENCHMARK_WORKLOAD=$benchmark_workload"
             echo "BENCHMARK_WEIGHTS=$benchmark_weights"
             echo "BENCHMARK_WEIGHTS_SUFFIX=$weights_suffix"
+            echo "BENCHMARK_MECHANISM=$benchmark_mechanism"
+            echo "BENCHMARK_MECHANISM_SUFFIX=$mechanism_suffix"
             echo "PREVIOUS_VERSION=$previous_version"
             echo "CURRENT_VERSION=0.3.22"
             echo "CURRENT_ENV=$RUNNER_TEMP/faiss-current"
@@ -401,7 +428,7 @@ jobs:
             wine_dtype_suffix="_float32"
           fi
 
-          echo "Comparing Wine Quality White ${wine_dtype}; weights=${BENCHMARK_WEIGHTS}."
+          echo "Comparing Wine Quality White ${wine_dtype}; weights=${BENCHMARK_WEIGHTS}; mechanism=${BENCHMARK_MECHANISM}."
 
           "$CURRENT_ENV/bin/python" -u \
             -m benchmarks.benchmark_released_real_data \
@@ -411,10 +438,11 @@ jobs:
             --dataset wine_quality_white \
             --dtype "$wine_dtype" \
             --weights "$BENCHMARK_WEIGHTS" \
+            --mechanism "$BENCHMARK_MECHANISM" \
             --data-home "$GITHUB_WORKSPACE/benchmark_outputs/datasets" \
             --timeout-seconds 300 \
             --budget-seconds 1200 \
-            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white${wine_dtype_suffix}${BENCHMARK_WEIGHTS_SUFFIX}.json"
+            --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_wine_quality_white${wine_dtype_suffix}${BENCHMARK_WEIGHTS_SUFFIX}${BENCHMARK_MECHANISM_SUFFIX}.json"
 
       - name: Run sequential Abalone comparisons
         if: env.BENCHMARK_WORKLOAD == 'abalone'
@@ -431,7 +459,7 @@ jobs:
               exit 1
             fi
 
-            echo "Comparing Abalone ${dtype}; ${remaining_seconds}s remaining."
+            echo "Comparing Abalone ${dtype}; weights=${BENCHMARK_WEIGHTS}; mechanism=${BENCHMARK_MECHANISM}; ${remaining_seconds}s remaining."
             if ! "$CURRENT_ENV/bin/python" -u \
               -m benchmarks.benchmark_released_real_data \
               --previous-python "$PREVIOUS_ENV/bin/python" \
@@ -440,10 +468,11 @@ jobs:
               --dataset abalone \
               --dtype "$dtype" \
               --weights "$BENCHMARK_WEIGHTS" \
+              --mechanism "$BENCHMARK_MECHANISM" \
               --data-home "$GITHUB_WORKSPACE/benchmark_outputs/datasets" \
               --timeout-seconds 300 \
               --budget-seconds "$remaining_seconds" \
-              --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_abalone_${dtype}${BENCHMARK_WEIGHTS_SUFFIX}.json"; then
+              --output "$GITHUB_WORKSPACE/benchmark_outputs/version_comparison_abalone_${dtype}${BENCHMARK_WEIGHTS_SUFFIX}${BENCHMARK_MECHANISM_SUFFIX}.json"; then
               comparison_failed=1
             fi
           done
