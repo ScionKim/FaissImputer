@@ -214,20 +214,72 @@ WINE_FLOAT32_WORKLOADS = {
 }
 
 
-def workload_spec(dataset_id, weights="uniform", *, dtype=None):
+WINE_MAR_PROFILES = {
+    "uniform": {
+        **PROFILE,
+        "archive": "benchmarks/results/released_wine_quality_mar_0.3.22.zip",
+        "report": "docs/benchmarks/released_wine_quality_mar_0.3.22.md",
+        "summary": "benchmarks/results/released_wine_quality_mar_0.3.22-summary.json",
+        "archive_sha256": "9fadc90a9cfd87b61bf82b3d2ed72067fb99884811dc90a447d71b0828d8ed45",
+        "json_sha256": "fc6706300d6153a4608307a792500f2e561740ea9f071f745c0efbd839d0a905",
+        "commit": "949e3ff6478fba8273e20fb77a72eef60d00e2a7",
+        "run": "37572210033",
+        "json_member": "version_comparison_wine_quality_white_mar.json",
+    },
+    "distance": {
+        **PROFILE,
+        "archive": "benchmarks/results/released_wine_quality_distance_mar_0.3.22.zip",
+        "report": "docs/benchmarks/released_wine_quality_distance_mar_0.3.22.md",
+        "summary": "benchmarks/results/released_wine_quality_distance_mar_0.3.22-summary.json",
+        "archive_sha256": "9ff8a529b3afb7129e7a78dc8d47e07aa8d42b1910c7431591436c5321fe8a8f",
+        "json_sha256": "7544ca8ab3247334f8678799f4047afc82dfd8cea3a394e097c00d4ab160e3ef",
+        "commit": "949e3ff6478fba8273e20fb77a72eef60d00e2a7",
+        "run": "37572753465",
+        "json_member": "version_comparison_wine_quality_white_distance_mar.json",
+    },
+}
+WINE_MAR_WORKLOADS = {
+    weights: {
+        **WORKLOADS["wine_quality_white"],
+        "profile": profile,
+        "configuration": {
+            **COMMON_CONFIG, "mechanism": "MAR",
+            **({"weights": weights} if weights != "uniform" else {}),
+        },
+        "json_members": {
+            "float64": {
+                "member": profile["json_member"],
+                "sha256": profile["json_sha256"],
+                "worker_run_budget_seconds": 1200,
+            },
+        },
+    }
+    for weights, profile in WINE_MAR_PROFILES.items()
+}
+MECHANISMS = ("MCAR", "MAR")
+
+
+def workload_spec(dataset_id, weights="uniform", *, dtype=None, mechanism="MCAR"):
     require(dataset_id in WORKLOADS, "Unknown archived dataset")
     require(weights in WEIGHTS, "Unknown archived weights")
     require(dtype in (None, "float32", "float64"), "Unknown archived dtype")
+    require(mechanism in MECHANISMS, "Unknown archived mechanism")
+    if mechanism == "MAR":
+        require(dataset_id == "wine_quality_white" and dtype in (None, "float64"),
+                "MAR archives cover only Wine Quality White float64")
+        return WINE_MAR_WORKLOADS[weights]
     if dataset_id == "wine_quality_white" and dtype == "float32":
         return WINE_FLOAT32_WORKLOADS[weights]
     return (WORKLOADS if weights == "uniform" else DISTANCE_WORKLOADS)[dataset_id]
 
 
-def read_dataset_archive(path, dataset_id, *, weights="uniform", dtype=None):
+def read_dataset_archive(
+    path, dataset_id, *, weights="uniform", dtype=None, mechanism="MCAR",
+):
     """Select one Wine dtype archive; Abalone retains its two-dtype archive."""
     require(dataset_id == "wine_quality_white" or dtype is None,
             "Abalone archives contain both dtypes; omit dtype")
-    spec = workload_spec(dataset_id, weights, dtype=dtype)
+    spec = workload_spec(dataset_id, weights, dtype=dtype, mechanism=mechanism)
     profile = spec["profile"]
     raw = path.read_bytes()
     require(sha256(raw).hexdigest() == profile["archive_sha256"],
@@ -282,9 +334,9 @@ def read_abalone_archive(path):
     return read_dataset_archive(path, "abalone")
 
 
-def archived_configuration(dataset_id, dtype, *, weights="uniform"):
+def archived_configuration(dataset_id, dtype, *, weights="uniform", mechanism="MCAR"):
     require(dataset_id in WORKLOADS, "Unknown archived dataset")
-    spec = workload_spec(dataset_id, weights, dtype=dtype)
+    spec = workload_spec(dataset_id, weights, dtype=dtype, mechanism=mechanism)
     require(dtype in spec["json_members"], "Unexpected archived dtype")
     return spec, {**spec["configuration"], "dtype": dtype}
 
@@ -296,14 +348,18 @@ def counted_stats(values):
 
 def validate(
     data, freezes, *, dataset_id="wine_quality_white", dtype="float64", weights="uniform",
+    mechanism="MCAR",
 ):
-    spec, common_config = archived_configuration(dataset_id, dtype, weights=weights)
+    spec, common_config = archived_configuration(
+        dataset_id, dtype, weights=weights, mechanism=mechanism,
+    )
     profile = spec["profile"]
     feature_count = common_config["features"]
     require(data["schema_version"] == 1 and data["benchmark"] == "released_real_data"
             and data["complete"] is True, "Unexpected or incomplete raw result")
     params, environment, dataset = data["parameters"], data["metadata"], data["dataset"]
     require(params.get("weights", "uniform") == weights, "Unexpected parameter: weights")
+    require(params.get("mechanism", "MCAR") == mechanism, "Unexpected parameter: mechanism")
     require(params["previous_version"] == profile["previous"]
             and params["current_version"] == profile["current"], "Unexpected release versions")
     for key, value in {
@@ -313,7 +369,7 @@ def validate(
         "sklearn_working_memory_mib": 256,
     }.items():
         require(params[key] == value, f"Unexpected parameter: {key}")
-    if dataset_id == "abalone" or weights == "distance" or dtype == "float32":
+    if dataset_id == "abalone" or weights == "distance" or dtype == "float32" or mechanism == "MAR":
         require(params["dataset_id"] == dataset_id and params["dtype"] == dtype,
                 "Parameter dataset/dtype mismatch")
     require(environment["git_commit"] == profile["commit"]
@@ -388,15 +444,28 @@ def validate(
                 f"Output/input dtype mismatch: {key}")
         case = record["case"]
         for field, value in {
-            "seed": seed, "mechanism": "MCAR", "input_dtype": dtype,
+            "seed": seed, "mechanism": mechanism, "input_dtype": dtype,
             "truth_dtype": "float64", "n_train": 3000, "n_query": 1000,
             "feature_names": names, "nominal_overall_missing_rate": 0.1,
-            "always_observed": [common_config["mar_driver"]], "mar_reference_rows": None,
-            "mar_cutoff": None, "mar_low_probability": None, "mar_high_probability": None,
+            "always_observed": [common_config["mar_driver"]],
         }.items():
             require(case[field] == value, f"Prepared case mismatch: {key}/{field}")
-        require(case["eligible_base_probability"] == 0.1 * feature_count / (feature_count - 1),
+        base_probability = common_config["missing_rate"] * feature_count / (feature_count - 1)
+        require(case["eligible_base_probability"] == base_probability,
                 f"Missingness probability mismatch: {key}")
+        if mechanism == "MAR":
+            require(case["mar_reference_rows"] == common_config["mar_reference_rows"],
+                    f"MAR reference rows mismatch: {key}")
+            cutoff = case["mar_cutoff"]
+            require(isinstance(cutoff, (int, float)) and not isinstance(cutoff, bool)
+                    and math.isfinite(cutoff), f"Invalid MAR cutoff: {key}")
+            require(case["mar_low_probability"] == 0.5 * base_probability
+                    and case["mar_high_probability"] == 1.5 * base_probability,
+                    f"MAR probability mismatch: {key}")
+        else:
+            for field in ("mar_reference_rows", "mar_cutoff", "mar_low_probability",
+                          "mar_high_probability"):
+                require(case[field] is None, f"Prepared case mismatch: {key}/{field}")
         for field in FINGERPRINTS:
             require(re.fullmatch("[0-9a-f]{64}", case["fingerprints"][field]) is not None,
                     f"Invalid input fingerprint: {key}/{field}")
@@ -484,12 +553,15 @@ def validate(
 
 def analyze(
     data, freezes, *, dataset_id="wine_quality_white", dtype="float64", weights="uniform",
+    mechanism="MCAR",
 ):
-    spec, common_config = archived_configuration(dataset_id, dtype, weights=weights)
+    spec, common_config = archived_configuration(
+        dataset_id, dtype, weights=weights, mechanism=mechanism,
+    )
     profile = spec["profile"]
     member = spec["json_members"][dtype]
     indexed, cases = validate(
-        data, freezes, dataset_id=dataset_id, dtype=dtype, weights=weights,
+        data, freezes, dataset_id=dataset_id, dtype=dtype, weights=weights, mechanism=mechanism,
     )
     match_fields = tuple(common_config) + ("seed", "repeat")
     cells, comparisons = [], []
@@ -850,15 +922,18 @@ def analyze_abalone(documents, freezes):
     return analyze_dataset(documents, freezes, dataset_id="abalone")
 
 
-def analyze_dataset(documents, freezes, *, dataset_id, weights="uniform", dtype=None):
+def analyze_dataset(
+    documents, freezes, *, dataset_id, weights="uniform", dtype=None, mechanism="MCAR",
+):
     require(dataset_id == "wine_quality_white" or dtype is None,
             "Abalone archives contain both dtypes; omit dtype")
-    spec = workload_spec(dataset_id, weights, dtype=dtype)
+    spec = workload_spec(dataset_id, weights, dtype=dtype, mechanism=mechanism)
     dtypes = tuple(spec["json_members"])
     require(set(documents) == set(dtypes), "All archived dtype documents are required")
     by_dtype = {
         dtype: analyze(
             documents[dtype], freezes, dataset_id=dataset_id, dtype=dtype, weights=weights,
+            mechanism=mechanism,
         )
         for dtype in dtypes
     }
@@ -904,6 +979,7 @@ def analyze_dataset(documents, freezes, *, dataset_id, weights="uniform", dtype=
     return {
         "schema_version": 1, "dataset_id": dataset_id, "dtypes": list(dtypes),
         **({"weights": weights} if weights != "uniform" else {}),
+        **({"mechanism": mechanism} if mechanism != "MCAR" else {}),
         "source": {
             "archive": profile["archive"], "archive_sha256": profile["archive_sha256"],
             "benchmark_commit": profile["commit"], "github_run_id": profile["run"],
@@ -918,7 +994,7 @@ def analyze_dataset(documents, freezes, *, dataset_id, weights="uniform", dtype=
         "dataset": left["dataset"], "dependency_freezes": freezes,
         "aggregation": {
             "dtype_separation": "Each dtype is analyzed separately; no pooled timing, memory, quality or speedup.",
-            "configuration": "One available-donor, fit-then-transform MCAR configuration per dtype.",
+            "configuration": f"One available-donor, fit-then-transform {mechanism} configuration per dtype.",
             "per_dtype_definitions": "See aggregation in each by_dtype entry for matching and full-precision arithmetic.",
             "cross_dtype_inputs": (
                 "Same source rows, masks, float64 truth and fitted scaler; training/query arrays use the selected dtype."
@@ -948,13 +1024,17 @@ def render_dataset_report(result):
     first = result["by_dtype"][dtypes[0]]
     cases, config = first["cases"], first["configuration"]
     weights = config["weights"]
-    profile = workload_spec(dataset_id, weights, dtype=dtypes[0])["profile"]
+    mechanism = config["mechanism"]
+    mar = mechanism == "MAR"
+    profile = workload_spec(dataset_id, weights, dtype=dtypes[0], mechanism=mechanism)["profile"]
     wine_float32 = dataset_id == "wine_quality_white" and dtypes == ["float32"]
     environment, dataset = result["environment"], result["dataset"]
     dataset_label = "Abalone" if dataset_id == "abalone" else "Wine Quality White"
     title_suffix = " — distance weights" if weights == "distance" else ""
     if wine_float32:
         title_suffix = f" — float32, {weights} weights"
+    if mar:
+        title_suffix = f" — float64, MAR, {weights} weights"
     dtype_run_note = (
         "Float32 and float64 run sequentially as separate invocations on the same runner."
         if len(dtypes) > 1 else f"Only {dtypes[0]} is measured in this run."
@@ -1008,7 +1088,7 @@ def render_dataset_report(result):
         f"- {config['train_size']:,} training rows; {config['query_size']:,} held-out "
         f"queries; {config['features']} numerical features; k={config['n_neighbors']}; "
         f'{weights} weights; mean aggregation; `donor_policy="available"`; `index_factory="Flat"`.',
-        f"- {100 * config['missing_rate']:.0f}% target overall MCAR missingness in "
+        f"- {100 * config['missing_rate']:.0f}% target overall {mechanism} missingness in "
         f"training and query inputs. `{config['mar_driver']}` stays observed; "
         "the other features are eligible for masking.",
         f"- {result['validation']['successful_records']} successful workers: "
@@ -1017,6 +1097,25 @@ def render_dataset_report(result):
         f"Variants rotate within each seed/repeat. {dtype_run_note}", "",
         "The environment freezes differ only in the FaissImputer release. "
         f"KNNImputer uses the {current} environment. {input_agreement}", "",
+        *([
+            "### MAR missingness by seed", "",
+            f"The benchmark sets the cutoff to the median raw `{config['mar_driver']}` "
+            f"value in the first {config['mar_reference_rows']:,} training rows, before "
+            "scaling. Query values do not determine it. For each eligible feature, "
+            "rows at or below the cutoff use half the base masking probability; "
+            "rows above it use 1.5 times the base probability. The driver stays "
+            "observed. Realized missingness rates are reported with donor counts below.", "",
+            table(
+                ["Seed", "Reference training rows", "Driver cutoff (source units)",
+                 "Base probability (%)", "At/below cutoff (%)", "Above cutoff (%)"],
+                [[c["seed"], c["mar_reference_rows"], f"{c['mar_cutoff']:.12g}",
+                  f"{100 * c['eligible_base_probability']:.4f}",
+                  f"{100 * c['mar_low_probability']:.4f}",
+                  f"{100 * c['mar_high_probability']:.4f}"] for c in cases],
+            ), "",
+            "This analysis validates the saved MAR metadata and case consistency. "
+            "It does not regenerate masks or recompute the cutoff from source rows.", "",
+        ] if mar else []),
         "## Aggregation methodology", "",
         "All timing and memory cells are **median [min–max] across nine records "
         "per method and dtype: three seeds × three repeats**. `total_seconds` "
@@ -1158,6 +1257,13 @@ def render_dataset_report(result):
         "their numerical or neighbor-selection cause. Earlier diagnostics on "
         "other seeds or missingness mechanisms do not establish the cause here.", "",
         (
+            "The MAR uniform and distance archives were measured in separate "
+            "runs. A matching CPU model does not make them a single controlled "
+            "weights comparison. Earlier MCAR results are separate experiments; "
+            "cross-run timings do not isolate a missingness or weights effect. "
+            "MCAR output diagnostics do not establish the cause of MAR output "
+            "differences. These reports keep each run separate."
+            if mar else
             "The float32 uniform and distance archives were measured in separate "
             "runs on different CPU models. They are not a hardware-controlled "
             "weights comparison. The earlier float64 archives are also separate "
@@ -1193,6 +1299,16 @@ def render_dataset_report(result):
         "every displayed statistic from the saved records without installing "
         "or running imputers.", "",
         (
+            "In the [Analyze released-version benchmark results workflow]"
+            "(../../.github/workflows/analyze-released-versions.yml), the corresponding "
+            f"matrix entry uses `--dataset wine_quality_white --dtype float64 --weights {weights} "
+            "--mechanism MAR`. It produces this Markdown report and the full-precision "
+            "summary. On the first push or manual analysis run on "
+            "`bench/released-wine-quality-mar-0.3.22`, both outputs may initially be "
+            "absent. Commit them together; subsequent runs compare them byte-for-byte. "
+            "Pull requests require both files; a partially present pair fails. "
+            "This is saved-data analysis, not a new benchmark."
+            if mar else
             "In the [Analyze released-version benchmark results workflow]"
             "(../../.github/workflows/analyze-released-versions.yml), the corresponding "
             f"matrix entry uses `--dataset wine_quality_white --dtype float32 --weights {weights}`. "
@@ -1235,6 +1351,10 @@ def main():
     parser.add_argument("--dataset", choices=tuple(WORKLOADS), default="wine_quality_white")
     parser.add_argument("--weights", choices=WEIGHTS, default="uniform")
     parser.add_argument(
+        "--mechanism", choices=MECHANISMS, default="MCAR",
+        help="Archived missingness mechanism; MAR is available for Wine float64 only.",
+    )
+    parser.add_argument(
         "--dtype", choices=("float32", "float64"),
         help="Wine archive dtype (default: float64); omit for the two-dtype Abalone archive.",
     )
@@ -1244,7 +1364,9 @@ def main():
     args = parser.parse_args()
     require(args.dataset == "wine_quality_white" or args.dtype is None,
             "Abalone archives contain both dtypes; omit --dtype")
-    profile = workload_spec(args.dataset, args.weights, dtype=args.dtype)["profile"]
+    profile = workload_spec(
+        args.dataset, args.weights, dtype=args.dtype, mechanism=args.mechanism,
+    )["profile"]
     input_path = args.input if args.input is not None else ROOT / profile["archive"]
     report_path = args.report if args.report is not None else ROOT / profile["report"]
     summary_path = args.summary if args.summary is not None else ROOT / profile["summary"]
@@ -1253,18 +1375,20 @@ def main():
         input_path.resolve(),
         *((ROOT / item["profile"]["archive"]).resolve()
           for item in (*WORKLOADS.values(), *DISTANCE_WORKLOADS.values(),
-                       *WINE_FLOAT32_WORKLOADS.values())),
+                       *WINE_FLOAT32_WORKLOADS.values(), *WINE_MAR_WORKLOADS.values())),
         (ROOT / "benchmarks/results/released_versions_0.3.21.zip").resolve(),
         (ROOT / "benchmarks/results/released_versions_0.3.22.zip").resolve(),
     }
     require(outputs[0] != outputs[1], "Report and summary need different paths")
     require(not protected.intersection(outputs), "Output would overwrite a raw archive")
-    if args.weights == "distance" or args.dtype == "float32":
+    if args.weights == "distance" or args.dtype == "float32" or args.mechanism == "MAR":
         documents, freezes = read_dataset_archive(
             input_path, args.dataset, weights=args.weights, dtype=args.dtype,
+            mechanism=args.mechanism,
         )
         result = analyze_dataset(
             documents, freezes, dataset_id=args.dataset, weights=args.weights, dtype=args.dtype,
+            mechanism=args.mechanism,
         )
         report = render_dataset_report(result)
     elif args.dataset == "abalone":
