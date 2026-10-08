@@ -193,6 +193,16 @@ cross-run timings do not isolate a weights effect. Preserved ZIPs and the
 shared analysis script reproduce timing, memory, donor counts, seed-level
 reconstruction errors, and output differences separately for each run.
 
+Published-release MAR comparisons are complete for Wine Quality White
+float64 and Abalone float32/float64, each with uniform and distance
+weights. The [four reports](docs/benchmarks/README.md#mar-real-data-comparisons)
+cover available donors, 3,000 training rows, 1,000 held-out queries,
+and five neighbors. Preserved ZIPs and the shared analysis workflow
+reproduce paired timings, whole-worker memory, three-seed quality,
+and output-agreement results. These separate runs do not isolate
+weights or missingness effects, and the reports do not diagnose
+the causes of output differences.
+
 The following output diagnostic reports document their selected cases:
 
 - [Abalone float64](docs/benchmarks/abalone-output-1969f4b.md):
@@ -291,6 +301,10 @@ for one million queries.
 - [Published Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_0.3.22.md)
 - [Distance-weighted Wine Quality 0.3.22 comparison](docs/benchmarks/released_wine_quality_distance_0.3.22.md)
 - [Distance-weighted Abalone 0.3.22 comparison](docs/benchmarks/released_abalone_distance_0.3.22.md)
+- [Published Wine Quality MAR, uniform weights](docs/benchmarks/released_wine_quality_mar_0.3.22.md)
+- [Published Wine Quality MAR, distance weights](docs/benchmarks/released_wine_quality_distance_mar_0.3.22.md)
+- [Published Abalone MAR, uniform weights](docs/benchmarks/released_abalone_mar_0.3.22.md)
+- [Published Abalone MAR, distance weights](docs/benchmarks/released_abalone_distance_mar_0.3.22.md)
 - [Published 0.3.21 comparison](docs/benchmarks/released_versions_0.3.21.md)
 - [Published 0.3.20 comparison](docs/benchmarks/released_versions_0.3.20.md)
 - [Historical 0.3.19 comparison](docs/benchmarks/released_versions_0.3.19.md)
