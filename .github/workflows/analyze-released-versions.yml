@@ -10,6 +10,7 @@ on:
       - "bench/released-distance-weights"
       - "bench/released-wine-quality-float32-results"
       - "bench/released-wine-quality-mar-0.3.22"
+      - "bench/released-abalone-mar-0.3.22"
     paths:
       - ".github/workflows/analyze-released-versions.yml"
       - "benchmarks/analyze_released_versions.py"
@@ -48,6 +49,12 @@ on:
       - "benchmarks/results/released_wine_quality_distance_mar_0.3.22.zip"
       - "benchmarks/results/released_wine_quality_distance_mar_0.3.22-summary.json"
       - "docs/benchmarks/released_wine_quality_distance_mar_0.3.22.md"
+      - "benchmarks/results/released_abalone_mar_0.3.22.zip"
+      - "benchmarks/results/released_abalone_mar_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_mar_0.3.22.md"
+      - "benchmarks/results/released_abalone_distance_mar_0.3.22.zip"
+      - "benchmarks/results/released_abalone_distance_mar_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_distance_mar_0.3.22.md"
   pull_request:
     paths:
       - ".github/workflows/analyze-released-versions.yml"
@@ -87,6 +94,12 @@ on:
       - "benchmarks/results/released_wine_quality_distance_mar_0.3.22.zip"
       - "benchmarks/results/released_wine_quality_distance_mar_0.3.22-summary.json"
       - "docs/benchmarks/released_wine_quality_distance_mar_0.3.22.md"
+      - "benchmarks/results/released_abalone_mar_0.3.22.zip"
+      - "benchmarks/results/released_abalone_mar_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_mar_0.3.22.md"
+      - "benchmarks/results/released_abalone_distance_mar_0.3.22.zip"
+      - "benchmarks/results/released_abalone_distance_mar_0.3.22-summary.json"
+      - "docs/benchmarks/released_abalone_distance_mar_0.3.22.md"
 
 permissions:
   contents: read
@@ -159,6 +172,20 @@ jobs:
             weights: distance
             mechanism: MAR
             stem: released_wine_quality_distance_mar_0.3.22
+          - id: released-abalone-mar-0.3.22
+            release: "0.3.22"
+            generator: benchmarks/analyze_released_real_data.py
+            dataset: abalone
+            weights: uniform
+            mechanism: MAR
+            stem: released_abalone_mar_0.3.22
+          - id: released-abalone-distance-mar-0.3.22
+            release: "0.3.22"
+            generator: benchmarks/analyze_released_real_data.py
+            dataset: abalone
+            weights: distance
+            mechanism: MAR
+            stem: released_abalone_distance_mar_0.3.22
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -204,6 +231,7 @@ jobs:
           STEM: ${{ matrix.stem }}
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
+          REF: ${{ github.ref }}
         run: |
           report="docs/benchmarks/${STEM}.md"
           summary="benchmarks/results/${STEM}-summary.json"
@@ -239,6 +267,11 @@ jobs:
                   "$REF_NAME" == "bench/released-wine-quality-mar-0.3.22" &&
                   ( "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "push" ) ]]; then
             echo "::notice::Generation only: the first Wine Quality MAR report and summary are not committed yet. Commit both outputs together on this branch before opening a pull request."
+          elif [[ ( "$PROFILE_ID" == "released-abalone-mar-0.3.22" ||
+                    "$PROFILE_ID" == "released-abalone-distance-mar-0.3.22" ) &&
+                  "$REF" == "refs/heads/bench/released-abalone-mar-0.3.22" &&
+                  ( "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "push" ) ]]; then
+            echo "::notice::Generation only: the first Abalone MAR report and summary are not committed yet. Commit both outputs together on this branch before opening a pull request."
           else
             echo "::error::Committed report and summary are required for ${PROFILE_ID}."
             exit 1

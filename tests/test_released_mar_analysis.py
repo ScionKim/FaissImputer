@@ -1,4 +1,4 @@
-"""Saved-archive regressions for the separate Wine float64 MAR results."""
+"""Saved-archive regressions for separate Wine and Abalone MAR results."""
 
 from copy import deepcopy
 import json
@@ -233,11 +233,8 @@ def test_mar_archive_hash_prevents_cross_mechanism_and_weight_routing(mar_eviden
         analysis.analyze_dataset(documents, freezes, dataset_id="wine_quality_white", weights=weights)
 
 
-@pytest.mark.parametrize("dataset_id,dtype", [
-    ("wine_quality_white", "float32"), ("abalone", None),
-    ("abalone", "float32"), ("abalone", "float64"),
-])
-def test_mar_rejects_unsupported_dataset_dtype_before_reading(dataset_id, dtype):
+def test_mar_rejects_unsupported_wine_dtype_before_reading():
+    dataset_id, dtype = "wine_quality_white", "float32"
     with pytest.raises(ValueError):
         analysis.workload_spec(dataset_id, dtype=dtype, mechanism="MAR")
     with pytest.raises(ValueError):
@@ -271,7 +268,9 @@ def test_mar_cli_selects_wrapper_and_correct_archive(monkeypatch, tmp_path, mar_
         *analysis.WORKLOADS.values(), *analysis.DISTANCE_WORKLOADS.values(),
         *analysis.WINE_FLOAT32_WORKLOADS.values(),
     )
-] + [("MCAR", profile) for profile in analysis.WINE_MAR_PROFILES.values()])
+] + [("MCAR", profile) for profile in (
+    *analysis.WINE_MAR_PROFILES.values(), *analysis.ABALONE_MAR_PROFILES.values(),
+)])
 def test_cli_protects_archives_across_mechanisms(monkeypatch, output_option, selected_mechanism, profile):
     monkeypatch.setattr(sys, "argv", [
         "analyze_released_real_data.py", "--mechanism", selected_mechanism,
@@ -296,3 +295,177 @@ def test_existing_wine_float32_outputs_remain_byte_identical(weights):
     summary = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     assert summary.encode("utf-8") == (analysis.ROOT / profile["summary"]).read_bytes()
     assert analysis.render_dataset_report(result).encode("utf-8") == (analysis.ROOT / profile["report"]).read_bytes()
+
+
+def test_existing_wine_mar_outputs_remain_byte_identical(mar_evidence, mar_result):
+    weights, _, _ = mar_evidence
+    profile = analysis.WINE_MAR_PROFILES[weights]
+    summary = json.dumps(mar_result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    assert summary.encode("utf-8") == (analysis.ROOT / profile["summary"]).read_bytes()
+    assert analysis.render_dataset_report(mar_result).encode("utf-8") == (
+        analysis.ROOT / profile["report"]
+    ).read_bytes()
+
+
+@pytest.fixture(scope="module", params=["uniform", "distance"])
+def abalone_mar_evidence(request):
+    weights = request.param
+    profile = analysis.ABALONE_MAR_PROFILES[weights]
+    documents, freezes = analysis.read_dataset_archive(
+        analysis.ROOT / profile["archive"], "abalone", weights=weights, mechanism="MAR",
+    )
+    result = analysis.analyze_dataset(
+        documents, freezes, dataset_id="abalone", weights=weights, mechanism="MAR",
+    )
+    return weights, documents, freezes, result
+
+
+def test_abalone_mar_keeps_two_dtype_evidence_separate(abalone_mar_evidence):
+    weights, documents, _, result = abalone_mar_evidence
+    profile = analysis.ABALONE_MAR_PROFILES[weights]
+    spec = analysis.workload_spec("abalone", weights, mechanism="MAR")
+    assert result["dataset_id"] == "abalone" and result["mechanism"] == "MAR"
+    assert result["dtypes"] == list(result["by_dtype"]) == ["float32", "float64"]
+    assert result["validation"]["successful_records"] == 54
+    assert result["validation"]["cross_dtype_source_rows_masks_truth_and_scalers_identical"]
+    assert result["validation"]["cross_dtype_environment_identical_except_creation_time"]
+    assert result["source"]["archive"] == profile["archive"]
+    assert result["source"]["archive_sha256"] == profile["archive_sha256"]
+    assert result["source"]["github_run_id"] == profile["run"]
+    for dtype in ("float32", "float64"):
+        section = result["by_dtype"][dtype]
+        records = documents[dtype]["records"]
+        indexed = {(r["variant"], r["seed"], r["repeat"]): r for r in records}
+        assert section["configuration"]["dtype"] == dtype
+        assert section["configuration"]["mechanism"] == "MAR"
+        assert section["configuration"]["weights"] == weights
+        assert result["source"]["json_members"][dtype]["sha256"] == spec["json_members"][dtype]["sha256"]
+        assert section["environment"]["cpu_model"] == documents[dtype]["metadata"]["cpu_model"]
+        raw_cases = {r["seed"]: r["case"] for r in records}
+        for case in section["cases"]:
+            assert {key: case[key] for key in raw_cases[case["seed"]]} == raw_cases[case["seed"]]
+            assert case["mar_cutoff"] == {101: 0.54, 202: 0.545, 303: 0.55}[case["seed"]]
+            assert case["mar_reference_rows"] == 1000
+            assert case["always_observed"] == ["Length"]
+            assert case["train_mask"]["missing_per_feature"][0] == 0
+            assert case["query_mask"]["missing_per_feature"][0] == 0
+            assert case["complete_donors"] == {101: 1536, 202: 1512, 303: 1490}[case["seed"]]
+            assert case["observed_donors_per_feature"] == [
+                3000 - count for count in case["train_mask"]["missing_per_feature"]
+            ]
+        for cell in section["cells"]:
+            group = [r for r in records if r["variant"] == cell["variant"]]
+            seed_group = [r for r in group if r["repeat"] == 1]
+            assert cell["record_count"] == len(group) == 9
+            assert cell["quality_seed_count"] == len(seed_group) == 3
+            for field in ("fit_seconds", "transform_seconds", "total_seconds"):
+                values = [r[field] for r in group]
+                assert cell["timing"][field] == {
+                    "median": median(values), "min": min(values), "max": max(values),
+                }
+            for field in ("rmse", "mae"):
+                values = [r[field] for r in seed_group]
+                assert cell["quality"][field] == {
+                    "median": median(values), "min": min(values), "max": max(values),
+                }
+        for comparison in section["comparisons"]:
+            numerator, denominator = comparison["numerator_variant"], comparison["denominator_variant"]
+            assert comparison["pair_count"] == len(comparison["pairs"]) == 9
+            for pair in comparison["pairs"]:
+                assert pair["match"]["dtype"] == dtype
+                assert pair["match"]["mechanism"] == "MAR"
+            pairs = [(indexed[(numerator, seed, repeat)], indexed[(denominator, seed, repeat)])
+                     for seed in (101, 202, 303) for repeat in (1, 2, 3)]
+            for field in ("fit_seconds", "transform_seconds", "total_seconds"):
+                ratios = [left[field] / right[field] for left, right in pairs]
+                assert comparison["speedup"][field] == {
+                    "median": median(ratios), "min": min(ratios), "max": max(ratios),
+                }
+            if numerator == "previous" and denominator == "current":
+                assert comparison["matching_output_hashes"] == 9
+                assert comparison["max_scored_abs_difference"] == 0
+            for sample in comparison["seed_output_agreement"]:
+                left = indexed[(numerator, sample["seed"], 1)]
+                right = indexed[(denominator, sample["seed"], 1)]
+                differences = [abs(a - b) for a, b in zip(left["imputed_values"], right["imputed_values"])]
+                assert sample["hidden_entries_above_1e_minus_5"] == sum(d > 1e-5 for d in differences)
+                assert sample["max_scored_abs_difference"] == max(differences)
+    report = analysis.render_dataset_report(result)
+    assert "float32 and float64, MAR" in report.splitlines()[0]
+    assert "### MAR missingness by seed" in report and "Length" in report
+    assert "different CPU models" in report
+    assert "--dataset abalone --weights " + weights + " --mechanism MAR" in report
+    assert "--dtype" not in report
+    assert "bench/released-abalone-mar-0.3.22" in report
+    assert profile["archive"] in report and profile["summary"] in report
+    assert report.endswith("\n") and "\r" not in report
+
+
+@pytest.mark.parametrize("change", ["missing_dtype", "cutoff", "scaler", "truth"])
+def test_abalone_mar_rejects_cross_dtype_input_changes(abalone_mar_evidence, change):
+    weights, original, freezes, _ = abalone_mar_evidence
+    documents = deepcopy(original)
+    if change == "missing_dtype":
+        del documents["float64"]
+    else:
+        # Change all methods/repeats for one seed so per-dtype consistency still holds.
+        for record in documents["float64"]["records"]:
+            if record["seed"] != 101:
+                continue
+            case = record["case"]
+            if change == "cutoff":
+                case["mar_cutoff"] += 1
+            elif change == "scaler":
+                case["scaler_mean"][0] += 1
+            else:
+                case["fingerprints"]["truth"] = "f" * 64
+    with pytest.raises(ValueError, match="dtype"):
+        analysis.analyze_dataset(
+            documents, freezes, dataset_id="abalone", weights=weights, mechanism="MAR",
+        )
+
+
+def test_abalone_mar_archive_routing_rejects_other_evidence(abalone_mar_evidence):
+    weights, _, _, _ = abalone_mar_evidence
+    path = analysis.ROOT / analysis.ABALONE_MAR_PROFILES[weights]["archive"]
+    other_weights = "distance" if weights == "uniform" else "uniform"
+    for dataset_id, selected_weights, mechanism in (
+        ("abalone", weights, "MCAR"), ("abalone", other_weights, "MAR"),
+        ("wine_quality_white", weights, "MAR"),
+    ):
+        with pytest.raises(ValueError, match="Archive SHA-256 mismatch"):
+            analysis.read_dataset_archive(
+                path, dataset_id, weights=selected_weights, mechanism=mechanism,
+            )
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_abalone_mar_outer_interfaces_require_both_dtypes(dtype, monkeypatch):
+    # Internal per-dtype validation is supported; public archive selection keeps both.
+    assert set(analysis.workload_spec("abalone", dtype=dtype, mechanism="MAR")["json_members"]) == {
+        "float32", "float64",
+    }
+    with pytest.raises(ValueError, match="omit dtype"):
+        analysis.read_dataset_archive(
+            analysis.ROOT / "nonexistent-mar-input.zip", "abalone", dtype=dtype, mechanism="MAR",
+        )
+    with pytest.raises(ValueError, match="omit dtype"):
+        analysis.analyze_dataset({}, {}, dataset_id="abalone", dtype=dtype, mechanism="MAR")
+    monkeypatch.setattr(sys, "argv", [
+        "analyze_released_real_data.py", "--dataset", "abalone", "--mechanism", "MAR",
+        "--dtype", dtype,
+    ])
+    with pytest.raises(ValueError, match="omit --dtype"):
+        analysis.main()
+
+
+def test_abalone_mar_cli_selects_both_dtypes(abalone_mar_evidence, monkeypatch, tmp_path):
+    weights, _, _, result = abalone_mar_evidence
+    report, summary = tmp_path / "report.md", tmp_path / "summary.json"
+    monkeypatch.setattr(sys, "argv", [
+        "analyze_released_real_data.py", "--dataset", "abalone", "--weights", weights,
+        "--mechanism", "MAR", "--report", str(report), "--summary", str(summary),
+    ])
+    analysis.main()
+    assert report.read_bytes() == analysis.render_dataset_report(result).encode("utf-8")
+    assert json.loads(summary.read_bytes()) == result

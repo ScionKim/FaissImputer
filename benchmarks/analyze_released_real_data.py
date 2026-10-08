@@ -256,6 +256,64 @@ WINE_MAR_WORKLOADS = {
     }
     for weights, profile in WINE_MAR_PROFILES.items()
 }
+
+
+ABALONE_MAR_PROFILES = {
+    "uniform": {
+        **ABALONE_PROFILE,
+        "archive": "benchmarks/results/released_abalone_mar_0.3.22.zip",
+        "report": "docs/benchmarks/released_abalone_mar_0.3.22.md",
+        "summary": "benchmarks/results/released_abalone_mar_0.3.22-summary.json",
+        "archive_sha256": "8b1c14831c25d53a3a7e9756761ad71553e931b244cdf5ea8ad1bc5e44de3924",
+        "commit": "99cdc057d844f5dec7c4a98da9c5a719d71ccafe",
+        "run": "37679710940",
+        "json_members": {
+            "float32": {
+                "member": "version_comparison_abalone_float32_mar.json",
+                "sha256": "9b95acde7b68f5860bab1c3f48f0fb5d2cc1785bd770d587f69df1c695e2b4b9",
+                "worker_run_budget_seconds": 1200,
+            },
+            "float64": {
+                "member": "version_comparison_abalone_float64_mar.json",
+                "sha256": "d69abc34dae2c384125bf5a68b801b5552684b965acdea9f8fb8c8cf375761cd",
+                "worker_run_budget_seconds": 1164,
+            },
+        },
+    },
+    "distance": {
+        **ABALONE_PROFILE,
+        "archive": "benchmarks/results/released_abalone_distance_mar_0.3.22.zip",
+        "report": "docs/benchmarks/released_abalone_distance_mar_0.3.22.md",
+        "summary": "benchmarks/results/released_abalone_distance_mar_0.3.22-summary.json",
+        "archive_sha256": "52ccd209302777d1c16dcfe159ae541c34c793f37d41fc035ad3e720fcf05695",
+        "commit": "99cdc057d844f5dec7c4a98da9c5a719d71ccafe",
+        "run": "37680429397",
+        "json_members": {
+            "float32": {
+                "member": "version_comparison_abalone_float32_distance_mar.json",
+                "sha256": "2541eff5f3d7fe147194947e72ad8a5ad711028b0e514b631a21aa243d87f41d",
+                "worker_run_budget_seconds": 1200,
+            },
+            "float64": {
+                "member": "version_comparison_abalone_float64_distance_mar.json",
+                "sha256": "031772e7e0a44f086bd46db3240a4f8b164a2789d6c3c2a20d86b2bd5f3d2fd4",
+                "worker_run_budget_seconds": 1165,
+            },
+        },
+    },
+}
+ABALONE_MAR_WORKLOADS = {
+    weights: {
+        **WORKLOADS["abalone"],
+        "profile": profile,
+        "configuration": {
+            **WORKLOADS["abalone"]["configuration"], "mechanism": "MAR",
+            **({"weights": weights} if weights != "uniform" else {}),
+        },
+        "json_members": profile["json_members"],
+    }
+    for weights, profile in ABALONE_MAR_PROFILES.items()
+}
 MECHANISMS = ("MCAR", "MAR")
 
 
@@ -265,8 +323,10 @@ def workload_spec(dataset_id, weights="uniform", *, dtype=None, mechanism="MCAR"
     require(dtype in (None, "float32", "float64"), "Unknown archived dtype")
     require(mechanism in MECHANISMS, "Unknown archived mechanism")
     if mechanism == "MAR":
-        require(dataset_id == "wine_quality_white" and dtype in (None, "float64"),
-                "MAR archives cover only Wine Quality White float64")
+        if dataset_id == "abalone":
+            return ABALONE_MAR_WORKLOADS[weights]
+        require(dtype in (None, "float64"),
+                "Wine Quality White MAR archives cover only float64")
         return WINE_MAR_WORKLOADS[weights]
     if dataset_id == "wine_quality_white" and dtype == "float32":
         return WINE_FLOAT32_WORKLOADS[weights]
@@ -1034,7 +1094,12 @@ def render_dataset_report(result):
     if wine_float32:
         title_suffix = f" — float32, {weights} weights"
     if mar:
-        title_suffix = f" — float64, MAR, {weights} weights"
+        title_suffix = f" — {' and '.join(dtypes)}, MAR, {weights} weights"
+    mar_dtype_option = " --dtype float64" if dataset_id == "wine_quality_white" else ""
+    mar_branch = (
+        "bench/released-abalone-mar-0.3.22" if dataset_id == "abalone"
+        else "bench/released-wine-quality-mar-0.3.22"
+    )
     dtype_run_note = (
         "Float32 and float64 run sequentially as separate invocations on the same runner."
         if len(dtypes) > 1 else f"Only {dtypes[0]} is measured in this run."
@@ -1257,6 +1322,13 @@ def render_dataset_report(result):
         "their numerical or neighbor-selection cause. Earlier diagnostics on "
         "other seeds or missingness mechanisms do not establish the cause here.", "",
         (
+            "The Abalone MAR uniform and distance archives were measured in separate "
+            "runs on different CPU models. They are not a hardware-controlled weights "
+            "comparison. Earlier MCAR results are separate experiments; cross-run "
+            "timings do not isolate a missingness or weights effect. MCAR output "
+            "diagnostics do not establish the cause of MAR output differences. "
+            "These reports keep each run separate."
+            if mar and dataset_id == "abalone" else
             "The MAR uniform and distance archives were measured in separate "
             "runs. A matching CPU model does not make them a single controlled "
             "weights comparison. Earlier MCAR results are separate experiments; "
@@ -1301,10 +1373,10 @@ def render_dataset_report(result):
         (
             "In the [Analyze released-version benchmark results workflow]"
             "(../../.github/workflows/analyze-released-versions.yml), the corresponding "
-            f"matrix entry uses `--dataset wine_quality_white --dtype float64 --weights {weights} "
+            f"matrix entry uses `--dataset {dataset_id}{mar_dtype_option} --weights {weights} "
             "--mechanism MAR`. It produces this Markdown report and the full-precision "
             "summary. On the first push or manual analysis run on "
-            "`bench/released-wine-quality-mar-0.3.22`, both outputs may initially be "
+            f"`{mar_branch}`, both outputs may initially be "
             "absent. Commit them together; subsequent runs compare them byte-for-byte. "
             "Pull requests require both files; a partially present pair fails. "
             "This is saved-data analysis, not a new benchmark."
@@ -1352,7 +1424,7 @@ def main():
     parser.add_argument("--weights", choices=WEIGHTS, default="uniform")
     parser.add_argument(
         "--mechanism", choices=MECHANISMS, default="MCAR",
-        help="Archived missingness mechanism; MAR is available for Wine float64 only.",
+        help="Archived missingness mechanism; MAR covers Wine float64 and both Abalone dtypes.",
     )
     parser.add_argument(
         "--dtype", choices=("float32", "float64"),
@@ -1375,7 +1447,8 @@ def main():
         input_path.resolve(),
         *((ROOT / item["profile"]["archive"]).resolve()
           for item in (*WORKLOADS.values(), *DISTANCE_WORKLOADS.values(),
-                       *WINE_FLOAT32_WORKLOADS.values(), *WINE_MAR_WORKLOADS.values())),
+                       *WINE_FLOAT32_WORKLOADS.values(), *WINE_MAR_WORKLOADS.values(),
+                       *ABALONE_MAR_WORKLOADS.values())),
         (ROOT / "benchmarks/results/released_versions_0.3.21.zip").resolve(),
         (ROOT / "benchmarks/results/released_versions_0.3.22.zip").resolve(),
     }
