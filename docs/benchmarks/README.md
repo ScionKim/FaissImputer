@@ -209,6 +209,28 @@ cross-run timings do not isolate a weights or dtype effect.
 - Distance: [Original evidence](../../benchmarks/results/released_wine_quality_float32_distance_0.3.22.zip)
   · [Full-precision summary](../../benchmarks/results/released_wine_quality_float32_distance_0.3.22-summary.json).
 
+### MAR real-data comparisons
+
+Published FaissImputer 0.3.21, 0.3.22, and KNNImputer compared with
+available donors, 3,000 training rows, 1,000 held-out queries, five
+neighbors, and 10% target MAR missingness.
+
+| Dataset | Dtypes | Uniform weights | Distance weights |
+| --- | --- | --- | --- |
+| Wine Quality White | float64 | [Report](released_wine_quality_mar_0.3.22.md) | [Report](released_wine_quality_distance_mar_0.3.22.md) |
+| Abalone | float32, float64 | [Report](released_abalone_mar_0.3.22.md) | [Report](released_abalone_distance_mar_0.3.22.md) |
+
+Each report separates dtypes and includes paired timing ratios,
+whole-worker peak RSS, three-seed reconstruction errors, and output
+differences. Preserved ZIPs, full-precision summaries, and reproduction
+instructions are linked from each report.
+
+Uniform and distance weights were measured in separate runs; the Abalone
+runs used different CPU models. Cross-run timings do not isolate a
+weights or missingness effect. Reconstruction quality and output
+agreement remain separate questions; these reports do not diagnose
+the causes of output differences.
+
 ## Historical version comparisons
 
 | Report | Coverage |
