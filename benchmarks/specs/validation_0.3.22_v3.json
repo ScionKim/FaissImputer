@@ -1,0 +1,425 @@
+{
+  "revision": "validation_0.3.22_v3",
+  "purpose": "Frozen measurement protocol and benchmark correctness acceptance, using the existing KNN comparison precedent and the user decision dated 2026-10-13; validation remains to be executed.",
+  "execution_scope": "measurement_protocol_and_correctness_criterion_frozen_validation_pending",
+  "accepted_execution_order": [
+    "bounded_ordered_call_diagnosis",
+    "freeze_measurement_protocol",
+    "correctness_verification",
+    "mandatory_controlled_scaling",
+    "real_data_validation",
+    "value_gate_decision",
+    "justified_profiling_optimization_or_release_work_only"
+  ],
+  "package": {
+    "distribution": "faiss-imputer",
+    "import_name": "faiss_imputer",
+    "version": "0.3.22",
+    "source": "published_wheel",
+    "python_minor": "3.12",
+    "dependency_pins": {
+      "numpy": "2.5.3",
+      "scikit-learn": "1.9.1",
+      "faiss-cpu": "1.15.1"
+    },
+    "dependency_pin_basis": "Versions supplied from the archived environment. These pins do not establish that every dependency or the runner matches the historical environment.",
+    "unlisted_dependency_versions": "Resolve wheel dependencies, record their exact installed versions and wheel SHA256 hashes; do not claim historical equivalence."
+  },
+  "diagnostic": {
+    "run_number": 1,
+    "train_rows": 20000,
+    "query_rows": 3000,
+    "features": 20,
+    "n_neighbors": 5,
+    "weights": "uniform",
+    "donor_policy": "complete",
+    "pattern": "random",
+    "threads": 1,
+    "working_memory_mib": 256,
+    "seeds": [
+      101,
+      202,
+      303
+    ],
+    "repeats_per_seed": 3,
+    "ordered_dtypes": [
+      "float32",
+      "float64"
+    ],
+    "calls_per_dtype": 6,
+    "worker_timeout_seconds": 180,
+    "outer_parallelism": 1,
+    "missingness": {
+      "train_fraction": 0.0,
+      "query_missing_features_per_row": 4,
+      "query_fraction": 0.2,
+      "query_selection": "random_without_replacement_per_row"
+    },
+    "warmup": {
+      "enabled": true,
+      "per_dtype": true,
+      "separate_model": true,
+      "train_rows": 32,
+      "query_rows": 8,
+      "features": 20,
+      "seed": 7,
+      "missing_query_columns": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "operation": "Fit and transform a separate small model immediately before the measured fit for each dtype, following the supplied historical worker."
+    },
+    "process_isolation": {
+      "unit": "seed_repeat",
+      "worker_count": 9,
+      "fresh_subprocess": true,
+      "sequential_workers": true,
+      "dtype_blocks_same_worker": true,
+      "dtype_order": "Complete float32 calls 1 through 6, then complete float64 calls 1 through 6 in the same worker.",
+      "same_seed_and_repeat_for_both_dtypes": true,
+      "block_boundary": "Delete the float32 block arrays and model, then collect garbage before the float64 block; retain interpreter, import and allocator state and record that fact.",
+      "alternate_order": false,
+      "automatic_retry": false
+    },
+    "output_retention": {
+      "protocol": "Retain the first output, a copy of the first output, and the previous repeated output during each dtype block, matching the supplied historical worker.",
+      "all_six_actual_call_measurements_retained": true,
+      "checks_outside_timers": true,
+      "first_output_mutation_check": true,
+      "repeated_output_comparison": "Compare every repeated output with the copy of the first output and separately check that the retained original first output still equals that copy.",
+      "between_call_evidence": "Record array layout, non-copying hashes and structural/equality checks outside timers. Descriptive difference calculations are unnecessary for equal repeats. Save call-1 arrays only after the six calls complete. These additional audit checks are explicitly part of this diagnostic protocol."
+    },
+    "reference": {
+      "method": "sklearn.impute.KNNImputer",
+      "timing": "After both timed Faiss dtype blocks in the same worker, so reference work cannot alter their warm state.",
+      "tolerance": null,
+      "tolerance_status": "Criterion source pending. Report numerical differences and identity diagnostics; do not invent a KNN equivalence threshold or declare equivalence from an unsourced threshold."
+    },
+    "stage_timings": {
+      "timing": "Separate instrumented replay after both timed Faiss dtype blocks and the KNN reference.",
+      "approach": "Use supported low-cost train/add/search timing collectors where available; do not instrument the primary timed calls.",
+      "unavailable_value": null,
+      "unavailable_values_are_not_zero": true,
+      "check_replay_against_timed_first_output": true,
+      "comparison_checks_outside_timers": true
+    },
+    "run_budget": {
+      "initial_runs": 1,
+      "maximum_total_diagnostic_runs": 2,
+      "second_run": "Optional only after evaluating the first run and selecting the single strongest hypothesis. It requires a deliberate revised diagnosis; this revision does not implement or trigger it.",
+      "global_run_count_enforcement": "Human-maintained run ledger. Workflow attempt gating and the push token do not prove a global run count.",
+      "rerun_same_github_run": false,
+      "automatic_follow_up": false
+    }
+  },
+  "scaling_plan": {
+    "status": "accepted_plan_metadata_only_not_executed_by_this_diagnostic",
+    "stage_4": "not_implemented",
+    "measurement_protocol_status": "Measurement choices and benchmark correctness criterion frozen; harness implementation and correctness verification remain pending.",
+    "primary_endpoint": "fit plus actual first transform; disclose excluded process warmup separately",
+    "warm_reuse_endpoint": "Median of calls 2-6 per worker; separate secondary endpoint, never substituted for the primary gate.",
+    "train_rows": [
+      5000,
+      10000,
+      20000,
+      50000,
+      100000,
+      200000
+    ],
+    "optional_train_rows": [
+      500000
+    ],
+    "query_rows": 3000,
+    "query_size_rule": "Fixed 3000 query rows for every training size, including optional 500k.",
+    "features": 20,
+    "n_neighbors": 5,
+    "weights": "uniform",
+    "threads": 1,
+    "seeds": [
+      101,
+      202,
+      303
+    ],
+    "repeats_per_seed": 3,
+    "missingness": {
+      "mechanism": "MCAR",
+      "query_pattern": "random",
+      "query_missing_features_per_row": 4,
+      "query_fraction": 0.2,
+      "complete_train_fraction": 0.0,
+      "available_train_fraction": 0.1
+    },
+    "series": [
+      {
+        "series_id": "complete_f32",
+        "workload_id": "complete_random",
+        "donor_policy": "complete",
+        "dtype": "float32",
+        "train_missing_fraction": 0.0,
+        "correctness_criterion_id": "knn_relative_3e-6_uniform_absolute_0_v1",
+        "rtol": 3e-06,
+        "atol": 0.0
+      },
+      {
+        "series_id": "complete_f64",
+        "workload_id": "complete_random",
+        "donor_policy": "complete",
+        "dtype": "float64",
+        "train_missing_fraction": 0.0,
+        "correctness_criterion_id": "knn_relative_3e-6_uniform_absolute_0_v1",
+        "rtol": 3e-06,
+        "atol": 0.0
+      },
+      {
+        "series_id": "available_f32",
+        "workload_id": "available_random",
+        "donor_policy": "available",
+        "dtype": "float32",
+        "train_missing_fraction": 0.1,
+        "correctness_criterion_id": "knn_relative_3e-6_uniform_absolute_0_v1",
+        "rtol": 3e-06,
+        "atol": 0.0
+      },
+      {
+        "series_id": "available_f64",
+        "workload_id": "available_random",
+        "donor_policy": "available",
+        "dtype": "float64",
+        "train_missing_fraction": 0.1,
+        "correctness_criterion_id": "knn_relative_3e-6_uniform_absolute_0_v1",
+        "rtol": 3e-06,
+        "atol": 0.0
+      }
+    ],
+    "workload_value_gate": "A dtype-only change does not qualify as a second independent workload. Treat complete_random and available_random as distinct policy/scenario workloads; retain separate dtype series.",
+    "donor_policy_rule": "Every measured cell records its series_id, workload_id and explicit donor_policy. Policy stays fixed across size points within a series.",
+    "active_development_gate": {
+      "correctness": "Every applicable result must pass benchmark_correctness_criterion and the independent checks. Existing regression tests retain their own tolerances. Failed or unevaluated correctness cannot support a value-gate pass.",
+      "minimum_paired_median_speedup": 2.0,
+      "consecutive_medium_large_points_after_crossover": 2,
+      "minimum_independent_workloads": 2,
+      "dtype_alone_is_independent_workload": false,
+      "aggregation": "Median of matched sklearn/Faiss runtime ratios; publish all seed/repeat evidence and all predefined series, including failures."
+    },
+    "medium_large_train_rows": [
+      20000,
+      50000,
+      100000,
+      200000
+    ],
+    "resource_budget": {
+      "memory_unit": "decimal_GB",
+      "matching_cell_keys": [
+        "method",
+        "donor_policy",
+        "dtype",
+        "seed",
+        "repeat",
+        "environment"
+      ],
+      "wall_time_scope": "Full cell wall time including startup, generation, warmup and validation; report performance timing endpoints separately.",
+      "optional_500k_gate": {
+        "required_train_rows": 200000,
+        "required_status": "completed_normally",
+        "maximum_wall_seconds_inclusive": 300,
+        "maximum_peak_rss_bytes_inclusive": 4000000000,
+        "requirements_combined_with": "AND",
+        "missing_or_incomplete_prerequisite": "Skip the matching 500k cell as resource_bounded / not_executed."
+      },
+      "optional_500k_stop": {
+        "wall_seconds_exclusive": 600,
+        "peak_rss_bytes_exclusive": 5500000000,
+        "conditions_combined_with": "OR",
+        "classification": "resource_bounded",
+        "completion_status": "not_completed"
+      },
+      "classification_rule": "Budget skips and stops are resource-bounded outcomes, not performance failures. Apply eligibility independently to each matching method/policy/dtype/seed/repeat/environment cell.",
+      "paired_comparison_rule": "If either method lacks a completed valid result, report the paired speedup as unavailable; do not infer a speedup or a gate pass from a resource stop."
+    }
+  },
+  "environment_record": {
+    "required": [
+      "runner_image",
+      "runner_image_version",
+      "os",
+      "cpu_model",
+      "logical_cpu_count",
+      "memory_bytes",
+      "python_version",
+      "package_versions",
+      "installed_package_origin",
+      "wheel_sha256",
+      "workflow_sha",
+      "git_sha",
+      "github_run_id",
+      "github_run_attempt",
+      "github_job",
+      "spec_revision"
+    ],
+    "allowed_missing_value": null,
+    "missing_fields_require_reason": true,
+    "secret_handling": "Capture only named provenance fields; do not dump the complete environment."
+  },
+  "parent_specification": {
+    "revision": "validation_0.3.22_v2",
+    "sha256": "dc65717e8cc869c34b5dca0766021cd50a6ab769d0cfc3ecb9481022c8304d36",
+    "preservation": "Keep the v1 and v2 files and diagnosis-1 artifacts unchanged. This revision does not request another ordered-call diagnosis."
+  },
+  "diagnosis_decision": {
+    "github_run_id": "38496540207",
+    "attempt": 1,
+    "git_sha": "2592f032c087dc99ecd3a91ca317603967590060",
+    "outcome": "Historical third-call acceleration not reproduced in this environment.",
+    "actual_diagnostic_runs_used": 1,
+    "second_run_planned": false,
+    "reason": "No correctness or measurement-validity issue in this run requires an additional diagnosis.",
+    "v1_preservation": "Keep the executed v1 specification and artifacts unchanged. This v2 is for the next validation harness, not a request to rerun the v1 diagnostic."
+  },
+  "frozen_measurement_protocol": {
+    "threads": 1,
+    "seeds": [
+      101,
+      202,
+      303
+    ],
+    "independent_repeats_per_seed": 3,
+    "dtype_block_order": [
+      "float32",
+      "float64"
+    ],
+    "dtype_order_rule": "Retain the v1 same-worker dtype order and documented block-boundary state; record any incomplete sequence rather than silently reordering.",
+    "small_warmup": "For each method and dtype, fit/transform a separate small model using the v1 warmup data definition; record its excluded cost.",
+    "target_model_warmup_calls_excluded": 0,
+    "transform_calls_recorded": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "primary_endpoint": "fit_seconds + actual_call_1_seconds after the disclosed small separate-model warmup",
+    "primary_exclusions": [
+      "data_generation",
+      "small_separate_model_warmup",
+      "output_checks",
+      "between_phase_gc_and_rss_reads",
+      "process_startup"
+    ],
+    "secondary_warm_endpoint": "median(transform_call_2_seconds through transform_call_6_seconds) within each worker",
+    "primary_summary": "Median of nine matched sklearn_primary/Faiss_primary ratios, pairing by workload, series, size, seed and repeat. Display per-seed and individual samples.",
+    "secondary_summary": "Median of nine ratios of matched within-worker warm medians; retain all individual call times and do not treat five calls as independent workers.",
+    "outliers": "Retain all samples. Failed or incomplete cells remain explicit; do not delete slow successful samples.",
+    "instrumentation": "Primary call timings remain uninstrumented. Label available factory/train/add/search observations as separate instrumented replay evidence.",
+    "correctness_gate": "Apply benchmark_correctness_criterion: rtol=3e-6 and explicit atol=0 for the current k=5 uniform series. Diagnosis 1 exact equality remains evidence only for its measured complete-donor cases; current benchmark validation is pending."
+  },
+  "historical_diagnostic_note": "The diagnostic section is retained unchanged from v2 as the executed v1 protocol. Its null reference tolerance records the historical state; current benchmark acceptance is defined exclusively in benchmark_correctness_criterion.",
+  "benchmark_correctness_criterion": {
+    "criterion_id": "knn_relative_3e-6_uniform_absolute_0_v1",
+    "status": "frozen_not_yet_verified_on_current_benchmark",
+    "decision_date": "2026-10-13",
+    "reference_method": "sklearn.impute.KNNImputer",
+    "default_rtol": 3e-06,
+    "default_rtol_basis": "Explicit user decision to adopt the repeated rtol=3e-6 KNN comparison precedent as the benchmark default, including the current k=5 uniform series. No additional source-file search is required.",
+    "project_wide_atol_policy": "Not established. Absolute tolerance must be explicit in each benchmark configuration; the existing tests are not a single project-wide atol rule.",
+    "current_uniform_atol": 0.0,
+    "current_uniform_atol_basis": "The existing direct uniform-weight KNN comparison specifies rtol=3e-6 and omits atol, giving NumPy testing assert_allclose atol=0. Adopt that relative-only rule for all current uniform series. There is no established absolute numerical error bound in the supplied evidence that justifies adding 3e-6 for these workloads.",
+    "scope": {
+      "n_neighbors": 5,
+      "weights": "uniform",
+      "donor_policies": [
+        "complete",
+        "available"
+      ],
+      "dtypes": [
+        "float32",
+        "float64"
+      ],
+      "series_ids": [
+        "complete_f32",
+        "complete_f64",
+        "available_f32",
+        "available_f64"
+      ],
+      "interpretation": "This is a prospectively frozen benchmark decision based on test precedent. The precedent does not prove that these workloads will pass, and does not establish a universal sklearn-equivalence guarantee."
+    },
+    "precedent": [
+      {
+        "file": "tests/test_weights.py",
+        "test": "test_weighted_predictions_match_knn_without_mutating_inputs",
+        "comparison": "FaissImputer versus KNNImputer",
+        "rtol": 3e-06,
+        "atol": 3e-06,
+        "weights": [
+          "distance",
+          "shifted_inverse_callable"
+        ],
+        "donor_policies": [
+          "complete",
+          "available"
+        ],
+        "n_neighbors": 2,
+        "input_dtype": "float32",
+        "scope_note": "This test supplies the relative-tolerance precedent; its absolute allowance is not transferred to uniform benchmarks."
+      },
+      {
+        "file": "tests/test_missing_values.py",
+        "test": "test_available_numeric_marker_matches_knn",
+        "comparison": "FaissImputer versus KNNImputer",
+        "rtol": 3e-06,
+        "atol": 0.0,
+        "atol_source": "numpy.testing.assert_allclose default; omitted in the existing test",
+        "weights": [
+          "uniform",
+          "distance"
+        ],
+        "donor_policies": [
+          "available"
+        ],
+        "n_neighbors": 2,
+        "input_dtype": "integer arrays; no explicit output dtype assertion",
+        "missing_values": -1,
+        "add_indicator": true,
+        "scope_note": "This is a direct uniform KNN comparison and the basis for selecting atol=0. It is not a float32/float64 parameterized benchmark."
+      }
+    ],
+    "numerical_acceptance": {
+      "rule": "For every originally missing query cell: abs(faiss_value - knn_value) <= atol + rtol * abs(knn_value). All cells must pass.",
+      "rtol": 3e-06,
+      "atol": 0.0,
+      "reference_is_second_operand": true,
+      "comparison_arithmetic": "Evaluate errors and tolerance bounds in float64 after imputation in the configured original dtype; do not rerun or change imputation dtype for acceptance.",
+      "scope_of_values": "Compare the same query cells from the same prepared inputs. Preserve observed query values exactly as a separate requirement; do not replace the elementwise rule with a bound based on a global maximum, mean, RMSE, or MAE.",
+      "finite_outputs_required": true,
+      "equal_nan": false,
+      "zero_reference": "Requires numerical equality because atol=0; signed zero is not a failure.",
+      "near_zero_reference": "A small absolute discrepancy may fail the relative-only rule, including through cancellation. Report it explicitly; do not introduce a floor, exclude near-zero cells, or change atol after seeing outcomes.",
+      "aggregation": "Every prescribed seed/repeat/call result must satisfy the rule. Do not average away failures or select only passing subsets."
+    },
+    "independent_checks": [
+      "Expected shape and configured output dtype.",
+      "Finite outputs and exact preservation of observed query values.",
+      "Training and query inputs remain unchanged.",
+      "Actual calls 2-6 equal call 1, and the retained original first output remains unchanged, under the frozen measurement protocol."
+    ],
+    "required_result_evidence": [
+      "spec_revision and criterion_id",
+      "workload_id, series_id, donor_policy, weights, n_neighbors, dtype, seed and repeat",
+      "rtol, atol, reference method and comparison arithmetic",
+      "compared cell count and tolerance violation count",
+      "maximum absolute difference, zero-reference violation count, and worst violating cell with actual value, reference value and allowed error",
+      "individual structural and repeat-consistency check outcomes",
+      "passed, failed or not_evaluated status with reason"
+    ],
+    "failure_handling": "Any tolerance or independent-check failure makes the cell ineligible to support the correctness/value gate. Retain timings and discrepancies as descriptive evidence. A KNN acceptance failure is not by itself proof that FaissImputer is mathematically wrong.",
+    "incomplete_handling": "Missing or incomplete evidence is not_evaluated, never a pass. A resource-budget stop remains resource_bounded rather than a performance failure, as specified in scaling_plan.resource_budget.",
+    "change_control": {
+      "post_result_relaxation_allowed": false,
+      "forbidden": "Do not increase rtol/atol, drop failing cells, swap the reference operand, or switch to a different error metric to make observed results pass.",
+      "other_configurations": "Use default rtol=3e-6. Before evaluating another configuration, explicitly state its atol and justification from existing tests and a numerical error rationale; do not silently inherit the weighted-test 3e-6 absolute allowance or this uniform-only absolute decision.",
+      "existing_tests": "Leave the existing regression-test tolerances unchanged."
+    }
+  }
+}
