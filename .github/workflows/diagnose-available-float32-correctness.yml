@@ -1,0 +1,341 @@
+name: Diagnose available float32 correctness
+
+# Commit the four new files on the existing diagnosis branch with
+# [available-float32-diagnostic] in the head commit message to request a run.
+# workflow_dispatch is also allowed from main or the existing diagnosis branch.
+# An existing GitHub run may not be rerun; use a new deliberate trigger.
+on:
+  push:
+    branches:
+      - diagnose/ordered-transform-calls
+    paths:
+      - benchmarks/diagnose_available_float32_correctness.py
+      - benchmarks/specs/available_float32_targets_38638261596.json
+      - tests/test_available_float32_correctness_diagnostic.py
+      - .github/workflows/diagnose-available-float32-correctness.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: available-float32-correctness-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  OMP_NUM_THREADS: '1'
+  OMP_THREAD_LIMIT: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  BLIS_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  NUMEXPR_MAX_THREADS: '1'
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PIP_NO_INPUT: '1'
+  PIP_NO_CACHE_DIR: '1'
+
+jobs:
+  reject-invalid-request:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[available-float32-diagnostic]')) &&
+      (github.run_attempt != '1' ||
+       (github.ref != 'refs/heads/main' && github.ref != 'refs/heads/diagnose/ordered-transform-calls'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Reject rerun or invalid branch
+        run: |
+          echo '::error::Run from main or diagnose/ordered-transform-calls with run_attempt=1. Rerunning an existing GitHub run is disabled; use a new deliberate trigger.'
+          exit 1
+
+  diagnose:
+    if: >-
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/diagnose/ordered-transform-calls') &&
+      github.run_attempt == '1' &&
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[available-float32-diagnostic]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Record and check frozen source provenance
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          mkdir -p diagnostic-artifacts
+          python -I - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          targets_path = Path('benchmarks/specs/available_float32_targets_38638261596.json')
+          targets = json.loads(targets_path.read_text(encoding='utf-8'))
+          spec_path = 'benchmarks/specs/validation_0.3.22_v3.json'
+          sources = [
+              'benchmarks/diagnose_available_float32_correctness.py',
+              str(targets_path),
+              'tests/test_available_float32_correctness_diagnostic.py',
+              '.github/workflows/diagnose-available-float32-correctness.yml',
+              spec_path,
+              'benchmarks/verify_benchmark_correctness.py',
+              'benchmarks/benchmark_scaling_threads.py',
+              'benchmarks/benchmark_imputers.py',
+          ]
+          expected = dict(targets['repository_source_sha256'])
+          expected[spec_path] = targets['spec_sha256']
+          records = []
+          for filename in sources:
+              source = Path(filename)
+              digest = hashlib.sha256(source.read_bytes()).hexdigest() if source.is_file() else None
+              records.append({
+                  'path': filename,
+                  'sha256': digest,
+                  'expected_sha256': expected.get(filename),
+                  'matches_frozen_source': digest == expected[filename] if filename in expected else None,
+              })
+          record = {
+              'git_sha': os.environ.get('GITHUB_SHA'),
+              'workflow_sha': os.environ.get('WORKFLOW_SHA'),
+              'github_ref': os.environ.get('GITHUB_REF'),
+              'github_run_id': os.environ.get('GITHUB_RUN_ID'),
+              'github_run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
+              'source_run_id': targets['source_run_id'],
+              'source_run_attempt': targets['source_run_attempt'],
+              'source_git_sha': targets['source_git_sha'],
+              'source_archive_sha256': targets['archive_sha256'],
+              'files': records,
+          }
+          Path('diagnostic-artifacts/source-provenance.json').write_text(
+              json.dumps(record, indent=2) + '\n', encoding='utf-8'
+          )
+          failures = [item['path'] for item in records
+                      if item['sha256'] is None or item['matches_frozen_source'] is False]
+          if failures:
+              raise SystemExit('Missing or changed frozen source files: ' + ', '.join(failures))
+          PY
+
+      - name: Download pinned published wheels outside the artifact directory
+        env:
+          WHEEL_DIR: ${{ runner.temp }}/available-float32-correctness-wheels
+        run: |
+          mkdir -p diagnostic-artifacts "$WHEEL_DIR"
+          python -m pip download --only-binary=:all: --dest "$WHEEL_DIR" \
+            'faiss-imputer==0.3.22' 'numpy==2.5.3' \
+            'scikit-learn==1.9.1' 'faiss-cpu==1.15.1' \
+            'scipy==1.18.1' 'threadpoolctl==3.7.0' 'joblib==1.6.0' \
+            'pytest>=8' \
+            2>&1 | tee diagnostic-artifacts/wheel-download.log
+          python -I - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          wheels = sorted(Path(os.environ['WHEEL_DIR']).glob('*.whl'))
+          if not wheels:
+              raise SystemExit('The wheel download produced no wheel files')
+          records = [
+              {'filename': wheel.name, 'sha256': hashlib.sha256(wheel.read_bytes()).hexdigest()}
+              for wheel in wheels
+          ]
+          output = Path('diagnostic-artifacts')
+          (output / 'wheel-files.json').write_text(
+              json.dumps(records, indent=2) + '\n', encoding='utf-8'
+          )
+          (output / 'wheel-sha256.txt').write_text(
+              ''.join(f"{record['sha256']}  {record['filename']}\n" for record in records),
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Install the downloaded published wheels
+        env:
+          WHEEL_DIR: ${{ runner.temp }}/available-float32-correctness-wheels
+        run: |
+          python -m pip install --no-index --find-links "$WHEEL_DIR" \
+            --only-binary=:all: --force-reinstall \
+            'faiss-imputer==0.3.22' 'numpy==2.5.3' \
+            'scikit-learn==1.9.1' 'faiss-cpu==1.15.1' \
+            'scipy==1.18.1' 'threadpoolctl==3.7.0' 'joblib==1.6.0' \
+            'pytest>=8' \
+            2>&1 | tee diagnostic-artifacts/wheel-install.log
+          python -m pip freeze --all > diagnostic-artifacts/pip-freeze.txt
+          python -m pip check 2>&1 | tee diagnostic-artifacts/pip-check.txt
+
+      - name: Record environment and installed-package provenance
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          python -I - <<'PY'
+          import hashlib
+          import importlib.metadata as metadata
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import sys
+
+          output = Path('diagnostic-artifacts')
+          output.mkdir(exist_ok=True)
+          targets = json.loads(Path(
+              'benchmarks/specs/available_float32_targets_38638261596.json'
+          ).read_text(encoding='utf-8'))
+          cpu_model = next(
+              (line.split(':', 1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines()
+               if line.startswith('model name')),
+              None,
+          )
+          memory_kib = next(
+              (int(line.split()[1]) for line in Path('/proc/meminfo').read_text().splitlines()
+               if line.startswith('MemTotal:')),
+              None,
+          )
+          module_origins = {}
+          for name in ('faiss_imputer', 'faiss', 'numpy', 'sklearn', 'scipy', 'threadpoolctl', 'joblib'):
+              module = importlib.util.find_spec(name)
+              module_origins[name] = (
+                  str(Path(module.origin).resolve()) if module and module.origin else None
+              )
+          installed_sources = []
+          for relative, expected_sha256 in targets['installed_source_sha256'].items():
+              package, suffix = relative.split('/', 1)
+              origin = module_origins.get(package)
+              source = Path(origin).parent / suffix if origin else None
+              digest = hashlib.sha256(source.read_bytes()).hexdigest() if source and source.is_file() else None
+              installed_sources.append({
+                  'package_relative_path': relative,
+                  'path': str(source.resolve()) if source else None,
+                  'sha256': digest,
+                  'expected_sha256': expected_sha256,
+                  'matches_frozen_source': digest == expected_sha256,
+              })
+          package_versions = {
+              dist.metadata['Name']: dist.version
+              for dist in metadata.distributions()
+              if dist.metadata.get('Name')
+          }
+          record = {
+              'runner_image': os.environ.get('ImageOS'),
+              'runner_image_version': os.environ.get('ImageVersion'),
+              'runner_os': os.environ.get('RUNNER_OS'),
+              'runner_arch': os.environ.get('RUNNER_ARCH'),
+              'os': platform.platform(),
+              'cpu_model': cpu_model,
+              'logical_cpu_count': os.cpu_count(),
+              'memory_bytes': memory_kib * 1024 if memory_kib is not None else None,
+              'python_version': sys.version,
+              'python_executable': sys.executable,
+              'package_versions': dict(sorted(package_versions.items())),
+              'expected_package_versions': targets['package_versions'],
+              'installed_package_origin': module_origins['faiss_imputer'],
+              'installed_module_origins': module_origins,
+              'installed_sources': installed_sources,
+              'wheel_sha256': (output / 'wheel-sha256.txt').read_text(),
+              'wheel_files': json.loads((output / 'wheel-files.json').read_text()),
+              'workflow_sha': os.environ.get('WORKFLOW_SHA'),
+              'git_sha': os.environ.get('GITHUB_SHA'),
+              'github_run_id': os.environ.get('GITHUB_RUN_ID'),
+              'github_run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
+              'github_job': os.environ.get('GITHUB_JOB'),
+              'github_event_name': os.environ.get('GITHUB_EVENT_NAME'),
+              'github_ref': os.environ.get('GITHUB_REF'),
+              'spec_revision': targets['spec_revision'],
+              'diagnostic_id': targets['diagnostic_id'],
+              'verification_kind': 'correctness-diagnostic-only',
+              'donor_policy': targets['donor_policy'],
+              'weights': targets['weights'],
+              'criterion': targets['criterion'],
+              'worker_count': 3,
+              'seeds': targets['seeds'],
+              'repeats_per_seed': targets['process_repeats'],
+              'worker_timeout_seconds': targets['worker_timeout_seconds'],
+              'total_timeout_seconds': targets['total_worker_budget_seconds'],
+              'train_rows': targets['train_rows'],
+              'query_rows': targets['query_rows'],
+              'target_cell_count': len(targets['targets']),
+              'same_worker_baseline_order': targets['baseline_order'],
+              'subsequent_full_batch_trace_order': targets['trace_order'],
+              'performance_measurements': False,
+              'automatic_retry': False,
+              'threads': {name: os.environ.get(name) for name in (
+                  'OMP_NUM_THREADS', 'OMP_THREAD_LIMIT', 'OPENBLAS_NUM_THREADS',
+                  'MKL_NUM_THREADS', 'BLIS_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS',
+                  'NUMEXPR_NUM_THREADS', 'NUMEXPR_MAX_THREADS',
+              )},
+          }
+          record['missing_field_reasons'] = {
+              key: 'Not supplied by the runner or unavailable from this host.'
+              for key, value in record.items() if value is None
+          }
+          record['missing_field_reasons'].update({
+              f'installed_module_origins.{name}': 'Module could not be located in the isolated interpreter.'
+              for name, origin in module_origins.items() if origin is None
+          })
+          (output / 'environment.json').write_text(
+              json.dumps(record, indent=2) + '\n', encoding='utf-8'
+          )
+          for name, version in targets['package_versions'].items():
+              if metadata.version(name) != version:
+                  raise SystemExit(f'Unexpected installed version for {name}')
+          if sys.version_info[:2] != (3, 12):
+              raise SystemExit('Python 3.12 is required')
+          for name, origin in module_origins.items():
+              if origin is None or Path(origin).is_relative_to(Path.cwd().resolve()):
+                  raise SystemExit(f'{name} must resolve outside the checked-out repository')
+          failures = [item['package_relative_path'] for item in installed_sources
+                      if not item['matches_frozen_source']]
+          if failures:
+              raise SystemExit('Missing or changed installed sources: ' + ', '.join(failures))
+          PY
+
+      - name: Check diagnostic orchestration before the real diagnostic
+        run: |
+          python -m pytest -q --noconftest tests/test_available_float32_correctness_diagnostic.py \
+            2>&1 | tee diagnostic-artifacts/diagnostic-unit-tests.log
+
+      # The driver enforces 180 seconds per worker and a 600-second total budget.
+      # Seeds 101, 202 and 303 each get one fresh worker, executed sequentially.
+      # In the original 20,000-train/3,000-query context, each worker first replays
+      # Faiss f32 calls 1-6, Faiss f64 calls 1-6, KNN f32 calls 1-6, KNN f64 calls 1-6.
+      # Separate traced float32 full-query calls follow for Faiss, then KNN.
+      # Only the twelve frozen cells are captured; the parity criterion is unchanged.
+      # This diagnostic records no fit/transform timing or performance measurements.
+      - name: Diagnose the twelve fixed cells in three sequential fresh workers
+        run: |
+          python -I benchmarks/diagnose_available_float32_correctness.py \
+            --spec benchmarks/specs/validation_0.3.22_v3.json \
+            --targets benchmarks/specs/available_float32_targets_38638261596.json \
+            --output diagnostic-artifacts/available-float32-correctness.json \
+            2>&1 | tee diagnostic-artifacts/diagnostic-console.log
+
+      - name: Upload source, specifications, provenance and partial diagnostic results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: available-float32-correctness-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            diagnostic-artifacts/
+            benchmarks/diagnose_available_float32_correctness.py
+            benchmarks/specs/available_float32_targets_38638261596.json
+            tests/test_available_float32_correctness_diagnostic.py
+            .github/workflows/diagnose-available-float32-correctness.yml
+            benchmarks/specs/validation_0.3.22_v3.json
+            benchmarks/verify_benchmark_correctness.py
+            benchmarks/benchmark_scaling_threads.py
+            benchmarks/benchmark_imputers.py
+            !**/*.whl
