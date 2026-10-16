@@ -1,0 +1,175 @@
+{
+  "revision": "validation_0.3.22_v1",
+  "purpose": "Bounded diagnosis of ordered transform calls using the published faiss-imputer 0.3.22 wheel.",
+  "execution_scope": "ordered_transform_diagnostic_only",
+  "accepted_execution_order": [
+    "bounded_ordered_call_diagnosis",
+    "freeze_measurement_protocol",
+    "correctness_verification",
+    "mandatory_controlled_scaling",
+    "real_data_validation",
+    "value_gate_decision",
+    "justified_profiling_optimization_or_release_work_only"
+  ],
+  "package": {
+    "distribution": "faiss-imputer",
+    "import_name": "faiss_imputer",
+    "version": "0.3.22",
+    "source": "published_wheel",
+    "python_minor": "3.12",
+    "dependency_pins": {
+      "numpy": "2.5.3",
+      "scikit-learn": "1.9.1",
+      "faiss-cpu": "1.15.1"
+    },
+    "dependency_pin_basis": "Versions supplied from the archived environment. These pins do not establish that every dependency or the runner matches the historical environment.",
+    "unlisted_dependency_versions": "Resolve wheel dependencies, record their exact installed versions and wheel SHA256 hashes; do not claim historical equivalence."
+  },
+  "diagnostic": {
+    "run_number": 1,
+    "train_rows": 20000,
+    "query_rows": 3000,
+    "features": 20,
+    "n_neighbors": 5,
+    "weights": "uniform",
+    "donor_policy": "complete",
+    "pattern": "random",
+    "threads": 1,
+    "working_memory_mib": 256,
+    "seeds": [101, 202, 303],
+    "repeats_per_seed": 3,
+    "ordered_dtypes": ["float32", "float64"],
+    "calls_per_dtype": 6,
+    "worker_timeout_seconds": 180,
+    "outer_parallelism": 1,
+    "missingness": {
+      "train_fraction": 0.0,
+      "query_missing_features_per_row": 4,
+      "query_fraction": 0.2,
+      "query_selection": "random_without_replacement_per_row"
+    },
+    "warmup": {
+      "enabled": true,
+      "per_dtype": true,
+      "separate_model": true,
+      "train_rows": 32,
+      "query_rows": 8,
+      "features": 20,
+      "seed": 7,
+      "missing_query_columns": [0, 1, 2, 3],
+      "operation": "Fit and transform a separate small model immediately before the measured fit for each dtype, following the supplied historical worker."
+    },
+    "process_isolation": {
+      "unit": "seed_repeat",
+      "worker_count": 9,
+      "fresh_subprocess": true,
+      "sequential_workers": true,
+      "dtype_blocks_same_worker": true,
+      "dtype_order": "Complete float32 calls 1 through 6, then complete float64 calls 1 through 6 in the same worker.",
+      "same_seed_and_repeat_for_both_dtypes": true,
+      "block_boundary": "Delete the float32 block arrays and model, then collect garbage before the float64 block; retain interpreter, import and allocator state and record that fact.",
+      "alternate_order": false,
+      "automatic_retry": false
+    },
+    "output_retention": {
+      "protocol": "Retain the first output, a copy of the first output, and the previous repeated output during each dtype block, matching the supplied historical worker.",
+      "all_six_actual_call_measurements_retained": true,
+      "checks_outside_timers": true,
+      "first_output_mutation_check": true,
+      "repeated_output_comparison": "Compare every repeated output with the copy of the first output and separately check that the retained original first output still equals that copy.",
+      "between_call_evidence": "Record array layout, non-copying hashes and structural/equality checks outside timers. Descriptive difference calculations are unnecessary for equal repeats. Save call-1 arrays only after the six calls complete. These additional audit checks are explicitly part of this diagnostic protocol."
+    },
+    "reference": {
+      "method": "sklearn.impute.KNNImputer",
+      "timing": "After both timed Faiss dtype blocks in the same worker, so reference work cannot alter their warm state.",
+      "tolerance": null,
+      "tolerance_status": "Criterion source pending. Report numerical differences and identity diagnostics; do not invent a KNN equivalence threshold or declare equivalence from an unsourced threshold."
+    },
+    "stage_timings": {
+      "timing": "Separate instrumented replay after both timed Faiss dtype blocks and the KNN reference.",
+      "approach": "Use supported low-cost train/add/search timing collectors where available; do not instrument the primary timed calls.",
+      "unavailable_value": null,
+      "unavailable_values_are_not_zero": true,
+      "check_replay_against_timed_first_output": true,
+      "comparison_checks_outside_timers": true
+    },
+    "run_budget": {
+      "initial_runs": 1,
+      "maximum_total_diagnostic_runs": 2,
+      "second_run": "Optional only after evaluating the first run and selecting the single strongest hypothesis. It requires a deliberate revised diagnosis; this revision does not implement or trigger it.",
+      "global_run_count_enforcement": "Human-maintained run ledger. Workflow attempt gating and the push token do not prove a global run count.",
+      "rerun_same_github_run": false,
+      "automatic_follow_up": false
+    }
+  },
+  "scaling_plan": {
+    "status": "accepted_plan_metadata_only_not_executed_by_this_diagnostic",
+    "stage_4": "not_implemented",
+    "measurement_protocol_status": "Finalize after the bounded diagnosis and freeze before scaling; do not change the accepted decision structure.",
+    "primary_endpoint": "fit plus actual first transform; disclose excluded process warmup separately",
+    "warm_reuse_endpoint": "Separate secondary endpoint; freeze included calls before scaling, never replace the primary gate after seeing results.",
+    "train_rows": [5000, 10000, 20000, 50000, 100000, 200000],
+    "optional_train_rows": [500000],
+    "query_rows": 3000,
+    "query_size_rule": "Fixed 3000 query rows for every training size, including optional 500k.",
+    "features": 20,
+    "n_neighbors": 5,
+    "weights": "uniform",
+    "threads": 1,
+    "seeds": [101, 202, 303],
+    "repeats_per_seed": 3,
+    "missingness": {
+      "mechanism": "MCAR",
+      "query_pattern": "random",
+      "query_missing_features_per_row": 4,
+      "query_fraction": 0.2,
+      "complete_train_fraction": 0.0,
+      "available_train_fraction": 0.1
+    },
+    "series": [
+      {"series_id": "complete_f32", "workload_id": "complete_random", "donor_policy": "complete", "dtype": "float32", "train_missing_fraction": 0.0},
+      {"series_id": "complete_f64", "workload_id": "complete_random", "donor_policy": "complete", "dtype": "float64", "train_missing_fraction": 0.0},
+      {"series_id": "available_f32", "workload_id": "available_random", "donor_policy": "available", "dtype": "float32", "train_missing_fraction": 0.1},
+      {"series_id": "available_f64", "workload_id": "available_random", "donor_policy": "available", "dtype": "float64", "train_missing_fraction": 0.1}
+    ],
+    "workload_value_gate": "A dtype-only change does not qualify as a second independent workload. Treat complete_random and available_random as distinct policy/scenario workloads; retain separate dtype series.",
+    "donor_policy_rule": "Every measured cell records its series_id, workload_id and explicit donor_policy. Policy stays fixed across size points within a series.",
+    "active_development_gate": {
+      "correctness": "Existing predefined acceptance criteria must pass; currently unresolved criteria are not a pass.",
+      "minimum_paired_median_speedup": 2.0,
+      "consecutive_medium_large_points_after_crossover": 2,
+      "minimum_independent_workloads": 2,
+      "dtype_alone_is_independent_workload": false,
+      "aggregation": "Median of matched sklearn/Faiss runtime ratios; publish all seed/repeat evidence and all predefined series, including failures."
+    },
+    "medium_large_train_rows": [20000, 50000, 100000, 200000],
+    "resource_budget": {
+      "memory_unit": "decimal_GB",
+      "matching_cell_keys": ["method", "donor_policy", "dtype", "seed", "repeat", "environment"],
+      "wall_time_scope": "Full cell wall time including startup, generation, warmup and validation; report performance timing endpoints separately.",
+      "optional_500k_gate": {
+        "required_train_rows": 200000,
+        "required_status": "completed_normally",
+        "maximum_wall_seconds_inclusive": 300,
+        "maximum_peak_rss_bytes_inclusive": 4000000000,
+        "requirements_combined_with": "AND",
+        "missing_or_incomplete_prerequisite": "Skip the matching 500k cell as resource_bounded / not_executed."
+      },
+      "optional_500k_stop": {
+        "wall_seconds_exclusive": 600,
+        "peak_rss_bytes_exclusive": 5500000000,
+        "conditions_combined_with": "OR",
+        "classification": "resource_bounded",
+        "completion_status": "not_completed"
+      },
+      "classification_rule": "Budget skips and stops are resource-bounded outcomes, not performance failures. Apply eligibility independently to each matching method/policy/dtype/seed/repeat/environment cell.",
+      "paired_comparison_rule": "If either method lacks a completed valid result, report the paired speedup as unavailable; do not infer a speedup or a gate pass from a resource stop."
+    }
+  },
+  "environment_record": {
+    "required": ["runner_image", "runner_image_version", "os", "cpu_model", "logical_cpu_count", "memory_bytes", "python_version", "package_versions", "installed_package_origin", "wheel_sha256", "workflow_sha", "git_sha", "github_run_id", "github_run_attempt", "github_job", "spec_revision"],
+    "allowed_missing_value": null,
+    "missing_fields_require_reason": true,
+    "secret_handling": "Capture only named provenance fields; do not dump the complete environment."
+  }
+}

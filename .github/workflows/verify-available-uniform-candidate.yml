@@ -1,0 +1,259 @@
+name: Verify available uniform candidate
+
+# One deliberate run on the existing branch; rerunning an existing run is disabled.
+on:
+  workflow_dispatch:
+  push:
+    branches: [diagnose/ordered-transform-calls]
+    paths:
+      - faiss_imputer/faiss_imputer.py
+      - benchmarks/verify_available_uniform_candidate.py
+      - benchmarks/specs/available_uniform_compact_candidate_v1.json
+      - tests/test_available_uniform_compact.py
+      - tests/data/available_uniform_float32_38681953970.json
+      - .github/workflows/verify-available-uniform-candidate.yml
+
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: available-uniform-candidate-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  OMP_NUM_THREADS: '1'
+  OMP_THREAD_LIMIT: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  BLIS_NUM_THREADS: '1'
+  VECLIB_MAXIMUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+  NUMEXPR_MAX_THREADS: '1'
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PIP_NO_INPUT: '1'
+  PIP_NO_CACHE_DIR: '1'
+
+jobs:
+  reject-invalid-request:
+    if: >-
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[available-uniform-candidate]')) &&
+      (github.run_attempt != '1' ||
+       (github.ref != 'refs/heads/main' && github.ref != 'refs/heads/diagnose/ordered-transform-calls'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: |
+          echo '::error::Use a new deliberate trigger on main or diagnose/ordered-transform-calls; existing runs cannot be rerun.'
+          exit 1
+
+  verify:
+    if: >-
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/diagnose/ordered-transform-calls') &&
+      github.run_attempt == '1' &&
+      (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[available-uniform-candidate]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned published base and dependencies
+        run: |
+          mkdir -p candidate-artifacts
+          python -m pip install --only-binary=:all: --force-reinstall \
+            --report candidate-artifacts/install-report.json \
+            'faiss-imputer==0.3.22' 'numpy==2.5.3' 'scikit-learn==1.9.1' \
+            'faiss-cpu==1.15.1' 'scipy==1.18.1' 'threadpoolctl==3.7.0' \
+            'joblib==1.6.0' 'pytest>=8' 'pandas>=2' 'build>=1.2' 'twine>=6' \
+            2>&1 | tee candidate-artifacts/install.log
+          python -m pip freeze --all > candidate-artifacts/pip-freeze.txt
+          python -m pip check 2>&1 | tee candidate-artifacts/pip-check.txt
+
+      - name: Check frozen hashes and overlay only the candidate core
+        env:
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          python -I - <<'PY'
+          import hashlib
+          import importlib.metadata as metadata
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import re
+          import sys
+          from urllib.parse import unquote, urlsplit
+
+          root = Path.cwd().resolve()
+          output = root / 'candidate-artifacts'
+          manifest_path = root / 'benchmarks/specs/available_uniform_compact_candidate_v1.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          def digest(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          def save(name, value):
+              (output / name).write_text(json.dumps(value, indent=2) + '\n', encoding='utf-8')
+          expected = {
+              'faiss_imputer/faiss_imputer.py': manifest['candidate_source_sha256'],
+              'benchmarks/specs/validation_0.3.22_v3.json': manifest['frozen_spec_sha256'],
+              'benchmarks/verify_benchmark_correctness.py': manifest['verifier_sha256'],
+              'benchmarks/benchmark_scaling_threads.py': '85c0126db9f3ff8c090e59fdea09f44893527ed90a4747e0df42f624a6a68a39',
+              'benchmarks/benchmark_imputers.py': '3494f9afcad94ffecfb2cc3e2018bffbdb1b2191dea44f3d25aac72e2a7b753a',
+          }
+          sources = {name: digest(root / name) for name in expected}
+          save('source-provenance.json', {'expected_sha256': expected, 'sha256': sources,
+               'manifest_sha256': digest(manifest_path), 'candidate_files_sha256': {
+                   name: digest(root / name) for name in (
+                       'benchmarks/verify_available_uniform_candidate.py',
+                       'tests/test_available_uniform_compact.py',
+                       'tests/data/available_uniform_float32_38681953970.json',
+                       '.github/workflows/verify-available-uniform-candidate.yml')}})
+          if sources != expected:
+              raise SystemExit('Candidate, frozen specification or verifier hash mismatch')
+          if sys.version_info[:2] != (3, 12):
+              raise SystemExit('Python 3.12 is required')
+          versions = {name: metadata.version(name) for name in manifest['package_versions']}
+          if versions != manifest['package_versions']:
+              raise SystemExit('Pinned dependency versions do not match the manifest')
+          if metadata.version('faiss-imputer') != manifest['baseline_version']:
+              raise SystemExit('Published base version mismatch')
+          located = importlib.util.find_spec('faiss_imputer')
+          package = Path(located.origin).resolve().parent if located and located.origin else None
+          if package is None or package.is_relative_to(root):
+              raise SystemExit('Published package must be installed outside the checkout')
+          def package_hashes():
+              return {str(path.relative_to(package)): digest(path)
+                      for path in sorted(package.rglob('*.py'))}
+          before = package_hashes()
+          save('package-source-before.json', before)
+          if before.get('faiss_imputer.py') != manifest['baseline_source_sha256']:
+              raise SystemExit('Installed published core hash mismatch')
+          (package / 'faiss_imputer.py').write_bytes((root / 'faiss_imputer/faiss_imputer.py').read_bytes())
+          after = package_hashes()
+          save('package-source-after.json', after)
+          expected_after = dict(before, **{'faiss_imputer.py': manifest['candidate_source_sha256']})
+          if after != expected_after:
+              raise SystemExit('Overlay changed unexpected package sources')
+          # Preserve pip's archive hashes without claiming a local wheel hash computation.
+          report = json.loads((output / 'install-report.json').read_text(encoding='utf-8'))
+          if report.get('version') != '1' or not isinstance(report.get('install'), list):
+              raise SystemExit('Unsupported or incomplete pip installation report')
+          wheels = []
+          wheel_hashes = {}
+          installed_versions = {}
+          def canonical_name(name):
+              return re.sub(r'[-_.]+', '-', name).lower()
+          for item in report['install']:
+              info = item.get('download_info', {})
+              package_metadata = item.get('metadata', {})
+              name = package_metadata.get('name')
+              version = package_metadata.get('version')
+              url = info.get('url')
+              archive_hash = info.get('archive_info', {}).get('hashes', {}).get('sha256')
+              if not all(isinstance(value, str) and value for value in (name, version, url, archive_hash)):
+                  raise SystemExit('Incomplete wheel provenance in pip installation report')
+              filename = Path(unquote(urlsplit(url).path)).name
+              if not filename.endswith('.whl') or not re.fullmatch(r'[0-9a-fA-F]{64}', archive_hash):
+                  raise SystemExit('Expected a wheel and SHA-256 in pip installation report')
+              normalized = canonical_name(name)
+              if filename in wheel_hashes or normalized in installed_versions:
+                  raise SystemExit('Duplicate wheel identity in pip installation report')
+              wheel_hashes[filename] = archive_hash.lower()
+              installed_versions[normalized] = version
+              wheels.append({'name': name, 'version': version, 'filename': filename,
+                             'sha256': archive_hash.lower(), 'hash_source': 'pip_install_report'})
+          for name, version in manifest['package_versions'].items():
+              if installed_versions.get(canonical_name(name)) != version:
+                  raise SystemExit(f'Missing or mismatched pinned wheel provenance: {name}')
+          save('wheel-provenance.json', {
+              'report': 'install-report.json', 'wheels': wheels,
+              'note': 'Hashes describe downloaded wheels recorded by pip. The faiss-imputer wheel is the published base; the overlaid candidate core has a separate source hash.',
+          })
+          github_job = os.environ.get('GITHUB_JOB')
+          missing_field_reasons = {}
+          if not github_job:
+              github_job = None
+              missing_field_reasons['github_job'] = 'GITHUB_JOB was absent from the workflow process environment.'
+              print('::warning::Runtime GITHUB_JOB is missing; environment.json records null and the reason.')
+          cpu = Path('/proc/cpuinfo').read_text().splitlines()
+          memory = Path('/proc/meminfo').read_text().splitlines()
+          save('environment.json', {
+              'implementation_kind': 'source_candidate', 'candidate_id': manifest['candidate_id'],
+              'baseline_version': manifest['baseline_version'],
+              'installed_distribution_version': metadata.version('faiss-imputer'),
+              'version_note': 'Distribution metadata describes the published base; the core is the source candidate.',
+              'installed_package_path': str(package), 'package_versions': versions,
+              'wheel_sha256': wheel_hashes, 'wheel_hash_source': 'pip_install_report',
+              'wheel_provenance_file': 'wheel-provenance.json',
+              'github_job': github_job, 'missing_field_reasons': missing_field_reasons,
+              'python': sys.version, 'platform': platform.platform(),
+              'cpu_model': next((line.split(':', 1)[1].strip() for line in cpu if line.startswith('model name')), None),
+              'logical_cpu_count': os.cpu_count(), 'affinity_cpu_count': len(os.sched_getaffinity(0)),
+              'memory_bytes': next(int(line.split()[1]) * 1024 for line in memory if line.startswith('MemTotal:')),
+              'runner': {name: os.environ.get(name) for name in (
+                  'RUNNER_OS', 'RUNNER_ARCH', 'ImageOS', 'ImageVersion', 'GITHUB_SHA',
+                  'WORKFLOW_SHA', 'GITHUB_REF', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_EVENT_NAME', 'GITHUB_JOB')},
+              'thread_environment': {name: os.environ.get(name) for name in (
+                  'OMP_NUM_THREADS', 'OMP_THREAD_LIMIT', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
+                  'BLIS_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS', 'NUMEXPR_MAX_THREADS')},
+              'worker_timeout_seconds': 300, 'total_worker_budget_seconds': 1500,
+              'performance_measurements': False, 'automatic_retry': False,
+          })
+          PY
+
+      - name: Run all tests against the installed candidate
+        run: |
+          python -I - <<'PY' 2>&1 | tee candidate-artifacts/tests.log
+          import hashlib
+          import importlib.util
+          import json
+          from pathlib import Path
+          import sys
+          root = Path.cwd().resolve()
+          manifest = json.loads((root / 'benchmarks/specs/available_uniform_compact_candidate_v1.json').read_text())
+          location = importlib.util.find_spec('faiss_imputer')
+          core = Path(location.origin).resolve().parent / 'faiss_imputer.py'
+          if core.is_relative_to(root) or hashlib.sha256(core.read_bytes()).hexdigest() != manifest['candidate_source_sha256']:
+              raise SystemExit('Installed candidate source hash or origin mismatch')
+          import faiss_imputer
+          if Path(faiss_imputer.__file__).resolve().is_relative_to(root):
+              raise SystemExit('Tests must use the installed source candidate')
+          # Resolve repository test helpers only after caching the installed package.
+          sys.path.insert(0, str(root))
+          import pytest
+          raise SystemExit(pytest.main(['-q', 'tests']))
+          PY
+
+      - name: Verify frozen correctness in sequential fresh workers
+        run: |
+          python -I benchmarks/verify_available_uniform_candidate.py \
+            --spec benchmarks/specs/validation_0.3.22_v3.json \
+            --candidate benchmarks/specs/available_uniform_compact_candidate_v1.json \
+            --output candidate-artifacts/verification/correctness.json \
+            2>&1 | tee candidate-artifacts/verification-console.log
+
+      - name: Upload source, provenance and partial verification results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: available-uniform-candidate-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          include-hidden-files: true
+          if-no-files-found: warn
+          path: |
+            candidate-artifacts/
+            faiss_imputer/faiss_imputer.py
+            benchmarks/verify_available_uniform_candidate.py
+            benchmarks/specs/available_uniform_compact_candidate_v1.json
+            tests/test_available_uniform_compact.py
+            tests/data/available_uniform_float32_38681953970.json
+            .github/workflows/verify-available-uniform-candidate.yml
+            benchmarks/specs/validation_0.3.22_v3.json
+            benchmarks/verify_benchmark_correctness.py
+            benchmarks/benchmark_scaling_threads.py
+            benchmarks/benchmark_imputers.py
+            !**/*.whl
