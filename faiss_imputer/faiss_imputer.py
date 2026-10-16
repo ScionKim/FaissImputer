@@ -1092,9 +1092,33 @@ class FaissImputer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
                     if not fill_rows.any():
                         continue
                     if self._uses_uniform_weights():
-                        selected = np.where(
-                            chosen[fill_rows], values[fill_rows], np.nan
-                        )
+                        if self.strategy == "mean":
+                            # Sum selected values in neighbor order without
+                            # gaps from non-donating search candidates.
+                            selected_mask = chosen[fill_rows]
+                            receiver_rows, candidate_cols = np.nonzero(
+                                selected_mask
+                            )
+                            slots = (
+                                np.cumsum(selected_mask, axis=1)[
+                                    receiver_rows, candidate_cols
+                                ] - 1
+                            )
+                            source_rows = np.flatnonzero(fill_rows)[
+                                receiver_rows
+                            ]
+                            selected = np.full(
+                                (int(fill_rows.sum()), int(required[col])),
+                                np.nan,
+                                dtype=self.donors_.dtype,
+                            )
+                            selected[receiver_rows, slots] = values[
+                                source_rows, candidate_cols
+                            ]
+                        else:
+                            selected = np.where(
+                                chosen[fill_rows], values[fill_rows], np.nan
+                            )
                         fill = self._aggregate(
                             selected, axis=1, ignore_nan=True
                         )

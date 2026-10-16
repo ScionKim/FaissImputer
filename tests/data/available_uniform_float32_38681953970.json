@@ -1,0 +1,306 @@
+{
+  "schema_version": 1,
+  "source": {
+    "archive_name": "available-float32-correctness-38681953970-attempt-1.zip",
+    "archive_sha256": "bc3c745fb3c0c93bbbaac48c06b0a48cc6683eaf65db6e13349b3726e9ae99c0",
+    "github_run_id": "38681953970",
+    "github_run_attempt": 1,
+    "git_sha": "46823d87958f9ba8be674164c126cd3d07ce534f"
+  },
+  "criterion": {
+    "rtol": 3e-06,
+    "atol": 0.0,
+    "reference": "archived KNN output"
+  },
+  "scope": "Captured five-donor float32 reductions reproduced in a small synthetic public-API case. The synthetic distances preserve the captured donor order; this is not a replay of the original benchmark or a claim about cross-version KNN neighbor order.",
+  "cases": [
+    {
+      "seed": 101,
+      "original_query_index": [
+        697,
+        19
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "ordered_donor_values": [
+        -0.11796433478593826,
+        0.16471315920352936,
+        0.21084704995155334,
+        -0.19334442913532257,
+        -0.065677709877491
+      ],
+      "archived_faiss_output": -0.0002852529287338257,
+      "archived_knn_output": -0.000285254413029179,
+      "captured_compact_float32_mean": -0.000285254413029179
+    },
+    {
+      "seed": 101,
+      "original_query_index": [
+        1299,
+        15
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "ordered_donor_values": [
+        -0.23719798028469086,
+        0.01033512968569994,
+        -0.06890983879566193,
+        0.06351970136165619,
+        0.2371481955051422
+      ],
+      "archived_faiss_output": 0.0009790420299395919,
+      "archived_knn_output": 0.0009790450567379594,
+      "captured_compact_float32_mean": 0.0009790450567379594
+    },
+    {
+      "seed": 101,
+      "original_query_index": [
+        1306,
+        15
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "ordered_donor_values": [
+        -0.008210805244743824,
+        0.2816866636276245,
+        0.14829184114933014,
+        -0.36801522970199585,
+        -0.05058173090219498
+      ],
+      "archived_faiss_output": 0.000634147203527391,
+      "archived_knn_output": 0.0006341502303257585,
+      "captured_compact_float32_mean": 0.0006341502303257585
+    },
+    {
+      "seed": 101,
+      "original_query_index": [
+        2074,
+        9
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "ordered_donor_values": [
+        0.08979669213294983,
+        0.2679927945137024,
+        -0.32950207591056824,
+        -0.25960075855255127,
+        0.2222009152173996
+      ],
+      "archived_faiss_output": -0.0018224924569949508,
+      "archived_knn_output": -0.0018224865198135376,
+      "captured_compact_float32_mean": -0.0018224865198135376
+    },
+    {
+      "seed": 101,
+      "original_query_index": [
+        2353,
+        16
+      ],
+      "selected_slots": [
+        0,
+        2,
+        3,
+        4,
+        6
+      ],
+      "ordered_donor_values": [
+        -0.01454397477209568,
+        -0.2594951391220093,
+        -0.5491799712181091,
+        0.381692111492157,
+        0.44643667340278625
+      ],
+      "archived_faiss_output": 0.0009819507831707597,
+      "archived_knn_output": 0.0009819448459893465,
+      "captured_compact_float32_mean": 0.0009819448459893465
+    },
+    {
+      "seed": 202,
+      "original_query_index": [
+        213,
+        7
+      ],
+      "selected_slots": [
+        0,
+        2,
+        3,
+        4,
+        5
+      ],
+      "ordered_donor_values": [
+        0.1456785947084427,
+        -0.4835534393787384,
+        -0.06413771212100983,
+        0.4005298912525177,
+        -0.010682147927582264
+      ],
+      "archived_faiss_output": -0.0024329661391675472,
+      "archived_knn_output": -0.002432956825941801,
+      "captured_compact_float32_mean": -0.002432956825941801
+    },
+    {
+      "seed": 202,
+      "original_query_index": [
+        1763,
+        17
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "ordered_donor_values": [
+        -0.1073589101433754,
+        -0.14046862721443176,
+        0.3276478350162506,
+        -0.08049090951681137,
+        0.002946136984974146
+      ],
+      "archived_faiss_output": 0.0004551050369627774,
+      "archived_knn_output": 0.00045510652125813067,
+      "captured_compact_float32_mean": 0.00045510652125813067
+    },
+    {
+      "seed": 202,
+      "original_query_index": [
+        1811,
+        15
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "ordered_donor_values": [
+        0.08201878517866135,
+        0.17698584496974945,
+        -0.198600172996521,
+        -0.168252095580101,
+        0.10476884245872498
+      ],
+      "archived_faiss_output": -0.0006157636526040733,
+      "archived_knn_output": -0.0006157606840133667,
+      "captured_compact_float32_mean": -0.0006157606840133667
+    },
+    {
+      "seed": 202,
+      "original_query_index": [
+        2922,
+        1
+      ],
+      "selected_slots": [
+        2,
+        3,
+        4,
+        5,
+        7
+      ],
+      "ordered_donor_values": [
+        -0.19483886659145355,
+        0.02682001143693924,
+        0.4535854756832123,
+        0.2164858877658844,
+        -0.5001015067100525
+      ],
+      "archived_faiss_output": 0.0003902018070220947,
+      "archived_knn_output": 0.00039020777330733836,
+      "captured_compact_float32_mean": 0.00039020777330733836
+    },
+    {
+      "seed": 303,
+      "original_query_index": [
+        265,
+        18
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "ordered_donor_values": [
+        -0.22674231231212616,
+        -0.11606521159410477,
+        -0.11469130963087082,
+        0.0876176729798317,
+        0.3609468638896942
+      ],
+      "archived_faiss_output": -0.0017868578433990479,
+      "archived_knn_output": -0.001786863780580461,
+      "captured_compact_float32_mean": -0.001786863780580461
+    },
+    {
+      "seed": 303,
+      "original_query_index": [
+        866,
+        16
+      ],
+      "selected_slots": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "ordered_donor_values": [
+        -0.08174280822277069,
+        0.0742851123213768,
+        -0.2806570827960968,
+        0.2449667900800705,
+        0.045461736619472504
+      ],
+      "archived_faiss_output": 0.00046274959458969533,
+      "archived_knn_output": 0.00046274811029434204,
+      "captured_compact_float32_mean": 0.00046274811029434204
+    },
+    {
+      "seed": 303,
+      "original_query_index": [
+        2683,
+        11
+      ],
+      "selected_slots": [
+        0,
+        2,
+        3,
+        4,
+        5
+      ],
+      "ordered_donor_values": [
+        -0.16318736970424652,
+        -0.07691341638565063,
+        -0.15457971394062042,
+        0.3585470914840698,
+        0.03515351191163063
+      ],
+      "archived_faiss_output": -0.00019598007202148438,
+      "archived_knn_output": -0.00019597932987380773,
+      "captured_compact_float32_mean": -0.00019597932987380773
+    }
+  ]
+}

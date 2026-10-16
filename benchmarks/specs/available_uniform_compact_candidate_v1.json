@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "candidate_id": "available-uniform-compact-v1",
+  "implementation_kind": "source_candidate",
+  "baseline_version": "0.3.22",
+  "baseline_correctness_status": "failed",
+  "baseline_correctness_run_id": "38638261596",
+  "diagnostic_run_id": "38681953970",
+  "diagnostic_archive_sha256": "bc3c745fb3c0c93bbbaac48c06b0a48cc6683eaf65db6e13349b3726e9ae99c0",
+  "baseline_source_sha256": "bf82b170a6af3161b49cf623f714b5b80ee849ff91a599f5fc05268f9acbd17a",
+  "candidate_source_sha256": "6e68733947b88bccc7a99e089deaf7207a15b9382f0c8b164cec7b8d3cb36360",
+  "frozen_spec_sha256": "d134b49fc2374b5a99ceb6eeb1203b3fad60ba1c558d18547b79dc9b3e74a0b8",
+  "verifier_sha256": "4d8906c273470d9324d47456edca4583e440d3ca923ea811fd910752a74d37f2",
+  "package_versions": {
+    "faiss-imputer": "0.3.22",
+    "numpy": "2.5.3",
+    "scikit-learn": "1.9.1",
+    "faiss-cpu": "1.15.1",
+    "scipy": "1.18.1",
+    "threadpoolctl": "3.7.0",
+    "joblib": "1.6.0"
+  },
+  "criterion": {
+    "rtol": 3e-06,
+    "atol": 0.0,
+    "reference": "KNNImputer"
+  },
+  "scope": "Pack selected available-donor uniform-mean values in existing neighbor order; preserve median, weighted, callable-metric and complete paths and existing aggregation overflow repair.",
+  "validation": "Reuse the frozen synthetic correctness schedule and audits. The immutable v3 specification supplies workload and acceptance rules; its published-wheel source designation is overridden only for this explicitly labelled candidate. Do not replace published-release evidence.",
+  "distribution_metadata_note": "Installed distribution metadata remains baseline 0.3.22 after an explicitly recorded single-source overlay. This is an unreleased source candidate, not a published 0.3.22 result.",
+  "performance_measurements": false,
+  "automatic_retry": false
+}
