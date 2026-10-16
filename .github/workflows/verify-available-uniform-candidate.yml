@@ -66,6 +66,7 @@ jobs:
         run: |
           mkdir -p candidate-artifacts
           python -m pip install --only-binary=:all: --force-reinstall \
+            --report candidate-artifacts/install-report.json \
             'faiss-imputer==0.3.22' 'numpy==2.5.3' 'scikit-learn==1.9.1' \
             'faiss-cpu==1.15.1' 'scipy==1.18.1' 'threadpoolctl==3.7.0' \
             'joblib==1.6.0' 'pytest>=8' 'pandas>=2' 'build>=1.2' 'twine>=6' \
@@ -85,7 +86,9 @@ jobs:
           import os
           from pathlib import Path
           import platform
+          import re
           import sys
+          from urllib.parse import unquote, urlsplit
 
           root = Path.cwd().resolve()
           output = root / 'candidate-artifacts'
@@ -136,6 +139,47 @@ jobs:
           expected_after = dict(before, **{'faiss_imputer.py': manifest['candidate_source_sha256']})
           if after != expected_after:
               raise SystemExit('Overlay changed unexpected package sources')
+          # Preserve pip's archive hashes without claiming a local wheel hash computation.
+          report = json.loads((output / 'install-report.json').read_text(encoding='utf-8'))
+          if report.get('version') != '1' or not isinstance(report.get('install'), list):
+              raise SystemExit('Unsupported or incomplete pip installation report')
+          wheels = []
+          wheel_hashes = {}
+          installed_versions = {}
+          def canonical_name(name):
+              return re.sub(r'[-_.]+', '-', name).lower()
+          for item in report['install']:
+              info = item.get('download_info', {})
+              package_metadata = item.get('metadata', {})
+              name = package_metadata.get('name')
+              version = package_metadata.get('version')
+              url = info.get('url')
+              archive_hash = info.get('archive_info', {}).get('hashes', {}).get('sha256')
+              if not all(isinstance(value, str) and value for value in (name, version, url, archive_hash)):
+                  raise SystemExit('Incomplete wheel provenance in pip installation report')
+              filename = Path(unquote(urlsplit(url).path)).name
+              if not filename.endswith('.whl') or not re.fullmatch(r'[0-9a-fA-F]{64}', archive_hash):
+                  raise SystemExit('Expected a wheel and SHA-256 in pip installation report')
+              normalized = canonical_name(name)
+              if filename in wheel_hashes or normalized in installed_versions:
+                  raise SystemExit('Duplicate wheel identity in pip installation report')
+              wheel_hashes[filename] = archive_hash.lower()
+              installed_versions[normalized] = version
+              wheels.append({'name': name, 'version': version, 'filename': filename,
+                             'sha256': archive_hash.lower(), 'hash_source': 'pip_install_report'})
+          for name, version in manifest['package_versions'].items():
+              if installed_versions.get(canonical_name(name)) != version:
+                  raise SystemExit(f'Missing or mismatched pinned wheel provenance: {name}')
+          save('wheel-provenance.json', {
+              'report': 'install-report.json', 'wheels': wheels,
+              'note': 'Hashes describe downloaded wheels recorded by pip. The faiss-imputer wheel is the published base; the overlaid candidate core has a separate source hash.',
+          })
+          github_job = os.environ.get('GITHUB_JOB')
+          missing_field_reasons = {}
+          if not github_job:
+              github_job = None
+              missing_field_reasons['github_job'] = 'GITHUB_JOB was absent from the workflow process environment.'
+              print('::warning::Runtime GITHUB_JOB is missing; environment.json records null and the reason.')
           cpu = Path('/proc/cpuinfo').read_text().splitlines()
           memory = Path('/proc/meminfo').read_text().splitlines()
           save('environment.json', {
@@ -144,13 +188,16 @@ jobs:
               'installed_distribution_version': metadata.version('faiss-imputer'),
               'version_note': 'Distribution metadata describes the published base; the core is the source candidate.',
               'installed_package_path': str(package), 'package_versions': versions,
+              'wheel_sha256': wheel_hashes, 'wheel_hash_source': 'pip_install_report',
+              'wheel_provenance_file': 'wheel-provenance.json',
+              'github_job': github_job, 'missing_field_reasons': missing_field_reasons,
               'python': sys.version, 'platform': platform.platform(),
               'cpu_model': next((line.split(':', 1)[1].strip() for line in cpu if line.startswith('model name')), None),
               'logical_cpu_count': os.cpu_count(), 'affinity_cpu_count': len(os.sched_getaffinity(0)),
               'memory_bytes': next(int(line.split()[1]) * 1024 for line in memory if line.startswith('MemTotal:')),
               'runner': {name: os.environ.get(name) for name in (
                   'RUNNER_OS', 'RUNNER_ARCH', 'ImageOS', 'ImageVersion', 'GITHUB_SHA',
-                  'WORKFLOW_SHA', 'GITHUB_REF', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_EVENT_NAME')},
+                  'WORKFLOW_SHA', 'GITHUB_REF', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_EVENT_NAME', 'GITHUB_JOB')},
               'thread_environment': {name: os.environ.get(name) for name in (
                   'OMP_NUM_THREADS', 'OMP_THREAD_LIMIT', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                   'BLIS_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS', 'NUMEXPR_MAX_THREADS')},
