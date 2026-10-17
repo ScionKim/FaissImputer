@@ -102,30 +102,9 @@ Performance varies with donor count, workload size, dtype, missingness,
 and configuration. The results below are measured examples, not a
 universal speed guarantee.
 
-### Transform performance — published 0.3.21
-
-The chart compares the published **FaissImputer 0.3.21** release in
-available-donor mode with **scikit-learn KNNImputer 1.9.1**.
-
-![Published FaissImputer 0.3.21 available-donor first-transform benchmark: float32 100.39 ms versus KNNImputer 274.60 ms, float64 119.33 ms versus 332.68 ms; median paired speedups 2.77x and 2.76x, excluding fit.](https://raw.githubusercontent.com/ScionKim/FaissImputer/main/docs/assets/available-transform-0.3.21.png)
-
-The workload used 20,000 training rows, 300 held-out queries, 20 features,
-and five neighbors with uniform weights. Training missingness was 10%;
-each query had four missing features. The chart reports median
-first-transform latency in **milliseconds, excluding fit**. Speedups
-are medians of matched KNNImputer/FaissImputer timing ratios.
-
-Fitting itself took longer than KNNImputer. Including fit, the median
-paired speedup was **2.49×** for both tested dtypes. Whole-worker peak
-RSS was slightly higher than KNNImputer.
-
 In the earlier real-data study at source `ef04b1b`, available mode was
 slower than KNNImputer on Wine Quality for both tested dtypes and on
 Abalone float64, but faster on Abalone float32.
-
-[Full results, environment, and methodology](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.21.md)
-· [Raw measurements](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21.zip)
-· [Unrounded summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21-summary.json)
 
 ### Explore other workloads
 
@@ -134,6 +113,7 @@ and links to raw evidence and reproduction instructions.
 
 | Study | What it covers |
 | --- | --- |
+| [Archived results — published 0.3.21](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_versions_0.3.21.md) | Available-donor measurements with 20,000 training rows and 300 held-out queries. [Raw measurements](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21.zip) · [Unrounded summary](https://github.com/ScionKim/FaissImputer/blob/main/benchmarks/results/released_versions_0.3.21-summary.json). |
 | [Scaling and missingness](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/fit-transform-ofat-9683d03.md) · `9683d03` | A 12-run same-data sweep across rows, features, missingness, and neighbors. APIs and dtypes are reported separately. |
 | [Wine Quality and Abalone](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/real-data-datasets-ef04b1b.md) · `ef04b1b` | Held-out real-data comparisons covering speed, memory, reconstruction error, and donor counts. |
 | [Wine Quality — published 0.3.22](https://github.com/ScionKim/FaissImputer/blob/main/docs/benchmarks/released_wine_quality_0.3.22.md) | Published 0.3.21, 0.3.22, and KNNImputer on 3,000 training rows and 1,000 held-out queries, using available donors, float64, and MCAR. Version 0.3.22 was faster than 0.3.21; KNNImputer remained faster in this case. |
